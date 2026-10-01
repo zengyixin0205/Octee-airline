@@ -1,10 +1,61 @@
 <!DOCTYPE html>
-<html>
+<html lang="en-GB">
 <head>
-    <title>OCTEE</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Octee Airlines — Fly somewhere. Eventually.</title>
+<meta name="description" content="Octee Airlines: award-winning* service from Fuji International Airport (FIA) to SIA, LIA and Scraggy House.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/home.js"></script>
 </head>
 <body>
-    <h1>Hello World!</h1>
-    <p>Welcome to my website.</p>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero sky">
+  <div id="rotator"></div>
+  <p class="sub">Award-winning* service from Fuji International Airport to Scraggy International, Lu Pin International and Scraggy House.</p>
+  <p class="foot" style="color:#c7d4e6">*award was a participation certificate</p>
+  <div id="home-search" style="margin-top:18px"></div>
+</section>
+
+<section aria-labelledby="find-h">
+  <h2 id="find-h">Find a flight</h2>
+  <form id="quick-find" class="card">
+    <div class="row">
+      <div class="field"><label for="qf-from">From</label><select id="qf-from" name="from"></select></div>
+      <div class="field"><label for="qf-to">To</label><select id="qf-to" name="to"></select></div>
+      <div class="field"><label for="qf-pax">Passengers</label>
+        <select id="qf-pax" name="passengers"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></div>
+    </div>
+    <div class="actions"><button class="btn dodge" type="submit">Search Flights</button><span id="quick-msg" class="note" aria-live="polite"></span></div>
+    <p class="hint">Dates are picked on the flight calendar in the booking form. 1 flight found. Departure: TBA. Arrival: Hopefully.</p>
+  </form>
+</section>
+
+<section aria-label="Octee in numbers" class="grid" style="margin-top:24px">
+  <div class="card navy"><h3>99% On-Time*</h3><p class="foot" style="color:#9fb2cc">*on-time for something</p></div>
+  <div class="card navy"><h3>1,000,000 Happy Passengers*</h3><p class="foot" style="color:#9fb2cc">*passengers who did not leave a review</p></div>
+  <div class="card navy"><h3>0 Problems*</h3><p class="foot" style="color:#9fb2cc">*that we know of</p></div>
+</section>
+
+<h2>Why fly Octee?</h2>
+<section class="grid">
+  <a class="card" href="destinations.html" style="text-decoration:none;color:inherit"><h3>Destinations</h3><p>SIA, LIA and Scraggy House. And, via Scraggy Airlines, even more places we don't fly to.</p></a>
+  <a class="card" href="baggage.html" style="text-decoration:none;color:inherit"><h3>Baggage</h3><p>Your bags, our mystery. Track them with our 99%-accurate tracker.</p></a>
+  <a class="card" href="experience.html" style="text-decoration:none;color:inherit"><h3>In-Flight</h3><p>Chef's selection: one peanut. Served at room temperature.</p></a>
+  <a class="card" href="reviews.html" style="text-decoration:none;color:inherit"><h3>Reviews</h3><p>Rated 4.9★* by passengers.</p><p class="foot">*rounded up, a lot</p></a>
+</section>
+
+<h2>What passengers say</h2>
+<section id="review-strip" class="grid" aria-live="polite"></section>
+<p><a href="reviews.html">Read all reviews</a></p>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
 </body>
 </html>

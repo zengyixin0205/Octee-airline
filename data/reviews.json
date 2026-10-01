@@ -1,0 +1,58 @@
+{
+  "reviews": [
+    {
+      "username": "peanut_fan",
+      "stars": 5,
+      "title": "One peanut. Perfect.",
+      "body": "I was promised one peanut and I received exactly one peanut. Consistency is rare these days.",
+      "date": "2026-09-28",
+      "route": "FIA → SIA",
+      "verified": true
+    },
+    {
+      "username": "lost_in_lia",
+      "stars": 4,
+      "title": "Arrived (eventually)",
+      "body": "The flight was delayed, then early, then delayed again. I did arrive somewhere, which was nice.",
+      "date": "2026-09-25",
+      "route": "FIA → LIA",
+      "verified": true
+    },
+    {
+      "username": "scraggy_house_guy",
+      "stars": 5,
+      "title": "Landed in the garden",
+      "body": "We landed in the garden at Scraggy House. The roses did not enjoy it. I did.",
+      "date": "2026-09-21",
+      "route": "FIA → Scraggy House",
+      "verified": true
+    },
+    {
+      "username": "bagless_traveller",
+      "stars": 1,
+      "title": "Where is my bag",
+      "body": "My bag has seen more of the world than I have. It sends postcards. I would like it back.",
+      "date": "2026-09-19",
+      "route": "LIA → FIA",
+      "verified": true
+    },
+    {
+      "username": "engine_watcher",
+      "stars": 2,
+      "title": "Engines MAY be working",
+      "body": "I ticked the box accepting that the engines may be working. I now understand why that box exists.",
+      "date": "2026-09-15",
+      "route": "SIA → FIA",
+      "verified": false
+    },
+    {
+      "username": "joelmobile_rider",
+      "stars": 3,
+      "title": "Helped, sort of",
+      "body": "The JOELMOBILE took me to a gate. Not my gate, but a gate. Joel was very confident about it.",
+      "date": "2026-09-10",
+      "route": "",
+      "verified": false
+    }
+  ]
+}

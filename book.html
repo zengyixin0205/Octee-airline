@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book a Flight — Octee Airlines</title>
+<meta name="description" content="Book an Octee flight (we will try). Fake booking, no payment.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/book.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">BOOK A FLIGHT<span class="punch">we will try</span></h1>
+  <p class="sub">Fill in every step to confirm. Nothing is charged and there are no payment fields. Paid in peanuts.</p>
+</section>
+<div id="booking">
+  <div id="form-banner" class="form-banner" hidden></div>
+  <ol id="steps" class="steps" aria-label="Booking steps"></ol>
+  <form id="book-form" class="card" novalidate onsubmit="return false">
+    <div id="step-body"><p class="note">Loading flights… (the planes are being found)</p></div>
+    <p id="step-msg" class="msg" role="alert"></p>
+    <div class="actions">
+      <button id="btn-back" class="btn ghost" type="button">Back</button>
+      <button id="btn-next" class="btn" type="button">Next</button>
+    </div>
+  </form>
+</div>
+<section id="result" hidden aria-live="polite"></section>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>

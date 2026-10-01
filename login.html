@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in — Octee Airlines</title>
+<meta name="description" content="Log in or sign up for Octee Airlines and collect Octmiles.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/login.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">WHO ARE YOU?<span class="punch">we also forgot</span></h1>
+</section>
+<div class="tabs" role="tablist" aria-label="Log in or sign up">
+  <button type="button" role="tab" id="tab-login" aria-selected="true" aria-controls="form-login">Log in</button>
+  <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form-signup">Sign up</button>
+</div>
+<form id="form-login" class="card" role="tabpanel" aria-labelledby="tab-login">
+  <div class="field"><label for="li-user">Username</label><input type="text" id="li-user" name="username" autocomplete="username"></div>
+  <div class="field"><label for="li-pass">Password</label>
+    <div class="row" style="flex-wrap:nowrap"><input type="password" id="li-pass" name="password" autocomplete="current-password"><button type="button" class="btn small ghost" data-show-password="li-pass" aria-pressed="false">Show</button></div></div>
+  <div class="actions"><button class="btn" type="submit">Log in</button></div>
+  <p id="msg-login" class="msg" role="status" aria-live="polite"></p>
+</form>
+<form id="form-signup" class="card" role="tabpanel" aria-labelledby="tab-signup" hidden>
+  <div class="field"><label for="su-user">Username</label><input type="text" id="su-user" name="username" autocomplete="username" maxlength="20" aria-describedby="su-user-hint"><p class="hint" id="su-user-hint">3–20 letters, numbers or underscores.</p></div>
+  <div class="field"><label for="su-pass">Password</label>
+    <div class="row" style="flex-wrap:nowrap"><input type="password" id="su-pass" name="password" autocomplete="new-password" aria-describedby="su-pass-hint"><button type="button" class="btn small ghost" data-show-password="su-pass" aria-pressed="false">Show</button></div>
+    <p class="hint" id="su-pass-hint">At least 8 characters.</p></div>
+  <div class="field"><label for="su-confirm">Confirm password</label><input type="password" id="su-confirm" name="confirm" autocomplete="new-password"></div>
+  <div class="actions"><button class="btn" type="submit">Sign up (+100 Octmiles)</button></div>
+  <p id="msg-signup" class="msg" role="status" aria-live="polite"></p>
+</form>
+<p class="msg info">Your account is saved in this browser only. This website has no server, so another device or browser won't know you. Don't reuse an important password.</p>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Octmiles — Octee Airlines</title>
+<meta name="description" content="Collect Octmiles. Spend them on almost something.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/octmiles-page.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">COLLECT OCTMILES<span class="punch">spend them on almost something</span></h1>
+</section>
+<div class="split">
+  <section class="card" id="balance" aria-live="polite"></section>
+  <div id="code-slot"></div>
+</div>
+<h2>Tiers</h2>
+<div class="table-wrap"><table class="plain"><thead><tr><th>Tier</th><th>Lifetime Octmiles</th><th>Perk</th></tr></thead><tbody id="tier-rows"></tbody></table></div>
+<p class="note">Your tier uses lifetime Octmiles, so spending them never drops you a tier.</p>
+<h2>How to earn</h2>
+<ul>
+  <li>Sign up: 100 Octmiles.</li>
+  <li>Octee flights, per stretch: FIA ↔ SIA 150, FIA ↔ LIA 200, FIA ↔ Scraggy House 250, SIA ↔ LIA 120, SIA ↔ Scraggy House 80. Octee First: +50 per flight.</li>
+  <li>Riding the JOELMOBILE: 20 (up to 3 rides a day).</li>
+  <li>Your first review: 30.</li>
+  <li>Octmiles codes: whatever the code is worth.</li>
+</ul>
+<h2>Rewards shop</h2>
+<p class="note">Octmiles and rewards have no real-world value.</p>
+<div id="shop" class="grid"></div>
+<h2>History</h2>
+<section id="history"></section>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>

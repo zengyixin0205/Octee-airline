@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reviews — Octee Airlines</title>
+<meta name="description" content="Passenger reviews of Octee Airlines. Rated 4.9★ (rounded up, a lot).">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/reviews.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">PASSENGER REVIEWS<span class="punch">we read them (eventually)</span></h1>
+</section>
+<div class="split">
+  <section class="card">
+    <p class="big-rating">4.9 ★<sup>*</sup></p>
+    <p class="foot">*rounded up, a lot.</p>
+    <p class="note" id="real-avg"></p>
+  </section>
+  <section id="write"></section>
+</div>
+<div class="actions" id="filters" role="group" aria-label="Filter by stars" style="margin-top:20px">
+  <button class="btn small secondary" type="button" data-filter="all" aria-pressed="true">All</button>
+  <button class="btn small ghost" type="button" data-filter="5" aria-pressed="false">5★</button>
+  <button class="btn small ghost" type="button" data-filter="4" aria-pressed="false">4★</button>
+  <button class="btn small ghost" type="button" data-filter="3" aria-pressed="false">3★</button>
+  <button class="btn small ghost" type="button" data-filter="2" aria-pressed="false">2★</button>
+  <button class="btn small ghost" type="button" data-filter="1" aria-pressed="false">1★</button>
+  <label for="sort" class="label" style="margin-left:auto">Sort</label>
+  <select id="sort" style="width:auto"><option value="newest">Newest</option><option value="high">Highest</option><option value="low">Lowest</option></select>
+</div>
+<h2>Featured reviews</h2>
+<section id="featured" class="grid" aria-live="polite"></section>
+<details class="lost"><summary>Reviews currently lost with your baggage <span id="lost-count"></span></summary><div id="lost-list" class="grid" style="margin-top:12px"></div></details>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>

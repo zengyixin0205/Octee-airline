@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIA — Fuji International Airport</title>
+<meta name="description" content="Fuji International Airport: Octee's home. Lost? We will make you more lost.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/fia.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">Fuji International Airport<span class="punch">LOST? we will make you more lost</span></h1>
+  <p class="sub">Octee's home base, part of FAG (Fuji Airport Group). Gates FIA01 to FIA12. Probably in that order.</p>
+</section>
+<figure class="card route-map">
+  <svg viewBox="0 0 640 260" role="img" aria-labelledby="fia-t fia-d">
+    <title id="fia-t">FIA terminal map</title>
+    <desc id="fia-d">A deliberately confusing terminal map. Gates 1 to 12 are in a loop, arrows point both ways, and "You are here" appears twice.</desc>
+    <rect x="20" y="20" width="600" height="220" rx="24" fill="#e8f1fa" stroke="#0b1f3a" stroke-width="3"/>
+    <path d="M60 130 C 160 40, 260 220, 360 130 S 560 40, 590 130" stroke="#c9a44c" stroke-width="6" fill="none"/>
+    <g font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#0b1f3a">
+      <text x="60" y="60">FIA01</text><text x="150" y="210">FIA07</text><text x="240" y="60">FIA03</text><text x="330" y="210">FIA12</text>
+      <text x="420" y="60">FIA05</text><text x="510" y="210">FIA02</text><text x="540" y="60">FIA09</text><text x="90" y="210">FIA11</text>
+      <text x="260" y="140" fill="#c03a3a">★ You are here</text><text x="470" y="140" fill="#c03a3a">★ You are also here</text>
+      <text x="40" y="140">← Departures →</text>
+    </g>
+  </svg>
+  <figcaption class="note" id="named-gate">Signs are updated hourly, at random.</figcaption>
+</figure>
+<div class="banner"><p class="headline">Need help?<span class="punch">Call the JOELMOBILE</span></p><a class="btn" href="joelmobile.html">Call the JOELMOBILE</a></div>
+<h2>The official FIA taglines</h2>
+<div id="gallery" class="grid"></div>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>

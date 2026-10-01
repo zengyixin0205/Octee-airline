@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JOELMOBILE — FIA's helpful buggy</title>
+<meta name="description" content="The JOELMOBILE: FIA's airport buggy that "helps" passengers. Managed by Joel Teh Yit Siang.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/joelmobile.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">JOELMOBILE</h1>
+  <p class="sub" style="font-size:1.4rem;font-style:italic">"I'm a joel!"</p>
+</section>
+<div class="banner"><p class="headline">NEED HELP?<span class="line" style="display:block;font-size:.6em">the JOELMOBILE is coming</span><span class="punch small">(eventually)</span></p></div>
+<p class="sub">Fast, friendly, free* door-to-gate service across FIA.</p>
+<p class="foot">*free to board. Getting off is a separate conversation.</p>
+<div class="split" style="margin-top:16px">
+  <section class="card">
+    <h2 style="margin-top:0">Request a ride</h2>
+    <form id="ride-form">
+      <div class="row">
+        <div class="field"><label for="pickup">Pick-up</label><select id="pickup" name="pickup"></select></div>
+        <div class="field"><label for="dropoff">Drop-off</label><select id="dropoff" name="dropoff"></select></div>
+      </div>
+      <div class="actions"><button class="btn" type="submit">Call the JOELMOBILE</button></div>
+      <p id="ride-hint" class="hint"></p>
+      <p id="ride-msg" class="msg" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+  <section class="card">
+    <h2 style="margin-top:0">Your manager</h2>
+    <div class="manager"><div class="avatar" aria-hidden="true">🛺</div>
+      <div><h3 style="margin:0">Joel Teh Yit Siang</h3><p class="note" style="margin:0">JOELMOBILE Operations Manager</p></div></div>
+    <blockquote style="margin:12px 0 0;font-style:italic">"I'm a joel!"</blockquote>
+  </section>
+</div>
+<h2>Live tracker</h2>
+<div id="terminal" class="terminal" aria-describedby="tracker-status"></div>
+<p id="tracker-status" class="note" aria-live="off"></p>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>

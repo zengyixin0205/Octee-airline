@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Destinations — Octee Airlines</title>
+<meta name="description" content="Search Octee destinations: SIA, LIA, Scraggy House, plus transfers with Scraggy Airlines.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/destinations-page.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <h1 class="headline">FLY SOMEWHERE.<span class="punch">EVENTUALLY</span></h1>
+  <div id="search" style="margin-top:16px"></div>
+  <div id="results" aria-live="polite" style="margin-top:16px"></div>
+</section>
+
+<h2>Where Octee flies</h2>
+<div class="grid">
+  <article class="card" data-place="SIA"><h3>SIA — Scraggy International Airport</h3>
+    <p>Home of Scraggy Airlines. Change here for Mdm Wrong-Wrong's and Lujin's.</p>
+    <p class="note">About 2 hours from FIA, give or take a day.</p><p class="flights"></p>
+    <a class="btn small" href="book.html?from=FIA&amp;to=SIA">Book now</a></article>
+  <article class="card" data-place="LIA"><h3>LIA — Lu Pin International Airport</h3>
+    <p>Lovely in the morning. We usually arrive in the afternoon.</p>
+    <p class="note">Some flights stop at SIA on the way. Stay on board.</p><p class="flights"></p>
+    <a class="btn small" href="book.html?from=FIA&amp;to=LIA">Book now</a></article>
+  <article class="card" data-place="SCH"><h3>Scraggy House <span class="badge-new">NEW: we land in the garden</span></h3>
+    <p>Not really an airport. The roses have been informed.</p>
+    <p class="note">Direct on Tue and Sat, and via a stop on Thu.</p><p class="flights"></p>
+    <a class="btn small" href="book.html?from=FIA&amp;to=SCH">Book now</a></article>
+</div>
+
+<h2>Partner destinations <span class="tag sa">transfer via SIA · operated by Scraggy Airlines</span></h2>
+<div id="partners" class="grid"><p class="note">Loading Scraggy flights…</p></div>
+<p id="scraggy-source" class="foot"></p>
+
+<h2>Route map</h2>
+<figure class="card route-map">
+  <svg viewBox="0 0 640 320" role="img" aria-labelledby="map-t map-d">
+    <title id="map-t">Octee route map</title>
+    <desc id="map-d">FIA in the middle with Octee lines to SIA, LIA and Scraggy House. Dashed Scraggy Airlines lines from SIA to Mdm Wrong-Wrong's, Lujin's and FIA. A dotted line between SIA and LIA is coming soon (not soon).</desc>
+    <g stroke="#0b1f3a" stroke-width="3" fill="none">
+      <line x1="320" y1="170" x2="150" y2="80"/><line x1="320" y1="170" x2="500" y2="90"/><line x1="320" y1="170" x2="330" y2="285"/>
+    </g>
+    <g stroke="#b06d00" stroke-width="2.5" stroke-dasharray="8 6" fill="none">
+      <line x1="150" y1="80" x2="40" y2="200"/><line x1="150" y1="80" x2="60" y2="30"/>
+    </g>
+    <line x1="150" y1="80" x2="500" y2="90" stroke="#6b7280" stroke-width="2" stroke-dasharray="2 6"/>
+    <g fill="#c9a44c" stroke="#0b1f3a" stroke-width="2">
+      <circle cx="320" cy="170" r="16"/><circle cx="150" cy="80" r="11"/><circle cx="500" cy="90" r="11"/><circle cx="330" cy="285" r="11"/>
+    </g>
+    <g fill="#ffe2a8" stroke="#b06d00" stroke-width="2"><circle cx="40" cy="200" r="9"/><circle cx="60" cy="30" r="9"/></g>
+    <text class="map-label" x="340" y="166">FIA (home)</text>
+    <text class="map-label" x="160" y="112">SIA</text>
+    <text class="map-label" x="512" y="94">LIA</text>
+    <text class="map-label" x="346" y="290">Scraggy House</text>
+    <text class="map-label" x="20" y="226">Mdm Wrong-Wrong's</text>
+    <text class="map-label" x="74" y="26">Lujin's</text>
+    <text class="map-label" x="260" y="70" fill="#6b7280">coming soon (not soon)</text>
+  </svg>
+</figure>
+
+<div class="grid">
+  <div class="card"><h3>Somewhere</h3><p>Our most popular destination.</p></div>
+  <div class="card"><h3>Eventually</h3><p>Where every flight ends up.</p></div>
+  <div class="card"><h3>Back to FIA</h3><p>The one place we always return to.</p></div>
+</div>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>
