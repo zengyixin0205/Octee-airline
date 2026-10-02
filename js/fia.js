@@ -1,8 +1,6 @@
 import { $, el } from "./dom.js";
-import { mountGallery } from "./taglines.js";
 import { currentUser } from "./auth.js";
 
-mountGallery($("#gallery"));
 // "Name a gate" reward shows on the map (in this browser)
 const u = currentUser();
 if (u && (u.redemptions || []).some((r) => r.id === "name-gate")) {

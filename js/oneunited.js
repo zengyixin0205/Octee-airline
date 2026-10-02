@@ -8,7 +8,7 @@ $("#ou-timetable").replaceChildren(...OU_FLIGHTS.map((f) => el("tr", {},
   el("td", {}, f.stops.map((s, i) => `${placeShort(s[0])} ${[s[1], s[2]].filter(Boolean).join(" / ")}`).join(" → ")))));
 
 // Find the next trip (in the coming 2 weeks) on each route that uses a One United flight AND another airline.
-const ROUTES = [["FIA", "MWW"], ["FIA", "LUJ"], ["LIA", "SCH"], ["MWW", "FIA"], ["SCH", "LIA"], ["LUJ", "SCH"]];
+const ROUTES = [["SIA", "MIA"], ["FIA", "LUJ"], ["LIA", "SCH"], ["MIA", "LIA"], ["SCH", "LIA"], ["LUJ", "SCH"]];
 scraggyData().then(({ routes }) => {
   const cards = [];
   for (const [from, to] of ROUTES) {
@@ -19,7 +19,7 @@ scraggyData().then(({ routes }) => {
       if (it) found = { date, it };
     }
     if (!found) continue;
-    const bookable = from !== "MWW" && from !== "LUJ";
+    const bookable = from !== "LUJ";
     cards.push(el("article", { class: "card" },
       el("h3", {}, `${placeName(from)} → ${placeName(to)}`),
       el("p", { class: "note" }, `${niceDate(found.date)} · ${describeItinerary(found.it)}`),

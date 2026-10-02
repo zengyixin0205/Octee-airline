@@ -99,7 +99,7 @@ Passengers from different places can end up on **the same flight**, either by ch
 
 ```
 FIA ── OA 58  ──► SIA  lands 09:20 ─┐
-                                    ├──► SA103  SIA 10:30 → Mdm Wrong-Wrong's   (same flight, both passengers)
+                                    ├──► SA103  SIA 10:30 → MIA (Mdm Wrong-Wrong International Airport)   (same flight, both passengers)
 LIA ── OA 101 ──► SIA  lands 09:34 ─┘    (OA 101 then carries on to FIA without them)
 ```
 
@@ -119,7 +119,7 @@ Rules:
 > **ONE UNITED**
 > *unitation is a dream, it's chaos.*
 
-One United is **another airline at FIA** (flight code **OU**). It serves mainly **Scraggy House and SIA** from FIA, and its flights are timed so they can be **one part of a longer trip with Octee (OA) or Scraggy Airlines (SA)**.
+One United is **another airline at FIA** (flight code **OU**). It serves mainly **Scraggy House and SIA** from FIA, plus **MIA** (OU 9 FIA 09:30 → MIA 11:40 and OU 10 MIA 12:40 → FIA 14:50, on Tue/Thu/Sat), and its flights are timed so they can be **one part of a longer trip with Octee (OA) or Scraggy Airlines (SA)**.
 
 | Flight | Route (stops) | Days | Times |
 |---|---|---|---|
@@ -132,21 +132,21 @@ One United is **another airline at FIA** (flight code **OU**). It serves mainly 
 | OU 7 | FIA → SIA | Every day | FIA 16:30 → SIA 18:20 |
 | OU 8 | SIA → FIA | Every day | SIA 19:10 → FIA 21:00 |
 
-- **More connections with SA:** OU 1 (daily) and OU 3 land at SIA in time for every morning Scraggy flight (SA101 10:20, SA103 10:30, SA105 10:45, SA107 11:00). Coming back, the Scraggy flights land at SIA by 12:30 and OU 2 (daily, 13:20), OU 4 (13:45) and OU 8 (19:10) fly home to FIA. So there is now a way to and from Mdm Wrong-Wrong's and Lujin's **every day**. OA 100 was also moved 30 minutes earlier (lands SIA 09:30) so it connects with all four SA flights.
+- **More connections with SA:** OU 1 (daily) and OU 3 land at SIA in time for every morning Scraggy flight (SA101 10:20, SA103 10:30, SA105 10:45, SA107 11:00). Coming back, the Scraggy flights land at SIA by 12:30 and OU 2 (daily, 13:20), OU 4 (13:45) and OU 8 (19:10) fly home to FIA. So there is now a way to and from MIA and Lujin's **every day**. OA 100 was also moved 30 minutes earlier (lands SIA 09:30) so it connects with all four SA flights.
 - **Connections with OA:** e.g. OA 103 from LIA lands at FIA 17:00 → OU 5 to Scraggy House 17:50 (Thu, Sun); OA 104 / OA 106 land at FIA 15:20 → OU 7 to SIA 16:30.
 - **Booking:** OU flights are booked on the normal **Octee form** (no extra form) and appear in the same flight options, marked "One United". They follow the same rules (45 minutes to change, max 2 changes, 180 seats per stretch).
 - **Octmiles:** OU flights earn **half** the Octmiles of the same stretch on Octee. *"One United shares the miles. Unevenly."*
 - **Where it shows:** its own page `oneunited.html` (headline + timetable + live examples of connections), a banner on Home, the search results, the Destinations cards, the status board (marked "[One United]") and boarding passes (light blue).
 - Data: `OU_FLIGHTS` in `js/destinations.js`.
 
-### Partner airline: Scraggy Airlines (SA)
+### Scraggy Airlines (SA) — part of Octee Airlines
 
-**SA is Scraggy Airlines, based at Scraggy International Airport (SIA)**: the airline from the Scraggy project. Octee does **not** fly to Mdm Wrong-Wrong's or Lujin's; Scraggy Airlines does, from SIA. Everything about SA flights must **match the real Scraggy flights** in `Scraggy-airlines/js/data.js`: flight numbers, gates, aircraft, classes, snacks, reasons, tick boxes and rules. Octee never makes up its own version.
+**SA is Scraggy Airlines, based at Scraggy International Airport (SIA)**: the airline from the Scraggy project. In the Octee story **Scraggy Airlines is under Octee Airlines** (FAG → FIA → Octee Airlines → Scraggy Airlines). It serves **Scraggy House, SIA and FIA**, plus **MIA** and Lujin's. It keeps its own flight numbers, its own booking form and its own yellow livery. Octee planes (OA) do **not** fly to MIA or Lujin's; Scraggy Airlines does from SIA, and One United flies FIA ↔ MIA. Everything about SA flights must **match the real Scraggy flights** in `Scraggy-airlines/js/data.js`: flight numbers, gates, aircraft, classes, snacks, reasons, tick boxes and rules. Octee never makes up its own version.
 
 | Scraggy route (from Scraggy's `ROUTES`) | Outbound | Times (daily) | Return | Times (daily) | Gate at SIA |
 |---|---|---|---|---|---|
 | SIA ↔ Scraggy House | SA101 | 10:20 → 10:50 | SA102 | 11:50 → 12:20 | SCG001 |
-| SIA ↔ Mdm Wrong-Wrong's | SA103 | 10:30 → 11:20 | SA104 | 11:40 → 12:30 | SCG002 |
+| SIA ↔ MIA | SA103 | 10:30 → 11:20 | SA104 | 11:40 → 12:30 | SCG002 |
 | SIA ↔ Lujin's | SA105 | 10:45 → 11:40 | SA106 | 11:35 → 12:30 | SCG003 |
 | **SIA ↔ FIA** (new) | **SA107** | SIA 11:00 → FIA 12:50 | **SA108** | FIA 14:00 → SIA 15:50 | SCG012 |
 
@@ -155,7 +155,7 @@ One United is **another airline at FIA** (flight code **OU**). It serves mainly 
 - **More connections at FIA:** SA107 lands at FIA 12:50, so passengers from SIA can change at FIA onto later OA flights (e.g. OA 102 at 14:30 on Wed/Sat, OA 108 at 15:40 on Fri), and OA flights landing at FIA before 13:15 connect onto SA108 at 14:00.
 - Scraggy books **one passenger per booking** (its form has a single passenger name), so transfer bookings are for **1 passenger**.
 
-So to reach Mdm Wrong-Wrong's, passengers fly Octee to **SIA** (e.g. OA 58 from FIA, or OA 101 from LIA), then change at **Scraggy International Airport (SIA)** to SA103 → Mdm Wrong-Wrong's. Booking a transfer means filling in **two forms** (§5.10): one for the Octee flight(s) and one for the SIA flight (Scraggy). The destination search (§5.12) shows the route.
+So to reach MIA, passengers fly Octee to **SIA** (e.g. OA 58 from FIA, or OA 101 from LIA), then change at **Scraggy International Airport (SIA)** to SA103 → MIA. Booking a transfer means filling in **two forms** (§5.10): one for the Octee flight(s) and one for the SIA flight (Scraggy). The destination search (§5.12) shows the route.
 
 > All names, companies and places are fictional. Any resemblance to real airlines or airports is coincidental.
 
@@ -262,7 +262,7 @@ A live clock panel on the side of every page, the same as the Scraggy Airlines p
 - **Accessibility:** `<aside aria-label="Current time">` with `<time>` elements. No `aria-live` on the ticking times (screen readers would read it every second).
 
 ```js
-// js/clock.js (from Scraggy, with FIA added and Mdm Wrong-Wrong's row removed)
+// js/clock.js (from Scraggy, with FIA added and MIA row removed)
 const fmt = (timeZone) => new Intl.DateTimeFormat("en-GB", {
   timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
 });
@@ -273,7 +273,7 @@ const siaFmt  = fmt(CONFIG.SIA_TIMEZONE);  // "Asia/Singapore"
 
 ### 5.1 Home (`index.html`)
 
-- **Nav bar:** Octee logo (`assets/img/octee-logo.svg`) + links + account area on the right ("Log in", or "Hi, username · 1,250 Octmiles · Gold Wing · Log out"). One link is slightly misaligned on purpose. Clicking the logo 8 times quickly opens the secret Control Tower (§7.5).
+- **Nav bar:** Octee logo (`assets/img/octee-logo.svg`) + links + account area on the right ("Log in", or "Hi, username · 1,250 Octmiles · Gold Wing · Log out"). One link is slightly misaligned on purpose. Clicking the logo 8 times quickly opens the FAG code administration sign-in (§7.5).
 - **Hero:** full-width sky image, tagline rotator cycling the 7 taglines (about 5s each). Punchline line fades in about 1s after the main line.
 - **Destination search box** in the hero: *"Where do you want to go? (We may take you there.)"* Same search as §5.12; pressing Enter opens `destinations.html?q=…` with the results.
 - **Booking widget:** From / To (one end is always FIA, the other is SIA, LIA or Scraggy House) / Dates (the flight calendar from §5.10) / Passengers → "Search Flights".
@@ -328,6 +328,11 @@ Rows come from the weekly timetable (§2) for **today's** day of the week, so th
 
 ### 5.6 FIA Airport (`fia.html`)
 
+- **Airport map (detailed):** an inline SVG of the whole airport, top to bottom: runway 09/27 and taxiway, Mt Fuji, the apron with planes in livery colours at the 12 gates (some "delayed"), the departures concourse (gates FIA01–FIA12, slightly out of order), the terminal (check-in desks for OA / OU / SA, security & passports, Octee Lounge, One Peanut Bar, baggage claim, a very large Lost & Found, information, toilets), control tower, Mt Fuji viewing deck, drop-off road with the JOELMOBILE stop and its dotted route, car park, FIA Station and the FAG head office. "You are here" appears twice. It has a legend, a `<title>`/`<desc>`, and scrolls sideways on phones so the labels stay readable.
+- The old "official FIA taglines" poster grid was **removed** from this page. The taglines now live as the big page headings (and in the Home rotator).
+
+- **Header:** a full-width photo of **Mount Fuji** (`assets/img/fuji.jpg`, snow peak, town below, red pagoda on the right) as the background of the page header. A dark fade at the top keeps the white title, the tagline and the intro readable. The photo has a text description (`role="img"` + `aria-label`). On phones the header is taller so the words sit in the sky above the mountain.
+
 - Terminal map that is deliberately confusing, with tagline *LOST? we will make you more lost*.
 - All 7 FIA taglines shown as a poster gallery.
 - A "Need help? Call the JOELMOBILE" banner linking to `joelmobile.html`.
@@ -336,9 +341,10 @@ Rows come from the weekly timetable (§2) for **today's** day of the week, so th
 
 - **Destination search box** at the top of the page (§5.12).
 - Three main destination cards: **SIA (Scraggy International Airport)**, **LIA (Lu Pin International Airport)** and **Scraggy House** (new, badge "NEW: we land in the garden"), each with a glossy photo, flight number, flight time ("about 2 hours, give or take a day") and a "Book now" button that opens `book.html?to=SIA` / `?to=LIA` / `?to=SCH`.
-- A smaller "Partner destinations (transfer via SIA, operated by Scraggy Airlines)" row: Mdm Wrong-Wrong's and Lujin's, each with "Book transfer (2 forms)" → `book.html?to=mdm-wrong-wrong` / `?to=lujin`.
+- A smaller "Partner destinations (transfer via SIA, operated by Scraggy Airlines)" row: MIA and Lujin's, each with "Book transfer (2 forms)" → `book.html?to=mdm-wrong-wrong` / `?to=lujin`.
 - Below them, smaller joke cards: "Somewhere", "Eventually", "Back to FIA".
-- A route map: FIA in the middle, solid OA lines to SIA, LIA and Scraggy House. Dashed Scraggy Airlines (SA) lines from SIA to Mdm Wrong-Wrong's and Lujin's. A dotted line between SIA and LIA labelled "coming soon (not soon)".
+- A **realistic route map**, drawn by `js/destinations-page.js` as an SVG from the real timetables (so it can't go out of date): pale sea with faint latitude/longitude lines, irregular islands, Mount Fuji next to FIA, a compass and a joke scale bar, sea names ("Sea of Delays", "Lost Luggage Strait"). Curved route lines in livery colours with a dark outline: **OA orange**, **OU light blue**, **SA yellow and dashed** (so airlines are not told apart by colour alone). Airports are white dots with code + full name; FIA is the bigger hub dot. A legend sits under the map and the SVG has a `<title>` and a `<desc>` listing every route.
+- An **MIA card** in the main list (One United from FIA, Scraggy Airlines from SIA), and a "Scraggy Airlines destinations" row built from the Scraggy data (Scraggy House, MIA, Lujin's, FIA).
 - Banner: *FLY SOMEWHERE. / EVENTUALLY*.
 
 ### 5.8 Contact (`contact.html`)
@@ -376,7 +382,7 @@ The form **follows Scraggy Airlines' booking form** (`Scraggy-airlines/book.html
 
 | Step (same as Scraggy) | Octee version |
 |---|---|
-| **1. Trip** | The form **asks three things, in this order**, in a highlighted box: **① Destination** ("Where are you going?"), **② Departure date** (the day you leave) and **③ Arrival date** (the day you fly back). Both dates are picked on the flight calendar (below). Underneath: **Departing from** (FIA by default; any of FIA, SIA, LIA, Scraggy House), **Passengers** (1–9) and a tick box **"One-way only (I'm not flying back)"**, which removes the arrival date. After a date is picked, the form lists that day's flights, like a real airline: direct, flights with a stop (stay on board) and connections (change planes); the passenger picks one for the departure and one for the flight back. Destinations marked "transfer via SIA (2 forms)" (Mdm Wrong-Wrong's, Lujin's) switch to the transfer booking below with 1 passenger. Missing answers: *"Pick your departure date on the calendar."* / *"Pick your arrival date (the day you fly back) on the calendar, or tick One-way."* If there's nothing that day: *"No flights that day. Not even eventually."* |
+| **1. Trip** | The form **asks three things, in this order**, in a highlighted box: **① Destination** ("Where are you going?"), **② Departure date** (the day you leave) and **③ Arrival date** (the day you fly back). Both dates are picked on the flight calendar (below). Underneath: **Departing from** (FIA by default; any of FIA, SIA, LIA, Scraggy House), **Passengers** (1–9) and a tick box **"One-way only (I'm not flying back)"**, which removes the arrival date. After a date is picked, the form lists that day's flights, like a real airline: direct, flights with a stop (stay on board) and connections (change planes); the passenger picks one for the departure and one for the flight back. Destinations marked "transfer via SIA (2 forms)" (MIA, Lujin's) switch to the transfer booking below with 1 passenger. Missing answers: *"Pick your departure date on the calendar."* / *"Pick your arrival date (the day you fly back) on the calendar, or tick One-way."* If there's nothing that day: *"No flights that day. Not even eventually."* |
 | **2. Aircraft** | Choose from the Octee fleet (Airbus 777, Boeing 330, Airbus 747, Boeing 380, same joke mix-up as Scraggy) or "Surprise me (we will pick the wrong one)". |
 | **3. Class** | Octee Economy, Octee Business, or **Octee First** ("Economy with a curtain"). Octee First earns +50 Octmiles per leg. |
 | **4. Passenger** | Name for each passenger (first one defaults to the username; a nickname is fine), seat preference (window, aisle, "somewhere"), snack preference (One Peanut · One Peanut (vegetarian) · One Peanut (served warm)), number of bags (0–3, *"We will lose them in a random order."*). |
@@ -421,7 +427,7 @@ This is the main change from Scraggy:
 
 #### Transfer bookings: two forms (Octee form + SIA form)
 
-When the destination is a Scraggy Airlines place (Mdm Wrong-Wrong's, Lujin's, or Scraggy House "via SIA"), the user fills in **two forms, one after the other**:
+When the destination is a Scraggy Airlines place (MIA, Lujin's, or Scraggy House "via SIA"), the user fills in **two forms, one after the other**:
 
 | | Form 1: **Octee form** | Form 2: **SIA form** |
 |---|---|---|
@@ -518,12 +524,12 @@ A search box where visitors type where they want to go. It's at the top of `dest
 > Back to FIA: OA 113 (Wed), OA 118 (Thu), OA 114 (Sun)
 > Earn 250 Octmiles per leg · **[Book this flight]** → `book.html?to=SCH`
 
-**2. Transfer flight** (Octee doesn't fly there, but Scraggy Airlines does from SIA: Mdm Wrong-Wrong's, Lujin's)
+**2. Transfer flight** (Octee doesn't fly there, but Scraggy Airlines does from SIA: MIA, Lujin's)
 
-> 🔁 **Transfer flight** — Octee Airlines does not fly to Mdm Wrong-Wrong's.
+> 🔁 **Transfer flight** — Octee Airlines does not fly to MIA.
 > **OA 58** FIA → SIA · every day · 07:30 → 09:20 (Octee Airlines)
 > ⏱ Change planes at **Scraggy International Airport (SIA)** · 70 minutes *(or 3 days)*
-> **SA103** SIA 10:30 → Mdm Wrong-Wrong's 11:20 · gate SCG002 (operated by Scraggy Airlines, based at SIA)
+> **SA103** SIA 10:30 → MIA 11:20 · gate SCG002 (operated by Scraggy Airlines, based at SIA)
 > *Also from LIA (Tue, Fri): OA 101 lands at SIA 09:34 → same SA103.*
 > Return: SA104 → SIA 12:30, then an OA flight home that day (e.g. OA 104 Mon 13:30, OA 103 Thu/Sun 15:10)
 > **[Book transfer (2 forms)]** → `book.html?to=mdm-wrong-wrong` · *Octmiles are only earned on the OA flight.*
@@ -542,7 +548,7 @@ Dates in "Next flights" are worked out from today and the timetable, and clickin
 
 One file is the single source of truth for the search, the Destinations cards, the booking form, the status board and the calendar:
 
-- `PLACES` — FIA, SIA, LIA, Scraggy House (`SCH`, Octee flies there) and Mdm Wrong-Wrong's (`MWW`), Lujin's (`LUJ`) (Scraggy Airlines only), with search nicknames.
+- `PLACES` — FIA, SIA, LIA, Scraggy House (`SCH`, Octee flies there) and MIA — Mdm Wrong-Wrong International Airport (`MIA`, flown by One United from FIA and Scraggy Airlines from SIA), and Lujin's (`LUJ`, Scraggy Airlines only), with search nicknames.
 - `OA_FLIGHTS` — the weekly timetable from §2; each flight is a list of stops `[airport, arrive, depart]`.
 - `segmentsOn(date, saRoutes)` — every bookable piece of every flight that day (any boarding stop → any later stop), plus the Scraggy flights from `js/scraggy.js`.
 - `itinerariesOn(from, to, date, saRoutes)` — every way to get there that day: direct, staying on board through stops, and up to 2 changes of plane with 45+ minutes at any airport.
@@ -554,6 +560,10 @@ Search order: OA direct match first, then partner (transfer) match, then FIA, th
 **Accessibility:** a real `<label>` (can be visually hidden), `role="combobox"` with `aria-expanded` and `aria-activedescendant` on the input, suggestions in a `role="listbox"`, and the results area as `aria-live="polite"` so screen readers hear "1 transfer flight found".
 
 ---
+
+### Page headings (all pages)
+
+Every page starts with the same heading block (`.hero`): a small spaced-out label (`.eyebrow`, e.g. `BAGGAGE · MAYBE`), then the page's tagline as a **very big, tight, bold sans heading in two tones** — first line dark, punchline in deep orange — on a soft cream-to-orange wash. Sizes use `clamp()` and the text wraps, so **every word always fits** (no clipping) from phone to desktop. Long punchlines use `.punch.long` (smaller). The Baggage page adds a three-column strip under the heading (`.trio`: Carry-on / Checked / Lost & found). Home keeps its dark orange hero and FIA its Mount Fuji photo, with the same type style in white.
 
 ## 6. Visual Design
 
@@ -602,7 +612,7 @@ Keep the site usable. The mess is the joke, not actual broken UX.
 
 ---
 
-## 7. Accounts, Octmiles, Codes & the Control Tower (static, no database)
+## 7. Accounts, Octmiles, Codes & FAG code administration (static, no database)
 
 GitHub Pages only serves static files: no server, no database. So everything that "remembers" something is saved **in the visitor's own browser** with `localStorage` (wrapped in `try/catch`, with a memory fallback, see `js/store.js`). Shared things that every visitor must see (codes, archived reviews, who may use the Control Tower) are **JSON files in the repo** under `data/`, changed by committing to GitHub.
 
@@ -612,7 +622,7 @@ GitHub Pages only serves static files: no server, no database. So everything tha
 | Reviews written on the site | `localStorage` (`octee.reviews`) | Only that browser |
 | Archived / published reviews | `data/reviews.json` | Everyone |
 | Octmiles codes (as SHA-256 hashes) | `data/codes.json` | Everyone (codes can't be read back from the hashes) |
-| Control Tower crew (password hashes) | `data/control-tower.json` | Everyone (passwords can't be read back) |
+| FAG administrators (password hashes) | `data/control-tower.json` | Everyone (passwords can't be read back) |
 | Timetable, places, Octmiles rates | `js/destinations.js` | Everyone |
 | Scraggy Airlines flights | Scraggy's `js/data.js` (live) or `js/scraggy-data-snapshot.js` | Everyone |
 
@@ -669,17 +679,23 @@ A second peanut (250, always out of stock) · Priority JOELMOBILE pickup (300) �
 - Once per code **per account** (remembered in that browser). A "max uses for everyone" limit isn't possible without a server, so it isn't offered.
 - At most **10 wrong codes per hour** per account.
 - Messages: *"+500 Octmiles! Please don't spend them all on one peanut."* · *"That code is not real. Like our on-time record."* · *"You already used this code. Nice try."* · *"This code has expired. Like your boarding pass."* · *"This code has been grounded."* · *"Too many wrong codes. Please wait an hour and think about what you've done."*
-- The repo ships with one welcome code: **`OCTEE500`** (500 Octmiles). Switch it off in the Control Tower if you don't want it.
+- The repo ships with one welcome code: **`OCTEE500`** (500 Octmiles). Switch it off in the FAG code administration if you don't want it.
 
-### 7.5 The Control Tower (secret code-maker, `js/control-tower.js`)
+### 7.5 FAG code administration (the secret code-maker, `js/control-tower.js`)
 
-- **Opening it:** click the Octee logo **8 times within 4 seconds** on any page. (A single click still goes Home.)
-- **Who gets in:** the owner and admins listed in `data/control-tower.json`, by **name + password**. Passwords are stored only as salted PBKDF2 hashes. Wrong password: *"The cockpit door is locked. The pilot is also locked out."* 5 wrong tries → 5-minute rest.
-- **First time** (no owner in the file yet): it asks Bo to choose the owner name and a strong password (12+ characters), then **downloads `control-tower.json`**. Put it in `data/`, commit and push.
-- **Codes tab:** make a code (type one or press **Random**, e.g. `OCT-7K2P`), set Octmiles (1–5,000), optional expiry and note; switch codes on/off; delete. Then **Download codes.json**, replace `data/codes.json`, commit and push. The plain code is shown once only, so write it down.
-- **Admins tab (owner only):** add an admin (name + their password) or remove one, then **Download control-tower.json** and commit it.
-- **The real lock is GitHub.** The Control Tower only prepares files in the browser. Nothing changes for anyone else until someone with push access to the repo commits them. So even if someone guessed the 8-click trick or a weak password, they couldn't publish anything.
-- Changes not yet published are kept in that browser (`octee.tower.*`) and the panel says *"You have changes that aren't published yet."*
+Clicking the Octee logo **8 times within 4 seconds** on any page opens a pop-up for **FAG — Fuji Airport Group**, asking the visitor to sign in to access the Octmiles points codes. (A single click still goes Home.)
+
+**This part looks serious on purpose.** It is the one place on the site with no jokes:
+
+- Plain corporate styling: white panel, dark grey text, square corners, a dark "FAG" mark, the heading **Fuji Airport Group** and the line "OCTMILES CODE ADMINISTRATION · RESTRICTED SYSTEM". No orange, no emojis, no punchlines.
+- Sign-in text: *"Authorised personnel only. Sign in to access the Octmiles points codes."* Fields: Name, Password. Button: **Sign in**.
+- **Wrong name or password: the pop-up vanishes instantly.** No error message, no hint, nothing left on the page. After 5 wrong tries it also closes instantly for the next 5 minutes, even with the right password.
+- **Who can sign in:** the owner and administrators listed in `data/control-tower.json`. Passwords are stored only as salted PBKDF2 hashes.
+- **First time** (no owner in the file yet): "Initial setup" asks for the owner name and a strong password (12+ characters), then **downloads `control-tower.json`**. Put it in `data/`, commit and push.
+- **Codes tab:** create a code (type one or press **Random**, e.g. `OCT-7K2P`), set Octmiles (1–5,000), optional expiry and note; switch codes on/off; delete. Then **Download codes.json**, replace `data/codes.json`, commit and push. The plain code is shown once only, so record it.
+- **Admins tab (owner only):** add an administrator (name + their password) or remove one, then **Download control-tower.json** and commit it.
+- **The real lock is GitHub.** This system only prepares files in the browser. Nothing changes for anyone else until someone with push access to the repo commits them. So even if someone found the 8-click trick or guessed a weak password, they couldn't publish anything.
+- Changes not yet published are kept in that browser (`octee.tower.*`) and the panel says "There are unpublished changes."
 
 ### 7.6 Reusing Scraggy's code
 
@@ -716,7 +732,7 @@ Octee-airline/
 ├── status.html         Today's FIA departures & arrivals (never ON TIME)
 ├── baggage.html        99% bag tracker
 ├── experience.html     One peanut
-├── fia.html            FIA map + tagline posters
+├── fia.html            Mount Fuji photo header, FIA map + tagline posters
 ├── joelmobile.html     "I'm a joel!"
 ├── oneunited.html      ONE UNITED: the OU airline, timetable, connections
 ├── reviews.html        4.9★* facade + real average + lost-with-baggage reviews
@@ -726,7 +742,7 @@ Octee-airline/
 ├── about.html  contact.html  404.html
 ├── css/styles.css      All styles (brand tokens at the top)
 ├── js/
-│   ├── config.js       Settings (time zones, Scraggy site URL, Control Tower clicks)
+│   ├── config.js       Settings (time zones, Scraggy site URL, logo clicks for the FAG sign-in)
 │   ├── main.js         Header, nav, account area, side clock, footer, 8-click logo
 │   ├── store.js        Safe localStorage / sessionStorage
 │   ├── dom.js          el() helper (textContent only), dates, toast
@@ -804,9 +820,9 @@ export const FIA_TAGLINES = [
 | M9 | Book a Flight: calendar, options, 6 steps, SIA form, boarding passes | ✅ |
 | M10 | JOELMOBILE | ✅ |
 | M11 | Reviews | ✅ |
-| M12 | Codes + Control Tower (static files) | ✅ |
+| M12 | Codes + FAG code administration (static files) | ✅ |
 | M12b | Orange theme, one range calendar for both dates, One United (OU) airline | ✅ |
-| M13 | Deploy to GitHub Pages; push Scraggy changes; Bo sets up the Control Tower owner | To do |
+| M13 | Deploy to GitHub Pages; push Scraggy changes; Bo creates the FAG owner account | To do |
 
 ---
 
@@ -832,10 +848,10 @@ export const FIA_TAGLINES = [
 - [x] Octmiles, tiers (lifetime), rewards, daily limit work
 - [x] Reviews: 4.9★* facade **and** the real average; 1–3★ are in "lost with your baggage", not removed
 - [x] "Have a code?" works with `data/codes.json` (hashes only), once per code per account, 10 wrong tries an hour
-- [x] 8 quick clicks on the logo open the Control Tower; it makes codes/admins and downloads the files to commit
+- [x] 8 quick clicks on the logo open the serious FAG (Fuji Airport Group) sign-in; a wrong password makes it vanish instantly; signed in, it makes codes/admins and downloads the files to commit
 - [x] The whole site revolves around orange (buttons, banners, calendar)
 - [x] One calendar picks the departure and arrival dates; the days between are shaded; Done saves
 - [x] ONE UNITED section ("unitation is a dream, it's chaos.") with OU 1–OU 8; OU flights connect with OA and SA and can be booked on the Octee form
-- [x] There is a way to and from Mdm Wrong-Wrong's and Lujin's every day (via OU or OA + SA)
+- [x] There is a way to and from MIA and Lujin's every day (via OU or OA + SA)
 - [x] Works on phones (no sideways scroll) and with reduced motion
 - [ ] Deployed to GitHub Pages

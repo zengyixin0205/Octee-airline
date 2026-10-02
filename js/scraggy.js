@@ -5,7 +5,7 @@ import { CONFIG } from "./config.js";
 import * as snapshot from "./scraggy-data-snapshot.js";
 
 // Scraggy's destination ids -> Octee place codes
-export const SCRAGGY_PLACE = { "scraggy-house": "SCH", "mdm-wrong-wrong": "MWW", lujin: "LUJ", fia: "FIA" };
+export const SCRAGGY_PLACE = { "scraggy-house": "SCH", "mdm-wrong-wrong": "MIA", lujin: "LUJ", fia: "FIA" };
 
 let cached = null;
 

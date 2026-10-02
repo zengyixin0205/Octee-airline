@@ -29,15 +29,15 @@ Things everyone sees live in `data/` and change when you commit:
 |---|---|
 | `data/codes.json` | Octmiles codes, stored only as hashes |
 | `data/reviews.json` | Published reviews |
-| `data/control-tower.json` | Who can use the Control Tower (password hashes only) |
+| `data/control-tower.json` | Who can sign in to the FAG code administration (password hashes only) |
 
-## The Control Tower (making codes)
+## FAG code administration (making codes)
 
-1. Click the Octee logo **8 times quickly** on any page.
-2. First time: choose your owner name and a strong password. It downloads `control-tower.json`. Put it in `data/`, commit, push.
-3. Make codes, then **Download codes.json**, replace `data/codes.json`, commit, push. The codes then work for everyone.
+1. Click the Octee logo **8 times quickly** on any page. A serious **FAG — Fuji Airport Group** sign-in appears.
+2. First time: create the owner account (strong password). It downloads `control-tower.json`. Put it in `data/`, commit, push.
+3. Sign in, create codes, then **Download codes.json**, replace `data/codes.json`, commit, push. The codes then work for everyone.
 
-Only people who can push to this repo can actually publish anything. The welcome code `OCTEE500` (500 Octmiles) is included.
+A wrong name or password makes the pop-up vanish instantly, with no message. Only people who can push to this repo can actually publish anything. The welcome code `OCTEE500` (500 Octmiles) is included.
 
 ## Scraggy Airlines
 

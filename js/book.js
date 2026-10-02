@@ -45,7 +45,7 @@ function backIts() {
 }
 const back = () => backIts()[state.backChoice] || null;
 const allLegs = () => [...(out() || []), ...(state.tripType === "return" ? back() || [] : [])];
-const needsSA = () => allLegs().some((s) => s.airline === "SA") || !!(PLACES[state.to] && !PLACES[state.to].oa);
+const needsSA = () => allLegs().some((s) => s.airline === "SA") || !!(PLACES[state.to] && !PLACES[state.to].oa && !allLegs().length);
 const needsOA = () => { const legs = allLegs(); return !legs.length || legs.some((s) => s.airline !== "SA"); };
 
 /* ---------------- steps ---------------- */
@@ -161,8 +161,8 @@ function dayInfoFor(fromP, toP, extra = {}) {
 function stepTrip() {
   const fromSel = el("select", { id: "from", onchange: (e) => update({ from: e.target.value, to: state.to === e.target.value ? (e.target.value === "FIA" ? "SIA" : "FIA") : state.to, outChoice: 0, backChoice: 0, departDate: "", returnDate: "" }) },
     OA_PLACES.map((c) => el("option", { value: c, selected: c === state.from }, placeName(c))));
-  const toSel = el("select", { id: "to", onchange: (e) => update({ to: e.target.value, outChoice: 0, backChoice: 0, departDate: "", returnDate: "", passengers: PLACES[e.target.value].oa ? state.passengers : 1 }) },
-    Object.keys(PLACES).filter((c) => c !== state.from).map((c) => el("option", { value: c, selected: c === state.to }, placeName(c) + (PLACES[c].oa ? "" : " — transfer via SIA (2 forms)"))));
+  const toSel = el("select", { id: "to", onchange: (e) => update({ to: e.target.value, outChoice: 0, backChoice: 0, departDate: "", returnDate: "", passengers: state.passengers }) },
+    Object.keys(PLACES).filter((c) => c !== state.from).map((c) => el("option", { value: c, selected: c === state.to }, placeName(c) + (c === "MIA" ? " (MIA)" : "") + (PLACES[c].oa ? "" : " — Scraggy Airlines only, via SIA (2 forms)"))));
   const paxSel = el("select", { id: "passengers", disabled: needsSA(), onchange: (e) => update({ passengers: +e.target.value, names: state.names.slice(0, +e.target.value) }) },
     Array.from({ length: 9 }, (_, i) => el("option", { value: i + 1, selected: state.passengers === i + 1 }, String(i + 1))));
   // One calendar for both dates (like an airline app): tap the departure day, then the arrival day, then Done.

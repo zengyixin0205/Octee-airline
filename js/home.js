@@ -11,7 +11,7 @@ mountSearchBox($("#home-search"), { onSearch: goSearch });
 const qf = $("#quick-find");
 const from = qf.elements.from, to = qf.elements.to;
 OA_PLACES.forEach((c) => { from.append(el("option", { value: c }, placeName(c))); to.append(el("option", { value: c }, placeName(c))); });
-to.append(el("option", { value: "MWW" }, "Mdm Wrong-Wrong's (via Scraggy Airlines)"), el("option", { value: "LUJ" }, "Lujin's (via Scraggy Airlines)"));
+to.append(el("option", { value: "LUJ" }, "Lujin's (via Scraggy Airlines)"));
 from.value = "FIA"; to.value = "SIA";
 qf.addEventListener("submit", (e) => {
   e.preventDefault();

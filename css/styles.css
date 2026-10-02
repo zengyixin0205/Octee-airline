@@ -327,3 +327,87 @@ details.lost summary { cursor: pointer; font-weight: 700; color: var(--octee-ink
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .btn.dodge:hover { transform: none; }
 }
+
+/* ---------- FAG (Fuji Airport Group) code administration: deliberately serious, plain corporate ---------- */
+.fag-back { background: rgba(20, 24, 28, .72); }
+.modal.fag { background: #ffffff; color: #1f2933; border: 1px solid #c7ccd1; border-radius: 6px; font-family: var(--sans); max-width: 760px; padding: 0 22px 20px; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+.modal.fag .close-x { color: #52606d; margin-top: 14px; }
+.fag-head { display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #d9dde1; padding: 18px 0 14px; margin-bottom: 14px; }
+.fag-mark { background: #1f2933; color: #ffffff; font-weight: 700; letter-spacing: 3px; padding: 10px 12px; border-radius: 3px; font-size: 1.05rem; }
+.modal.fag h2 { font-family: var(--sans); color: #1f2933; font-size: 1.25rem; margin: 0; letter-spacing: .3px; }
+.modal.fag h3 { font-family: var(--sans); color: #1f2933; font-size: 1.05rem; margin: 0 0 8px; }
+.fag-sub { margin: 2px 0 0; font-size: .8rem; color: #52606d; text-transform: uppercase; letter-spacing: 1.2px; }
+.modal.fag .card { background: #f7f8f9; color: #1f2933; border: 1px solid #d9dde1; border-radius: 4px; box-shadow: none; }
+.modal.fag table.plain { background: #fff; border-radius: 0; }
+.modal.fag table.plain th { background: #1f2933; color: #fff; }
+.modal.fag table.plain td { border-color: #d9dde1; }
+.modal.fag .note, .modal.fag .hint { color: #52606d; }
+.modal.fag input, .modal.fag select, .modal.fag textarea { background: #fff; color: #1f2933; border: 1px solid #9aa5b1; border-radius: 3px; }
+.modal.fag .btn { background: #1f2933; color: #fff; border-radius: 3px; font-weight: 600; }
+.modal.fag .btn:hover { background: #323f4b; color: #fff; }
+.modal.fag .btn.secondary, .modal.fag .btn.ghost { background: #fff; color: #1f2933; border: 1px solid #1f2933; }
+.modal.fag .btn.danger { color: #b42318; border-color: #b42318; }
+.modal.fag .tabs button { background: #fff; color: #1f2933; border: 1px solid #1f2933; border-radius: 3px; }
+.modal.fag .tabs button[aria-selected="true"] { background: #1f2933; color: #fff; }
+.modal.fag .tag { background: #e4e7eb; color: #1f2933; border-radius: 3px; text-transform: uppercase; font-size: .72rem; letter-spacing: .8px; }
+.modal.fag .msg { border-radius: 3px; }
+.modal.fag .msg.info { border: 1px solid #9aa5b1; }
+.modal.fag :focus-visible { outline: 2px solid #1f2933; }
+
+/* ---------- FIA page: Mount Fuji photo header ---------- */
+.hero.photo { position: relative; margin: 0 -16px; min-height: clamp(320px, 52vw, 560px); border-radius: 0 0 24px 24px; overflow: hidden;
+  background: #8a97a6 center 58% / cover no-repeat; display: flex; align-items: flex-start; }
+.hero.photo.fuji { background-image: linear-gradient(180deg, rgba(30,16,6,.72) 0%, rgba(30,16,6,.42) 34%, rgba(30,16,6,0) 62%), url("../assets/img/fuji.jpg"); }
+.hero.photo .photo-text { padding: 28px 18px 0; max-width: 760px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.45); }
+.hero.photo .headline { color: #fff; }
+.hero.photo .punch { color: #ffd9b0; }
+.hero.photo .sub { color: #fff; }
+
+/* ---------- Route map ---------- */
+#route-map svg { width: 100%; height: auto; display: block; border-radius: 10px; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin-top: 10px; font-size: .88rem; font-weight: 600; }
+.swatch { display: inline-block; width: 26px; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 6px; border: 1px solid rgba(43,26,14,.45); }
+.swatch.oa { background: var(--oa); } .swatch.ou { background: var(--ou); } .swatch.sa { background: var(--sa); }
+@media (max-width: 640px) {
+  .hero.photo { min-height: 520px; background-position: 42% 100%; }
+  .hero.photo.fuji { background-image: linear-gradient(180deg, rgba(30,16,6,.82) 0%, rgba(30,16,6,.6) 40%, rgba(30,16,6,0) 62%), url("../assets/img/fuji.jpg"); }
+  .hero.photo .photo-text { padding-top: 20px; }
+}
+
+/* ---------- Page headings: small label + very big two-tone heading on a soft orange wash ---------- */
+.hero { margin: 0 -16px 24px; padding: clamp(34px, 7vw, 84px) clamp(18px, 6vw, 72px) clamp(30px, 6vw, 70px);
+  background: linear-gradient(118deg, #fffefb 0%, #fff3e6 46%, #ffdcb8 100%); border-radius: 0 0 24px 24px; }
+.hero.flat { border-radius: 0; margin-bottom: 0; }
+.eyebrow { font-family: var(--sans); font-weight: 800; font-size: .8rem; line-height: 1.3; letter-spacing: .26em; text-transform: uppercase; color: var(--octee-ink); margin: 0 0 clamp(18px, 4vw, 46px); }
+.hero .headline { font-family: var(--sans); font-weight: 800; font-size: clamp(2.3rem, 8.4vw, 5.6rem); line-height: .98; letter-spacing: -.045em; overflow-wrap: break-word; text-wrap: balance; max-width: 16ch; }
+.hero .headline .punch { font-family: inherit; font-weight: inherit; font-style: normal; font-size: 1em; color: var(--octee-orange-deep); margin-top: .06em; }
+.hero .headline .punch.long { font-size: .56em; line-height: 1.04; letter-spacing: -.03em; margin-top: .32em; max-width: 22ch; }
+.hero .headline .punch.small { font-size: .36em; letter-spacing: -.01em; line-height: 1.15; margin-top: .5em; }
+.hero .sub { margin-top: clamp(16px, 3vw, 28px); }
+.hero.sky .headline { font-size: clamp(2.2rem, 7.4vw, 4.8rem); max-width: none; }
+.hero.sky .headline .punch, .hero.photo .headline .punch { color: #ffd9b0; }
+.hero.sky .eyebrow, .hero.photo .eyebrow { color: #fff; }
+.rotator { min-height: clamp(9.5rem, 26vw, 16.5rem); }
+.hero.photo { padding: 0; margin-bottom: 24px; min-height: clamp(420px, 58vw, 640px); }
+.hero.photo .photo-text { padding: clamp(26px, 5vw, 56px) clamp(18px, 6vw, 72px) 0; max-width: none; }
+.hero.photo .headline { font-size: clamp(2.2rem, 6.4vw, 4.4rem); max-width: 18ch; }
+.hero.photo .eyebrow { margin-bottom: clamp(12px, 2vw, 22px); }
+
+/* three-column strip under a heading */
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 -16px 24px; background: #fff; border-radius: 0 0 24px 24px; overflow: hidden; box-shadow: 0 6px 18px rgba(43,26,14,.06); }
+.trio > div { padding: clamp(20px, 4vw, 44px) clamp(18px, 4vw, 56px); border-left: 1px solid #e4d5c4; }
+.trio > div:first-child { border-left: 0; }
+.trio h2 { font-family: var(--sans); font-weight: 800; letter-spacing: -.02em; font-size: 1.35rem; margin: 0 0 10px; }
+.trio p { margin: 0; color: #5a4f45; max-width: 30ch; }
+@media (max-width: 700px) { .trio { grid-template-columns: 1fr; } .trio > div { border-left: 0; border-top: 1px solid #e4d5c4; } .trio > div:first-child { border-top: 0; } }
+
+/* ---------- FIA airport map ---------- */
+.fia-map { padding: 14px; }
+.map-scroll { overflow-x: auto; border-radius: 10px; }
+.map-scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
+.swatch.route { background: repeating-linear-gradient(90deg, #c25500 0 4px, transparent 4px 9px); border: 0; }
+.swatch.air { background: #ffe2c2; height: 12px; }
+@media (max-width: 640px) {
+  .hero.photo { min-height: 660px; background-position: 42% 100%; }
+  .hero.photo.fuji { background-image: linear-gradient(180deg, rgba(30,16,6,.86) 0%, rgba(30,16,6,.7) 46%, rgba(30,16,6,0) 66%), url("../assets/img/fuji.jpg"); }
+}

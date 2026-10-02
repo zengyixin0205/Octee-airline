@@ -84,7 +84,7 @@ export async function renderResults(box, query, from) {
   }
   const hasSA = upcoming.some((u) => u.it.some((s) => s.airline === "SA"));
   const direct = upcoming[0].it.length === 1;
-  const title = !PLACES[to].oa ? `🔁 Transfer flight — Octee Airlines does not fly to ${placeName(to)}.`
+  const title = !PLACES[to].oa ? `🔁 Transfer flight — only Scraggy Airlines flies to ${placeName(to)}.`
     : direct ? `✈ ${placeName(from)} → ${placeName(to)}` : `🔁 ${placeName(from)} → ${placeName(to)} with a change`;
   const card = el("article", { class: "card result" + (hasSA ? " transfer" : "") }, el("h3", {}, title));
   for (const u of upcoming) {

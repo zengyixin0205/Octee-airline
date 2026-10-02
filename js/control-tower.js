@@ -1,4 +1,5 @@
-// The Control Tower — secret code-maker. Opened by clicking the Octee logo 8 times quickly.
+// FAG (Fuji Airport Group) code administration — opened by clicking the Octee logo 8 times quickly.
+// This part is deliberately SERIOUS: plain corporate look, no jokes. A wrong password closes it instantly, with no message.
 //
 // This is a STATIC site, so there is no server to keep secrets or save codes. Instead:
 //  * Who may enter is in data/control-tower.json (owner + admins, passwords stored only as PBKDF2 hashes).
@@ -29,10 +30,13 @@ function download(filename, data) {
 
 function shell(...content) {
   back?.remove();
-  back = el("div", { class: "modal-back", role: "dialog", "aria-modal": "true", "aria-label": "Control Tower" },
-    el("div", { class: "modal" },
+  back = el("div", { class: "modal-back fag-back", role: "dialog", "aria-modal": "true", "aria-label": "FAG Fuji Airport Group, Octmiles code administration" },
+    el("div", { class: "modal fag" },
       el("button", { class: "close-x", type: "button", "aria-label": "Close", onclick: () => back.remove() }, "×"),
-      el("h2", {}, "🗼 Octee Control Tower"), ...content));
+      el("div", { class: "fag-head" },
+        el("div", { class: "fag-mark", "aria-hidden": "true" }, "FAG"),
+        el("div", {}, el("h2", {}, "Fuji Airport Group"), el("p", { class: "fag-sub" }, "Octmiles Code Administration · Restricted system"))),
+      ...content));
   back.addEventListener("keydown", (e) => { if (e.key === "Escape") back.remove(); });
   back.addEventListener("click", (e) => { if (e.target === back) back.remove(); });
   document.body.append(back);
@@ -51,23 +55,23 @@ export async function openControlTower() {
 function setupOwner() {
   const msg = el("p", { class: "msg", "aria-live": "polite" });
   const form = el("form", { class: "card" },
-    el("h3", {}, "First time here, Captain?"),
-    el("p", {}, "No owner is set up yet. Choose the owner name and a strong password. You'll download ", el("code", {}, "control-tower.json"), " and put it in the ", el("code", {}, "data/"), " folder of the website, then commit and push."),
+    el("h3", {}, "Initial setup"),
+    el("p", {}, "No administrator account exists yet. Create the owner account with a strong password. You will download ", el("code", {}, "control-tower.json"), " and put it in the ", el("code", {}, "data/"), " folder of the website, then commit and push."),
     el("div", { class: "row" },
       el("div", { class: "field" }, el("label", { for: "ct-name" }, "Owner name"), el("input", { type: "text", id: "ct-name", maxlength: "30", autocomplete: "username" })),
       el("div", { class: "field" }, el("label", { for: "ct-pass" }, "Password (12+ characters)"), el("input", { type: "password", id: "ct-pass", autocomplete: "new-password" }))),
-    el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Create owner + download file")), msg);
+    el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Create owner account")), msg);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = form.querySelector("#ct-name").value.trim(), pass = form.querySelector("#ct-pass").value;
-    if (name.length < 2) return setMsg(msg, "Pick a name.", "error");
-    if (pass.length < 12) return setMsg(msg, "Use at least 12 characters. The hash is public, so the password must be strong.", "error");
+    if (name.length < 2) return setMsg(msg, "Enter a name.", "error");
+    if (pass.length < 12) return setMsg(msg, "The password must be at least 12 characters.", "error");
     const salt = randomSalt();
     const crew = { owner: { name, salt, hash: await hashPassword(pass, salt) }, admins: [] };
     save(DRAFT_CREW, crew);
     download("control-tower.json", crew);
     saveSession(SESSION, { name, role: "owner" });
-    tower({ name, role: "owner" }, crew, "Downloaded control-tower.json. Put it in the website's data/ folder, then commit and push.");
+    tower({ name, role: "owner" }, crew, "control-tower.json downloaded. Place it in the website's data/ folder, then commit and push.");
   });
   shell(form);
 }
@@ -76,15 +80,16 @@ function setupOwner() {
 function login(crew) {
   const msg = el("p", { class: "msg", "aria-live": "polite" });
   const form = el("form", { class: "card" },
-    el("p", {}, "Captains only. Please identify yourself."),
+    el("h3", {}, "Sign in"),
+    el("p", {}, "Authorised personnel only. Sign in to access the Octmiles points codes."),
     el("div", { class: "row" },
       el("div", { class: "field" }, el("label", { for: "ct-name" }, "Name"), el("input", { type: "text", id: "ct-name", autocomplete: "username" })),
       el("div", { class: "field" }, el("label", { for: "ct-pass" }, "Password"), el("input", { type: "password", id: "ct-pass", autocomplete: "current-password" }))),
-    el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Enter the cockpit")), msg);
+    el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Sign in")), msg);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const lock = loadSession(LOCK, { fails: 0, until: 0 });
-    if (Date.now() < lock.until) return setMsg(msg, "Too many tries. The cockpit door is resting. Try again in a few minutes.", "error");
+    if (Date.now() < lock.until) { back.remove(); return; }   // locked out after 5 wrong tries: just close
     const name = form.querySelector("#ct-name").value.trim(), pass = form.querySelector("#ct-pass").value;
     const people = [{ ...crew.owner, role: "owner" }, ...(crew.admins || []).map((a) => ({ ...a, role: "admin" }))];
     const who = people.find((p) => p.name.toLowerCase() === name.toLowerCase());
@@ -96,7 +101,7 @@ function login(crew) {
     }
     const fails = lock.fails + 1;
     saveSession(LOCK, { fails: fails >= 5 ? 0 : fails, until: fails >= 5 ? Date.now() + 5 * 60_000 : 0 });
-    setMsg(msg, "The cockpit door is locked. The pilot is also locked out.", "error");
+    back.remove();   // wrong name or password: the pop-up vanishes instantly, with no message
   });
   shell(form);
 }
@@ -123,7 +128,7 @@ async function tower(session, crew, notice = "") {
     const msg = el("p", { class: "msg", "aria-live": "polite" });
     const made = el("div");
     const form = el("form", { class: "card" },
-      el("h3", {}, "Make a code"),
+      el("h3", {}, "Create a code"),
       el("div", { class: "row" },
         el("div", { class: "field" }, el("label", { for: "nc-code" }, "Code"), el("input", { type: "text", id: "nc-code", maxlength: "20", placeholder: "e.g. OCTEE500" })),
         el("div", { class: "field", style: "justify-content:flex-end" }, el("button", { class: "btn small secondary", type: "button", onclick: () => {
@@ -133,8 +138,8 @@ async function tower(session, crew, notice = "") {
       el("div", { class: "row" },
         el("div", { class: "field" }, el("label", { for: "nc-miles" }, "Octmiles (1–5,000)"), el("input", { type: "number", id: "nc-miles", min: "1", max: "5000", value: "500" })),
         el("div", { class: "field" }, el("label", { for: "nc-exp" }, "Expires (optional)"), el("input", { type: "date", id: "nc-exp" })),
-        el("div", { class: "field" }, el("label", { for: "nc-note" }, "Note (only in the file)"), el("input", { type: "text", id: "nc-note", maxlength: "60", placeholder: "For class 4B" }))),
-      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Make code")), msg, made);
+        el("div", { class: "field" }, el("label", { for: "nc-note" }, "Note (only in the file)"), el("input", { type: "text", id: "nc-note", maxlength: "60", placeholder: "Internal reference" }))),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Create code")), msg, made);
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const code = normalizeCode(form.querySelector("#nc-code").value);
@@ -145,7 +150,7 @@ async function tower(session, crew, notice = "") {
       if (codes.some((c) => c.hash === hash)) return setMsg(msg, "That code already exists.", "error");
       saveCodes([...codes, { hash, octmiles: miles, expires: form.querySelector("#nc-exp").value || null, active: true,
         note: form.querySelector("#nc-note").value.trim() || null, madeBy: session.name, made: new Date().toISOString().slice(0, 10) }]);
-      body.prepend(el("p", { class: "msg ok" }, `Code ${code} made (${miles} Octmiles). Write it down: the file only keeps a hash, so it can't be shown again. Download codes.json and commit it to make it work for everyone.`));
+      body.prepend(el("p", { class: "msg ok" }, `Code ${code} created (${miles} Octmiles). Record it now: only a hash is stored, so it cannot be displayed again. Download codes.json and commit it to publish the code.`));
     });
     const changed = JSON.stringify(codes) !== JSON.stringify(published.codes || []);
     return el("div", {},
@@ -159,11 +164,11 @@ async function tower(session, crew, notice = "") {
             el("td", {}, String(c.octmiles)), el("td", {}, c.expires || "never"), el("td", {}, c.madeBy || "—"),
             el("td", {}, el("input", { type: "checkbox", checked: c.active !== false, "aria-label": "Code switched on",
               onchange: (e) => saveCodes(codes.map((x, k) => (k === i ? { ...x, active: e.target.checked } : x))) })),
-            el("td", {}, el("button", { class: "btn small ghost", type: "button", style: "color:#ffb4b4;border-color:#ffb4b4", onclick: () => saveCodes(codes.filter((_, k) => k !== i)) }, "Delete"))))))) : el("p", { class: "note" }, "No codes yet."),
-        el("p", { class: changed ? "msg info" : "note" }, changed ? "You have changes that aren't published yet." : "Matches the published data/codes.json."),
+            el("td", {}, el("button", { class: "btn small ghost danger", type: "button", onclick: () => saveCodes(codes.filter((_, k) => k !== i)) }, "Delete"))))))) : el("p", { class: "note" }, "No codes yet."),
+        el("p", { class: changed ? "msg info" : "note" }, changed ? "There are unpublished changes." : "Matches the published data/codes.json."),
         el("div", { class: "actions" },
           el("button", { class: "btn", type: "button", onclick: () => download("codes.json", { codes }) }, "Download codes.json"),
-          el("button", { class: "btn small ghost", type: "button", style: "color:var(--octee-orange);border-color:var(--octee-orange)", onclick: () => { remove(DRAFT_CODES); codes = published.codes || []; show("codes"); } }, "Undo my changes")),
+          el("button", { class: "btn small ghost", type: "button", onclick: () => { remove(DRAFT_CODES); codes = published.codes || []; show("codes"); } }, "Discard changes")),
         el("p", { class: "hint" }, "To publish: put the downloaded codes.json in the website's data/ folder (replace the old one), commit and push. GitHub Pages updates in about a minute, then the codes work on every device.")));
   }
 
@@ -171,7 +176,7 @@ async function tower(session, crew, notice = "") {
     const msg = el("p", { class: "msg", "aria-live": "polite" });
     const form = el("form", { class: "card" },
       el("h3", {}, "Add an admin"),
-      el("p", { class: "note" }, "Admins can make codes. Only you (the owner) can add or remove admins."),
+      el("p", { class: "note" }, "Administrators can create codes. Only the owner can add or remove administrators."),
       el("div", { class: "row" },
         el("div", { class: "field" }, el("label", { for: "na-name" }, "Name"), el("input", { type: "text", id: "na-name", maxlength: "30" })),
         el("div", { class: "field" }, el("label", { for: "na-pass" }, "Their password (12+ characters)"), el("input", { type: "password", id: "na-pass", autocomplete: "new-password" }))),
@@ -192,7 +197,7 @@ async function tower(session, crew, notice = "") {
         el("table", { class: "plain" }, el("tbody", {},
           el("tr", {}, el("td", {}, crew.owner.name), el("td", {}, "Owner"), el("td", {})),
           crew.admins.map((a, i) => el("tr", {}, el("td", {}, a.name), el("td", {}, "Admin · added " + (a.added || "")),
-            el("td", {}, el("button", { class: "btn small ghost", type: "button", style: "color:#ffb4b4;border-color:#ffb4b4", onclick: () => {
+            el("td", {}, el("button", { class: "btn small ghost danger", type: "button", onclick: () => {
               crew = { ...crew, admins: crew.admins.filter((_, k) => k !== i) }; save(DRAFT_CREW, crew); body.replaceChildren(crewPanel());
             } }, "Remove"))))))),
       form,
@@ -202,11 +207,11 @@ async function tower(session, crew, notice = "") {
 
   shell(
     top,
-    el("p", {}, `Welcome to the Control Tower, Captain ${session.name}. `, el("span", { class: "tag" }, session.role),
-      " ", el("button", { class: "btn small ghost", type: "button", style: "color:var(--octee-orange);border-color:var(--octee-orange)", onclick: () => { removeSession(SESSION); back.remove(); } }, "Leave")),
+    el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
+      " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
     el("div", { class: "tabs", role: "tablist" }, tabCodes, tabCrew),
     body,
-    el("p", { class: "hint" }, "This is a static website: the Control Tower only prepares files. Nothing changes for other people until you commit them to GitHub."));
+    el("p", { class: "hint" }, "This system only prepares files. No change takes effect for other users until the files are committed to the repository."));
   if (!notice) top.remove();
   show("codes");
 }

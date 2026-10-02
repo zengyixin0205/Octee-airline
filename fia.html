@@ -16,28 +16,114 @@
 <body>
 <div id="site-header"></div>
 <main id="main">
-<section class="hero">
-  <h1 class="headline">Fuji International Airport<span class="punch">LOST? we will make you more lost</span></h1>
-  <p class="sub">Octee's home base, part of FAG (Fuji Airport Group). Gates FIA01 to FIA12. Probably in that order.</p>
+<section class="hero photo fuji" role="img" aria-label="Mount Fuji, snow on its peak, above the town, with a red pagoda on the right">
+  <div class="photo-text">
+    <p class="eyebrow">FIA Airport · Somewhere</p>
+    <h1 class="headline">Fuji International Airport<span class="punch long">LOST? we will make you more lost</span></h1>
+    <p class="sub">Octee's home base, part of FAG (Fuji Airport Group). Gates FIA01 to FIA12. Probably in that order.</p>
+  </div>
 </section>
-<figure class="card route-map">
-  <svg viewBox="0 0 640 260" role="img" aria-labelledby="fia-t fia-d">
-    <title id="fia-t">FIA terminal map</title>
-    <desc id="fia-d">A deliberately confusing terminal map. Gates 1 to 12 are in a loop, arrows point both ways, and "You are here" appears twice.</desc>
-    <rect x="20" y="20" width="600" height="220" rx="24" fill="#fff3e6" stroke="#2b1a0e" stroke-width="3"/>
-    <path d="M60 130 C 160 40, 260 220, 360 130 S 560 40, 590 130" stroke="#ff7a00" stroke-width="6" fill="none"/>
-    <g font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#2b1a0e">
-      <text x="60" y="60">FIA01</text><text x="150" y="210">FIA07</text><text x="240" y="60">FIA03</text><text x="330" y="210">FIA12</text>
-      <text x="420" y="60">FIA05</text><text x="510" y="210">FIA02</text><text x="540" y="60">FIA09</text><text x="90" y="210">FIA11</text>
-      <text x="260" y="140" fill="#c03a3a">★ You are here</text><text x="470" y="140" fill="#c03a3a">★ You are also here</text>
-      <text x="40" y="140">← Departures →</text>
-    </g>
-  </svg>
-  <figcaption class="note" id="named-gate">Signs are updated hourly, at random.</figcaption>
+<h2>Airport map</h2>
+<figure class="card fia-map">
+  <div class="map-scroll" tabindex="0" role="group" aria-label="FIA map (scroll sideways on small screens)">
+<svg viewBox="0 0 1000 650" role="img" aria-labelledby="fia-t fia-d">
+<title id="fia-t">Map of Fuji International Airport (FIA)</title>
+<desc id="fia-d">From top to bottom: the single runway 09/27 with Mount Fuji behind it; the apron with aircraft parked at twelve gates; the departures concourse with gates FIA01 to FIA12, not quite in order; the terminal with the check-in hall for Octee Airlines, One United and Scraggy Airlines on the left, security, the Octee Lounge and the One Peanut Bar in the middle, and baggage claim and a very large Lost and Found on the right; the control tower on the left and the Mount Fuji viewing deck on the right; then the drop-off road with the JOELMOBILE stop, the car park, FIA Station and the Fuji Airport Group head office. The JOELMOBILE route loops around the terminal. "You are here" appears twice.</desc>
+<rect width="1000" height="650" fill="#e4edc7"/>
+<path d="M838,92 L900,22 L962,92 Z" fill="#7d8fa3" stroke="#52606d"/><path d="M880,45 L900,22 L920,45 L911,40 L900,50 L889,40 Z" fill="#fff"/>
+<text x="900" y="106" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="500" fill="#3d4852" font-style="italic">Mt Fuji (not a gate)</text>
+<rect x="40" y="32" width="780" height="42" rx="4" fill="#4c4640"/><path d="M110,53 H750" stroke="#fff" stroke-width="3" stroke-dasharray="26 18"/>
+<text x="68" y="59" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#fff" >09</text><text x="794" y="59" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#fff" >27</text>
+<text x="430" y="24" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >RUNWAY 09 / 27 · the only one</text>
+<rect x="120" y="74" width="26" height="20" fill="#8d857c"/><rect x="714" y="74" width="26" height="20" fill="#8d857c"/><rect x="40" y="94" width="780" height="14" fill="#8d857c"/>
+<text x="430" y="105" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#fff" letter-spacing="1.5">TAXIWAY A · please queue</text>
+<rect x="90" y="108" width="820" height="118" fill="#dcd7d0"/>
+<text x="98" y="124" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800" fill="#4c4640" letter-spacing="2">APRON</text>
+<rect x="90" y="226" width="820" height="56" fill="#ffe2c2" stroke="#2b1a0e" stroke-width="2.5"/>
+<rect x="120" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M125,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#ff7a00" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="125" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA01</text>
+<rect x="188" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M193,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#ff7a00" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="193" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA02</text>
+<rect x="256" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<text x="261" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="9.5" font-weight="500" fill="#4c4640" font-style="italic">delayed</text>
+<text x="261" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA03</text>
+<rect x="324" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M329,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#a8dcf7" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="329" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA07</text>
+<rect x="392" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M397,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#ff7a00" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="397" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA05</text>
+<rect x="460" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<text x="465" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="9.5" font-weight="500" fill="#4c4640" font-style="italic">delayed</text>
+<text x="465" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA06</text>
+<rect x="528" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M533,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#fff1a8" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="533" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA04</text>
+<rect x="596" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M601,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#ff7a00" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="601" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA08</text>
+<rect x="664" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M669,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#a8dcf7" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="669" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA09</text>
+<rect x="732" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<text x="737" y="168" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="9.5" font-weight="500" fill="#4c4640" font-style="italic">delayed</text>
+<text x="737" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA10</text>
+<rect x="800" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M805,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#ff7a00" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="805" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA12</text>
+<rect x="868" y="188" width="10" height="38" fill="#a59c91" stroke="#2b1a0e" stroke-width="1"/>
+<path d="M873,130 q5,6 5,16 l20,12 v5 l-20,-5 v12 l7,6 v4 l-12,-3 l-12,3 v-4 l7,-6 v-12 l-20,5 v-5 l20,-12 q0,-10 5,-16z" fill="#a8dcf7" stroke="#2b1a0e" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="873" y="247" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA11</text>
+<text x="500" y="275" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800" fill="#7a3d00" letter-spacing="2">DEPARTURES CONCOURSE · AFTER SECURITY</text>
+<rect x="200" y="282" width="600" height="220" fill="#fff" stroke="#2b1a0e" stroke-width="2.5"/>
+<rect x="420" y="282" width="160" height="52" fill="#ffd9b0" stroke="#2b1a0e" stroke-width="1.5"/><text x="500.0" y="306.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >SECURITY &amp; PASSPORTS</text><text x="500.0" y="323.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >shoes off, hopes off</text>
+<rect x="420" y="334" width="160" height="82" fill="#fff3e6" stroke="#2b1a0e" stroke-width="1.5"/><text x="500.0" y="373.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >OCTEE LOUNGE</text><text x="500.0" y="390.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >one chair, shared</text>
+<rect x="420" y="416" width="160" height="86" fill="#fff" stroke="#2b1a0e" stroke-width="1.5"/><text x="500.0" y="457.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >ONE PEANUT BAR</text><text x="500.0" y="474.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >menu: peanut (1)</text>
+<text x="214" y="304" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >CHECK-IN HALL</text>
+<rect x="214" y="318" width="62" height="16" rx="3" fill="#ff7a00" stroke="#2b1a0e" stroke-width="1.2"/><text x="284" y="330" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#2b1a0e" >Octee (OA) desks 1–8</text>
+<rect x="214" y="351" width="62" height="16" rx="3" fill="#a8dcf7" stroke="#2b1a0e" stroke-width="1.2"/><text x="284" y="363" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#2b1a0e" >One United (OU) 9–12</text>
+<rect x="214" y="384" width="62" height="16" rx="3" fill="#fff1a8" stroke="#2b1a0e" stroke-width="1.2"/><text x="284" y="396" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#2b1a0e" >Scraggy (SA) 13–14</text>
+<path d="M200,432 H420 M310,432 V502" stroke="#2b1a0e" stroke-width="1.5" fill="none"/>
+<text x="255" y="462" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="#2b1a0e" >Information</text><text x="255" y="478" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >(closed)</text>
+<text x="365" y="462" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="#2b1a0e" >Toilets</text><text x="365" y="478" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >follow the queue</text>
+<text x="594" y="304" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >BAGGAGE CLAIM</text>
+<rect x="594" y="316" width="64" height="24" rx="12" fill="#dcd7d0" stroke="#2b1a0e" stroke-width="1.5"/><rect x="606" y="324" width="40" height="8" rx="4" fill="#fff" stroke="#2b1a0e" stroke-width="1"/><text x="666" y="332" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#2b1a0e" >1 · your bags (maybe)</text>
+<rect x="594" y="352" width="64" height="24" rx="12" fill="#dcd7d0" stroke="#2b1a0e" stroke-width="1.5"/><rect x="606" y="360" width="40" height="8" rx="4" fill="#fff" stroke="#2b1a0e" stroke-width="1"/><text x="666" y="368" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#2b1a0e" >2 · not your bags</text>
+<rect x="580" y="392" width="220" height="110" fill="#ffe2c2" stroke="#2b1a0e" stroke-width="1.5"/>
+<text x="690" y="432" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="800" fill="#2b1a0e" >LOST &amp; FOUND</text><text x="690" y="450" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >the biggest room in the airport</text>
+<rect x="286" y="499" width="48" height="6" fill="#fff"/><rect x="666" y="499" width="48" height="6" fill="#fff"/>
+<text x="310" y="516" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800" fill="#2b1a0e" >▲ Departures in</text><text x="690" y="516" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="800" fill="#2b1a0e" >▼ Arrivals out</text>
+<text x="310" y="421" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="#b3261e" >★ You are here</text><text x="690" y="478" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="#b3261e" >★ You are also here</text>
+<rect x="126" y="330" width="16" height="74" fill="#a59c91" stroke="#2b1a0e" stroke-width="1.5"/><path d="M112,330 L118,306 H150 L156,330 Z" fill="#a8dcf7" stroke="#2b1a0e" stroke-width="1.5"/>
+<text x="134" y="422" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#2b1a0e" >Control tower</text><text x="134" y="436" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >(on a break)</text>
+<rect x="846" y="318" width="100" height="62" rx="8" fill="#fff" stroke="#2b1a0e" stroke-width="1.5"/><path d="M896,318 L930,270" stroke="#2b1a0e" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="896" y="344" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="#2b1a0e" >Mt Fuji</text><text x="896" y="359" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="#2b1a0e" >viewing deck</text><text x="896" y="394" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >(cloudy since 1998)</text>
+<rect x="40" y="524" width="920" height="30" fill="#8d857c"/><path d="M50,539 H950" stroke="#fff" stroke-width="2" stroke-dasharray="14 12"/>
+<path d="M500,524 H182 V257 H818 V524 Z" fill="none" stroke="#c25500" stroke-width="3.5" stroke-dasharray="1 8" stroke-linecap="round"/>
+<rect x="432" y="510" width="136" height="24" rx="12" fill="#ff7a00" stroke="#2b1a0e" stroke-width="2"/><text x="500" y="526" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#2b1a0e" >JOELMOBILE stop</text>
+<text x="60" y="570" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#2b1a0e" >Drop-off road · one way, both ways</text>
+<rect x="40" y="580" width="270" height="56" rx="6" fill="#dcd7d0" stroke="#2b1a0e" stroke-width="1.5"/><path d="M60,580 v20 M90,580 v20 M120,580 v20 M150,580 v20 M180,580 v20 M210,580 v20 M240,580 v20 M270,580 v20" stroke="#fff" stroke-width="2"/>
+<text x="175" y="618" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >P · Car park</text><text x="175" y="631" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >your car is also lost</text>
+<rect x="350" y="580" width="300" height="56" rx="6" fill="#fff" stroke="#2b1a0e" stroke-width="1.5"/><path d="M350,592 H650" stroke="#2b1a0e" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="500" y="614" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#2b1a0e" >FIA STATION · trains &amp; buses</text><text x="500" y="629" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#4c4640" >next train: eventually</text>
+<rect x="690" y="580" width="270" height="56" rx="2" fill="#eef1f4" stroke="#1f2933" stroke-width="1.5"/>
+<text x="825" y="606" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" fill="#1f2933" >FAG · Fuji Airport Group</text><text x="825" y="622" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="500" fill="#3d4852" >Head office · authorised personnel only</text>
+</svg>
+  </div>
+  <figcaption>
+    <div class="map-legend">
+      <span><i class="swatch oa"></i> Octee Airlines (OA)</span>
+      <span><i class="swatch ou"></i> One United (OU)</span>
+      <span><i class="swatch sa"></i> Scraggy Airlines (SA)</span>
+      <span><i class="swatch route"></i> JOELMOBILE route</span>
+      <span><i class="swatch air"></i> After security</span>
+    </div>
+    <p class="note" id="named-gate">Signs are updated hourly, at random. Gate order is correct to the best of our knowledge.</p>
+  </figcaption>
 </figure>
 <div class="banner"><p class="headline">Need help?<span class="punch">Call the JOELMOBILE</span></p><a class="btn" href="joelmobile.html">Call the JOELMOBILE</a></div>
-<h2>The official FIA taglines</h2>
-<div id="gallery" class="grid"></div>
 </main>
 <div id="site-footer"></div>
 <noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>

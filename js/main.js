@@ -120,7 +120,7 @@ function buildFooter() {
   holder.replaceWith(el("footer", { class: "site-footer" },
     el("div", { class: "inner" },
       el("p", {}, "Octee Airlines, a member of FAG (Fuji Airport Group). Operating from FIA (Fuji International Airport)."),
-      el("p", { class: "foot" }, "Partner airline: Scraggy Airlines (SA), based at Scraggy International Airport (SIA). Accounts and Octmiles are kept in your browser."),
+      el("p", { class: "foot" }, "Scraggy Airlines (SA) is part of Octee Airlines, based at Scraggy International Airport (SIA). One United (OU) is a partner airline. Accounts and Octmiles are kept in your browser."),
       el("p", {}, el("a", { href: "status.html" }, "Flight Status"), " · ", el("a", { href: "reviews.html" }, "Reviews"), " · ", el("a", { href: "contact.html" }, "Contact"))
     )));
 }

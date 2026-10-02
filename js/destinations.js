@@ -6,15 +6,16 @@ export const PLACES = {
   SIA: { name: "Scraggy International Airport", short: "SIA", oa: true, aliases: ["sia", "scraggy international", "scraggy airport"] },
   LIA: { name: "Lu Pin International Airport", short: "LIA", oa: true, aliases: ["lia", "lu pin", "lupin", "lu pin international"] },
   SCH: { name: "Scraggy House", short: "Scraggy House", oa: true, aliases: ["scraggy house", "scraggys house", "sch"] },
-  MWW: { name: "Mdm Wrong-Wrong's", short: "Mdm Wrong-Wrong's", oa: false, aliases: ["mdm wrong wrong", "madam wrong wrong", "wrong wrong", "mdm wrong wrong house", "mdm wrongwrongs"] },
+  MIA: { name: "Mdm Wrong-Wrong International Airport", short: "MIA", oa: true, aliases: ["mia", "mdm wrong wrong", "madam wrong wrong", "wrong wrong", "mdm wrong wrong house", "mdm wrongwrongs", "mdm wrong wrong international"] },
   LUJ: { name: "Lujin's", short: "Lujin's", oa: false, aliases: ["lujin", "lujins"] }
 };
-export const OA_PLACES = ["FIA", "SIA", "LIA", "SCH"];
+// Places you can start a trip from on the Octee form (served by Octee or One United)
+export const OA_PLACES = ["FIA", "SIA", "LIA", "SCH", "MIA"];
 export const placeName = (c) => PLACES[c]?.name || c;
 export const placeShort = (c) => PLACES[c]?.short || c;
 
 // Octmiles per stretch between two neighbouring stops
-const RATES = { "FIA-SIA": 150, "FIA-LIA": 200, "FIA-SCH": 250, "LIA-SIA": 120, "SCH-SIA": 80 };
+const RATES = { "FIA-SIA": 150, "FIA-LIA": 200, "FIA-SCH": 250, "LIA-SIA": 120, "SCH-SIA": 80, "FIA-MIA": 300 };
 export const rate = (a, b) => RATES[[a, b].sort().join("-")] || 0;
 
 // Weekly timetable. days: 1 = Mon … 7 = Sun. stops: [airport, arrive, depart]. All Singapore time.
@@ -52,7 +53,9 @@ export const OU_FLIGHTS = [
   { no: "OU 5", days: [4, 7],    stops: [["FIA", null, "17:50"], ["SCH", "19:40", null]] },
   { no: "OU 6", days: [4, 7],    stops: [["SCH", null, "20:20"], ["FIA", "22:10", null]] },
   { no: "OU 7", days: ALL,       stops: [["FIA", null, "16:30"], ["SIA", "18:20", null]] },
-  { no: "OU 8", days: ALL,       stops: [["SIA", null, "19:10"], ["FIA", "21:00", null]] }
+  { no: "OU 8", days: ALL,       stops: [["SIA", null, "19:10"], ["FIA", "21:00", null]] },
+  { no: "OU 9",  days: [2, 4, 6], stops: [["FIA", null, "09:30"], ["MIA", "11:40", null]] },
+  { no: "OU 10", days: [2, 4, 6], stops: [["MIA", null, "12:40"], ["FIA", "14:50", null]] }
 ];
 export const AIRLINES = {
   OA: { name: "Octee Airlines", milesFactor: 1 },
