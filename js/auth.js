@@ -40,7 +40,7 @@ export function etchedAccounts() {
   }
   return etchedCache;
 }
-const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
+const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, scraggymiles: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
 const fromEtched = (e) => ({ ...BLANK(), ...e });
 const etchedFor = async (key) => (await etchedAccounts()).find((a) => a.username.toLowerCase() === key) || null;
 // What the Account page shows: is this account in the code, and since when?

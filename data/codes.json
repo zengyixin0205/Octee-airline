@@ -8,6 +8,40 @@
       "note": "Welcome code OCTEE500 (from the dev guide)",
       "madeBy": "Octee",
       "made": "2026-10-01"
+    },
+    {
+      "hash": "931dc25595b3b5af7ba04920367471933187a8d8c7f033d41b322b81d592554a",
+      "octmiles": 1000,
+      "expires": null,
+      "active": true,
+      "note": "Code JOEL",
+      "madeBy": "Octee",
+      "made": "2026-10-02"
+    },
+    {
+      "hash": "1d3de97cf2439ff315105da9855b876353be821f59a2f5f10949b333b99d3388",
+      "octmiles": 5000,
+      "expires": null,
+      "active": true,
+      "note": "Code OCTEE",
+      "madeBy": "Octee",
+      "made": "2026-10-02"
+    },
+    {
+      "hash": "569b1e6854f04ce59d9f8b4e2961a0b668bade37ed0e3fbe5832bad0962eacb0",
+      "octmiles": 100000,
+      "expires": null,
+      "active": true,
+      "note": "Crew code OCTEECREW: 100,000 Octmiles; then 100 Octmiles + 100 Octeetokens twice; after that each use needs control tower permission. Outside the daily limit.",
+      "madeBy": "Octee",
+      "made": "2026-10-02",
+      "repeat": true,
+      "noLimit": true,
+      "atTopTier": {
+        "octmiles": 100,
+        "tokens": 100
+      },
+      "freeTopUses": 2
     }
   ]
 }

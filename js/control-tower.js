@@ -9,6 +9,7 @@
 import { el, setMsg } from "./dom.js";
 import { hashPassword, randomSalt, codeHash, normalizeCode } from "./crypto.js";
 import { loadSession, saveSession, removeSession, load, save, remove } from "./store.js";
+import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions.js";
 
 const SESSION = "octee.tower.session";
 const DRAFT_CODES = "octee.tower.codes";
@@ -113,6 +114,9 @@ async function tower(session, crew, notice = "") {
   const tabCodes = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "Codes");
   const tabCrew = session.role === "owner" ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
   const tabAccounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Accounts");
+  const tabRequests = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Requests");
+  const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
+  countRequests();
   const publishedAccounts = (await fetchJson("data/accounts.json", { accounts: [] })).accounts || [];
   const removed = new Set();
   const body = el("div");
@@ -121,11 +125,15 @@ async function tower(session, crew, notice = "") {
     tabCodes.setAttribute("aria-selected", String(which === "codes"));
     tabCrew?.setAttribute("aria-selected", String(which === "crew"));
     tabAccounts.setAttribute("aria-selected", String(which === "accounts"));
+    tabRequests.setAttribute("aria-selected", String(which === "requests"));
+    countRequests();
+    if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
     body.replaceChildren(which === "codes" ? codesPanel() : which === "accounts" ? accountsPanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabCrew?.addEventListener("click", () => show("crew"));
   tabAccounts.addEventListener("click", () => show("accounts"));
+  tabRequests.addEventListener("click", () => show("requests"));
 
   const saveCodes = (next) => { codes = next; save(DRAFT_CODES, codes); show("codes"); };
 
@@ -188,9 +196,9 @@ async function tower(session, crew, notice = "") {
     const msg = el("p", { class: "msg", "aria-live": "polite" });
     const snapshot = (u, at) => ({
       username: u.username, salt: u.salt, hash: u.hash, createdAt: u.createdAt, etchedAt: at,
-      octmiles: u.octmiles || 0, lifetime: u.lifetime || 0, tokens: u.tokens || 0,
+      octmiles: u.octmiles || 0, lifetime: u.lifetime || 0, tokens: u.tokens || 0, scraggymiles: u.scraggymiles || 0,
       history: (u.history || []).slice(0, 50), trips: u.trips || [], redemptions: u.redemptions || [],
-      codesUsed: u.codesUsed || {}, codeDays: u.codeDays || {}, codeExtra: u.codeExtra || {}, rides: u.rides || [], reviewBonus: !!u.reviewBonus
+      codesUsed: u.codesUsed || {}, repeatUses: u.repeatUses || {}, codeDays: u.codeDays || {}, codeExtra: u.codeExtra || {}, rides: u.rides || [], reviewBonus: !!u.reviewBonus
     });
     const rows = keys.map((k) => {
       const u = local[k], p = publishedAccounts.find((a) => pubKey(a) === k);
@@ -235,6 +243,46 @@ async function tower(session, crew, notice = "") {
         el("p", { class: "hint" }, "To publish: replace data/accounts.json with the downloaded file, commit and push. Balances earned on a device after saving stay on that device until the account is saved again here; when the file holds a newer copy, the file replaces the device copy at the next sign-in.")));
   }
 
+  // Permission requests. A passenger who has used the crew code beyond its free uses is stopped and a request
+  // is recorded. Any administrator or the owner may give permission; each permission allows one more use.
+  async function requestsPanel() {
+    const reqs = pendingRequests();
+    const grants = await allGrants();
+    const msg = el("p", { class: "msg", "aria-live": "polite" });
+    const give = async (name) => { await grant(name, 1); show("requests"); };
+    const form = el("form", { class: "card", style: "margin-top:12px" },
+      el("h3", {}, "Give permission by username"),
+      el("p", { class: "note" }, "For a request made on another device, enter the passenger's username."),
+      el("div", { class: "row" },
+        el("div", { class: "field" }, el("label", { for: "pm-user" }, "Username"), el("input", { type: "text", id: "pm-user", maxlength: "20", autocomplete: "off" })),
+        el("div", { class: "field", style: "justify-content:flex-end" }, el("button", { class: "btn", type: "submit" }, "Give permission (1 use)"))),
+      msg);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = form.querySelector("#pm-user").value.trim();
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(name)) return setMsg(msg, "Enter a valid username.", "error");
+      await give(name);
+    });
+    const names = Object.keys(grants).sort();
+    return el("div", {},
+      el("div", { class: "card" },
+        el("h3", {}, `Pending requests (${reqs.length})`),
+        reqs.length ? el("div", { class: "table-wrap" }, el("table", { class: "plain" },
+          el("thead", {}, el("tr", {}, ["Username", "Request", "Received", "", ""].map((h) => el("th", {}, h)))),
+          el("tbody", {}, reqs.map((r) => el("tr", {},
+            el("td", {}, r.username), el("td", {}, r.what || "Permission"), el("td", {}, String(r.at || "").slice(0, 16).replace("T", " ")),
+            el("td", {}, el("button", { class: "btn small", type: "button", onclick: () => give(r.username) }, "Give permission")),
+            el("td", {}, el("button", { class: "btn small ghost danger", type: "button", onclick: () => { dismissRequest(r.username); show("requests"); } }, "Refuse"))))))) : el("p", { class: "note" }, "No pending requests in this browser."),
+        el("p", { class: "hint" }, `Decided by ${session.name} (${session.role}). A permission given here takes effect in this browser immediately.`)),
+      form,
+      el("div", { class: "card", style: "margin-top:12px" },
+        el("h3", {}, "Permissions given"),
+        names.length ? el("table", { class: "plain" }, el("thead", {}, el("tr", {}, el("th", {}, "Username"), el("th", {}, "Extra uses allowed"))),
+          el("tbody", {}, names.map((n) => el("tr", {}, el("td", {}, n), el("td", {}, String(grants[n])))))) : el("p", { class: "note" }, "None yet."),
+        el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => download("permissions.json", { crew: grants }) }, "Download permissions.json")),
+        el("p", { class: "hint" }, "Requests are recorded in the browser where they are made; there is no server to deliver them. To make permissions work on other devices: replace data/permissions.json with the downloaded file, commit and push.")));
+  }
+
   function crewPanel() {
     const msg = el("p", { class: "msg", "aria-live": "polite" });
     const form = el("form", { class: "card" },
@@ -272,7 +320,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabAccounts, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabAccounts, tabRequests, tabCrew),
     body,
     el("p", { class: "hint" }, "This system only prepares files. No change takes effect for other users until the files are committed to the repository."));
   if (!notice) top.remove();

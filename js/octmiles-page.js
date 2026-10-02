@@ -1,6 +1,7 @@
 import { $, el, setMsg, fmtMiles, niceDate } from "./dom.js";
 import { currentUser, requireLogin } from "./auth.js";
-import { TIERS, tierFor, nextTier, REWARDS, redeemReward, TOKEN_RATE, TOKEN_PRICES, CODES_PER_DAY, tokensOf, fmtTokens, exchangeMiles, buyExtraCode, codesToday, codesLeft } from "./miles.js";
+import { TIERS, tierFor, nextTier, REWARDS, redeemReward, TOKEN_RATE, TOKEN_PRICES, CODES_PER_DAY, tokensOf, fmtTokens, exchangeMiles, buyExtraCode, codesToday, codesLeft, SCRAGGY_RATE, scraggyOf, exchangeScraggymiles, sharedScraggy, transferScraggymiles } from "./miles.js";
+import { CONFIG } from "./config.js";
 import { codeBoxCard } from "./code-box.js";
 
 $("#code-slot").append(codeBoxCard());
@@ -31,9 +32,41 @@ function renderTokens(u) {
     msg);
 }
 
+function renderScraggy(u) {
+  const card = $("#scraggy-card");
+  if (!u) { card.replaceChildren(el("p", {}, "Log in to see your Scraggymiles.")); return; }
+  const own = scraggyOf(u), shared = sharedScraggy(u), have = own + shared;
+  const msg = el("p", { class: "msg", role: "status", id: "scraggy-msg" });
+  const field = (id, max) => el("input", { type: "number", id, min: "1", max: String(Math.max(1, max)), step: "1", value: String(Math.max(1, max)), inputmode: "numeric" });
+  const amount = field("scraggy-amount", have), give = field("share-amount", own);
+  const hint = el("p", { class: "hint" });
+  const show = () => { const n = Math.floor(Number(amount.value)) || 0; hint.textContent = `${fmtMiles(n)} Scraggymile${n === 1 ? "" : "s"} = ${fmtMiles(n * SCRAGGY_RATE)} Octmiles.`; };
+  amount.addEventListener("input", show); show();
+  const run = (fn, ok) => { try { const r = fn(); render(); setMsg($("#scraggy-msg"), ok(r), "ok"); } catch (err) { setMsg(msg, err.message, "error"); } };
+  const scraggySite = CONFIG.SCRAGGY_SITE_URL ? new URL("points.html", CONFIG.SCRAGGY_SITE_URL).href : null;
+  card.replaceChildren(
+    el("p", { class: "big-rating", style: "font-size:3rem;color:#b38a00" }, fmtMiles(have)),
+    el("p", {}, "Scraggymiles · earned on Scraggy Airlines flights · ", el("strong", {}, `1 Scraggymile = ${SCRAGGY_RATE} Octmiles`)),
+    el("p", {}, el("span", { class: "tag oa" }, `${fmtMiles(own)} on Octee only`), el("span", { class: "tag sa" }, `${fmtMiles(shared)} shared with Scraggy Airlines`)),
+    el("div", { class: "split" },
+      el("form", { id: "share-form", onsubmit: (e) => { e.preventDefault(); const n = Math.floor(Number(give.value)); run(() => transferScraggymiles(n), () => `${fmtMiles(n)} Scraggymiles are now shared with Scraggy Airlines. They count on both airlines.`); } },
+        el("h3", { style: "margin-top:0" }, "Share with Scraggy Airlines"),
+        el("div", { class: "field" }, el("label", { for: "share-amount" }, "How many Scraggymiles to share?"), give,
+          el("p", { class: "hint" }, "Shared miles become Scraggy Points for the account with the same username on the Scraggy Airlines website. They still show here. Spend them on either airline and they leave both; leave them and they stay on both.")),
+        el("div", { class: "actions" }, el("button", { class: "btn secondary", type: "submit", disabled: own < 1 }, "Share with Scraggy Airlines"),
+          scraggySite ? el("a", { class: "btn small ghost", href: scraggySite }, "Open Scraggy Points") : "")),
+      el("form", { id: "scraggy-form", onsubmit: (e) => { e.preventDefault(); const n = Math.floor(Number(amount.value)); run(() => exchangeScraggymiles(n), (got) => `Exchanged. +${fmtMiles(got)} Octmiles. Scraggy is watching.`); } },
+        el("h3", { style: "margin-top:0" }, "Turn into Octmiles"),
+        el("div", { class: "field" }, el("label", { for: "scraggy-amount" }, "How many Scraggymiles?"), amount, hint),
+        el("div", { class: "actions" }, el("button", { class: "btn", type: "submit", disabled: have < 1 }, "Exchange for Octmiles")))),
+    el("p", { class: "note" }, "Exchanging is one way and uses your Octee-only miles first. Sharing works in this browser, on the live website."),
+    msg);
+}
+
 function render() {
   const u = currentUser();
   renderTokens(u);
+  renderScraggy(u);
   if (!u) {
     $("#balance").replaceChildren(el("p", {}, "Log in to see your Octmiles. ", el("a", { class: "btn small", href: "login.html?next=octmiles.html" }, "Log in / Sign up")));
     $("#history").replaceChildren();
@@ -46,9 +79,9 @@ function render() {
       el("div", { class: "progress", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct), "aria-label": "Progress to next tier" }, el("span", { style: `width:${pct}%` })),
       el("p", { class: "hint" }, next ? `${fmtMiles(next.min - u.lifetime)} more lifetime Octmiles to ${next.name}.` : "Top tier. There is nowhere left to go. Like our planes."));
     $("#history").replaceChildren(el("div", { class: "table-wrap" }, el("table", { class: "plain" },
-      el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "What"), el("th", {}, "Octmiles"), el("th", {}, "Octeetokens"))),
+      el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "What"), el("th", {}, "Octmiles"), el("th", {}, "Octeetokens"), el("th", {}, "Scraggymiles"))),
       el("tbody", {}, (u.history || []).slice(0, 50).map((h) => el("tr", {},
-        el("td", {}, niceDate(h.at.slice(0, 10))), el("td", {}, h.text), el("td", {}, h.amount ? (h.amount > 0 ? "+" : "") + fmtMiles(h.amount) : "—"), el("td", {}, h.tokens ? (h.tokens > 0 ? "+" : "") + fmtMiles(h.tokens) : "—")))))));
+        el("td", {}, niceDate(h.at.slice(0, 10))), el("td", {}, h.text), el("td", {}, h.amount ? (h.amount > 0 ? "+" : "") + fmtMiles(h.amount) : "—"), el("td", {}, h.tokens ? (h.tokens > 0 ? "+" : "") + fmtMiles(h.tokens) : "—"), el("td", {}, h.scraggy ? (h.scraggy > 0 ? "+" : "") + fmtMiles(h.scraggy) : "—")))))));
   }
   const shop = $("#shop");
   shop.replaceChildren(...REWARDS.map((r) => {

@@ -439,14 +439,15 @@ This is the main change from Scraggy:
 
 #### Forms: FIA form, One United form, SIA form
 
-The main booking form is called the **FIA form** (it used to be called the Octee form). Extra forms are added by the flights chosen, and **every form must be finished before Confirm**:
+Step **1. Trip** is shared by every booking: destination, dates, flights and the **passenger name(s)**. After that, passengers **only fill in the forms for the airlines they actually fly**, and every form shown must be finished before Confirm:
 
-| Trip includes | Forms to fill | Banner |
-|---|---|---|
-| Octee flights only | FIA form | (none) |
-| a One United flight | FIA form + **One United form** | ① FIA form → ② One United form → ③ Confirm both |
-| a Scraggy Airlines flight | FIA form + SIA form | ① FIA form → ② SIA form (Scraggy) → ③ Confirm both |
-| both | all three | ① FIA form → ② One United form → ③ SIA form (Scraggy) → ④ Confirm all |
+| Trip includes | Forms to fill |
+|---|---|
+| Octee Airlines (OA) flights | **FIA form** (aircraft, class, seat/snack/bags, fun extras + the three tick boxes) |
+| One United (OU) flights | **One United form** |
+| Scraggy Airlines (SA) flights | **SIA form** |
+
+So a One United-only trip has no FIA form, and an OA + SA trip has the FIA form and the SIA form. With two or more forms a banner shows the order, e.g. ① Trip → ② FIA form → ③ One United form → ④ SIA form (Scraggy) → ⑤ Confirm all. (The FIA form used to be called the Octee form.)
 
 **One United form** (light blue, dotted steps marked "OU"; "unitation is a dream, it's chaos"):
 
@@ -773,6 +774,14 @@ How to etch an account (FAG administration → **Accounts** tab): tick the accou
 
 Privacy: `data/accounts.json` is **public** in the repo. It holds usernames, salted PBKDF2 password hashes, balances and trips (with passenger names). Only save accounts whose owners agree, with passwords not used anywhere else. No real passwords, emails or payment details are ever stored.
 
+### Scraggymiles
+
+- **Earned** on Scraggy Airlines flights booked here: Scraggy's own points for that route and class (`legPoints` from the Scraggy data): 100 Scraggy House, 250 MIA or Lujin's, 300 FIA, plus the Scraggy class bonus. Shown on the SA boarding pass and in the booking message.
+- **Exchange:** 1 Scraggymile = **2 Octmiles** (`SCRAGGY_RATE` in `js/miles.js`), on the Octmiles page ("Scraggymiles" section). One way. The Octmiles received count as earned, so they raise lifetime Octmiles and the tier.
+- **Sharing with Scraggy Airlines:** on the Octmiles page a passenger can move Scraggymiles into a pot shared with the Scraggy Airlines website (`transferScraggymiles`). Both sites live at the same web address, so they read the same browser storage key, `scraggy.shared.points` (`{ "username": points }`). Shared miles become Scraggy Points for the account with the **same username** on the Scraggy site and still show here ("on Octee only" / "shared with Scraggy Airlines"). Spending them on either site takes them off both; unspent, they stay on both. Exchanging to Octmiles uses Octee-only miles first, then the shared pot. Works per browser, on the live site.
+- The etched accounts `Octee` and `Joel` also exist on the Scraggy site (`Scraggy-airlines/data/accounts.json`) with the same passwords.
+- Stored on the account (`u.scraggymiles`), shown on the Account page, in the history table, and saved with etched accounts. They are not the Scraggy Points of the Scraggy Airlines website.
+
 ### Octeetokens (second currency)
 
 Octmiles are **earned**; Octeetokens are what you **pay with**. All in `js/miles.js`, stored on the account in the browser (`u.tokens`).
@@ -792,7 +801,9 @@ Octmiles are **earned**; Octeetokens are what you **pay with**. All in `js/miles
 
 ### Ready-made codes and the number rule
 
-- `data/codes.json` ships with three codes: `OCTEE500` (500 Octmiles), `JOEL` (1,000) and `OCTEE` (5,000). Codes ignore capitals and spaces; each account can use a code once.
+- `data/codes.json` ships with four codes: `OCTEE500` (500 Octmiles), `JOEL` (1,000), `OCTEE` (5,000) and the crew code `OCTEECREW`.
+- **`OCTEECREW` is special** (flags on its entry in `codes.json`: `repeat`, `noLimit`, `atTopTier`): it gives 100,000 Octmiles, which reaches the top tier (Platinum Wing) at once. If the account is **already in the top tier**, it gives **100 Octmiles + 100 Octeetokens** instead. It **does not count** towards the 5 codes a day (it also works when the 5 are used up). After the first (tier) use, the 100 + 100 bonus works **twice** by itself (`freeTopUses: 2`). Every use after that is stopped with "A message has been sent to the control tower" and needs **permission from an admin or the owner**; each permission allows one more use.
+- **Permissions (`js/permissions.js`):** there is no server, so the "message" is a request saved in that browser (`octee.tower.requests`). In the FAG administration, the **Requests** tab lists pending requests with **Give permission** / **Refuse**, a form to give permission by username (for a request made on another device), and the permissions given. A permission given in a browser works there at once (`octee.tower.grants`). For other devices, **Download permissions.json**, put it in `data/`, commit and push (`data/permissions.json` = `{ "crew": { "username": extraUses } }`). Codes ignore capitals and spaces; each account can use a code once.
 - **Number rule** (in `js/miles.js`, no file needed): any **5-digit number** whose **first digit is 1 or 2** and whose **last digit is odd** is worth its **first three digits** in Octmiles. Example: `23487` gives 234; `10001` gives 100; `12340` (even) and `31235` (starts with 3) give nothing. Each number works once per account. A code listed in `codes.json` always wins over the rule.
 
 ## 8. Tech Stack & Structure

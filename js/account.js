@@ -1,6 +1,6 @@
 import { $, el, niceDate, fmtMiles, setMsg } from "./dom.js";
 import { currentUser, requireLogin, logOut, updateUser, etchedInfo } from "./auth.js";
-import { tierFor, spendTokens, tokensOf } from "./miles.js";
+import { tierFor, spendTokens, tokensOf, scraggyOf, sharedScraggy } from "./miles.js";
 import { placeShort } from "./destinations.js";
 import { passCard, OA_CLASSES, classTokens } from "./booking-data.js";
 import { scraggyData } from "./scraggy.js";
@@ -16,6 +16,7 @@ function render(SA) {
       el("dt", {}, "Member since"), el("dd", {}, niceDate(u.createdAt.slice(0, 10))),
       el("dt", {}, "Octmiles"), el("dd", {}, fmtMiles(u.octmiles), " (", el("a", { href: "octmiles.html" }, "details"), ")"),
       el("dt", {}, "Octeetokens"), el("dd", {}, fmtMiles(tokensOf(u)), " (", el("a", { href: "octmiles.html#tokens" }, "get more"), ")"),
+      el("dt", {}, "Scraggymiles"), el("dd", {}, fmtMiles(scraggyOf(u) + sharedScraggy(u)), sharedScraggy(u) ? ` (${fmtMiles(sharedScraggy(u))} shared with Scraggy Airlines)` : "", " (", el("a", { href: "octmiles.html#scraggymiles" }, "exchange or share"), ")"),
       el("dt", {}, "Tier"), el("dd", {}, tierFor(u.lifetime).name)),
     el("p", { class: "note", id: "where-note" }, "Your account lives in this browser only. Another device or browser won't know you. We won't either."));
   etchedInfo(u.username).then((info) => {

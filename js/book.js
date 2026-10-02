@@ -5,7 +5,7 @@
 import { $, el, setMsg, niceDate, today } from "./dom.js";
 import { loadSession, saveSession, removeSession } from "./store.js";
 import { currentUser, updateUser } from "./auth.js";
-import { addMiles, spendTokens, tokensOf } from "./miles.js";
+import { addMiles, addScraggymiles, spendTokens, tokensOf } from "./miles.js";
 import { allTripsInBrowser } from "./auth.js";
 import { openRangeCalendar } from "./calendar.js";
 import {
@@ -49,13 +49,22 @@ const allLegs = () => [...(out() || []), ...(state.tripType === "return" ? back(
 const needsSA = () => allLegs().some((s) => s.airline === "SA") || !!(PLACES[state.to] && !PLACES[state.to].oa && !allLegs().length);
 const needsOU = () => allLegs().some((s) => s.airline === "OU");
 const hasOA = () => allLegs().some((s) => s.airline === "OA");
-const formCount = () => 1 + (needsOU() ? 1 : 0) + (needsSA() ? 1 : 0);
-const needsOA = () => { const legs = allLegs(); return !legs.length || legs.some((s) => s.airline !== "SA"); };
+// The FIA form is only for Octee Airlines flights (or while no flights are picked yet).
+const needsOA = () => { const legs = allLegs(); return !legs.length ? !needsSA() : hasOA(); };
+const formCount = () => (needsOA() ? 1 : 0) + (needsOU() ? 1 : 0) + (needsSA() ? 1 : 0);
+const nameProblems = () => {
+  const p = [];
+  for (let i = 0; i < state.passengers; i++) {
+    const n = (state.names[i] || "").trim();
+    if (n.length < 2 || n.length > 40) p.push(`Passenger ${i + 1} needs a name (2–40 characters; a nickname is fine).`);
+  }
+  return p;
+};
 
 /* ---------------- steps ---------------- */
 const req = (v, msg) => (v === "" || v == null || v === false ? [msg] : []);
 const STEPS = {
-  o1: { form: "oa", title: "1. Trip", validate: () => {
+  o1: { form: "trip", title: "1. Trip", validate: () => {
     const p = [];
     if (state.from === state.to) p.push("Your destination is where you already are. You are already there. Probably.");
     if (!state.departDate) p.push("Pick your departure date on the calendar.");
@@ -65,7 +74,7 @@ const STEPS = {
       else if (!back()) p.push("Pick one of the flights for your arrival date.");
     }
     if (needsSA() && state.passengers !== 1) p.push("Scraggy Airlines books one passenger at a time, so trips with SA flights are for 1 passenger.");
-    return p;
+    return [...p, ...nameProblems()];
   } },
   o2: { form: "oa", title: "2. Aircraft", validate: () => req(state.aircraft, "Choose an aircraft (or let us pick the wrong one).") },
   o3: { form: "oa", title: "3. Class", validate: () => {
@@ -74,12 +83,7 @@ const STEPS = {
     return u && hasOA() && cost > tokensOf(u) ? [`That class costs ${cost} Octeetokens and you have ${tokensOf(u)}. Exchange Octmiles on the Octmiles page, or choose Octee Economy.`] : [];
   } },
   o4: { form: "oa", title: "4. Passenger", validate: () => {
-    const p = [];
-    for (let i = 0; i < state.passengers; i++) {
-      const n = (state.names[i] || "").trim();
-      if (n.length < 2 || n.length > 40) p.push(`Passenger ${i + 1} needs a name (2–40 characters; a nickname is fine).`);
-    }
-    return [...p, ...req(state.seatPref, "Choose a seat preference."), ...req(state.snack, "Choose a snack. It is a peanut."), ...req(state.bags, "Choose how many bags we will lose.")];
+    return [...req(state.seatPref, "Choose a seat preference."), ...req(state.snack, "Choose a snack. It is a peanut."), ...req(state.bags, "Choose how many bags we will lose.")];
   } },
   o5: { form: "oa", title: "5. Fun extras", validate: () => [
     ...req(state.reason, "Choose a reason for travelling."),
@@ -204,6 +208,15 @@ function stepTrip() {
   const returnBtn = el("button", { type: "button", class: "date-btn", id: "return-btn" }, state.returnDate ? niceDate(state.returnDate) : "Pick a date 📅");
   returnBtn.setAttribute("aria-labelledby", "return-label return-btn");
   returnBtn.addEventListener("click", () => openCal(state.departDate ? "arrive" : "depart", returnBtn));
+  const u = currentUser();
+  const nameFields = Array.from({ length: state.passengers }, (_, i) => {
+    const id = "name-" + i;
+    const value = state.names[i] ?? (i === 0 && u ? u.username : "");
+    if (state.names[i] == null) state.names[i] = value;
+    return el("div", { class: "field" }, el("label", { for: id }, state.passengers > 1 ? `Passenger ${i + 1} name` : "Passenger name"),
+      el("input", { type: "text", id, value, maxlength: "40", autocomplete: "off",
+        oninput: (e) => { state.names[i] = e.target.value; update({ names: [...state.names] }, { rerender: false }); } }));
+  });
   const summary = [];
   if (o) summary.push(el("p", {}, el("strong", {}, "Departure: "), `${niceDate(state.departDate)} · ${o.map((s) => s.no).join(" + ")} · ${placeShort(o[0].from)} ${o[0].dep} → ${placeShort(o[o.length - 1].to)} ${o[o.length - 1].arr}`));
   const b = back();
@@ -224,6 +237,8 @@ function stepTrip() {
         needsSA() ? el("p", { class: "hint" }, "Scraggy Airlines books one passenger at a time.") : ""),
       el("div", { class: "field", style: "justify-content:center" },
         check("oneway", "One-way only (I'm not flying back)", oneway, (v) => update({ tripType: v ? "oneway" : "return", returnDate: "", backChoice: 0 })))),
+    el("div", { class: "row" }, nameFields),
+    el("p", { class: "hint" }, "No real personal details needed. A nickname is fine."),
     state.departDate ? el("div", {}, el("h3", {}, "Departure flights · ", niceDate(state.departDate)),
       itineraryPicker("out", outIts(), state.outChoice, (i) => {
         // keep the arrival date if the flight back still works with this departure flight
@@ -233,32 +248,19 @@ function stepTrip() {
     state.tripType === "return" && state.returnDate ? el("div", {}, el("h3", {}, "Flights back · ", niceDate(state.returnDate)),
       itineraryPicker("back", backIts(), state.backChoice, (i) => update({ backChoice: i }))) : "",
     summary.length ? el("div", { class: "card" }, summary) : "",
-    needsOU() ? el("p", { class: "msg info" }, "This trip includes One United flights, so you'll also fill in the One United form before confirming.") : "",
-    needsSA() ? el("p", { class: "msg info" }, "This trip includes Scraggy Airlines flights, so you'll also fill in the SIA form (Scraggy's own form) before confirming.") : "");
+    allLegs().length ? el("p", { class: "msg info" }, "Forms for this trip: ", [hasOA() && "the FIA form (Octee Airlines flights)", needsOU() && "the One United form", needsSA() && "the SIA form (Scraggy's own form)"].filter(Boolean).join(", "), ". You only fill in the forms for the airlines you fly.") : "");
 }
 
 const stepOA = {
   o2: () => el("fieldset", {}, el("legend", {}, "2. Aircraft"), radios("aircraft", OA_AIRCRAFT, state.aircraft, (v) => update({ aircraft: v }))),
   o3: () => el("fieldset", {}, el("legend", {}, "3. Class"),
     radios("travelClass", OA_CLASSES.map((c) => ({ id: c.id, name: c.name + (c.tokens ? ` · ${c.tokens} Octeetokens` : " · free") + (c.bonus ? ` (+${c.bonus} Octmiles per flight)` : ""), blurb: c.joke })), state.travelClass, (v) => update({ travelClass: v }))),
-  o4: () => {
-    const u = currentUser();
-    const names = Array.from({ length: state.passengers }, (_, i) => {
-      const id = "name-" + i;
-      const value = state.names[i] ?? (i === 0 && u ? u.username : "");
-      if (state.names[i] == null) state.names[i] = value;
-      return el("div", { class: "field" }, el("label", { for: id }, `Passenger ${i + 1} name`),
-        el("input", { type: "text", id, value, maxlength: "40", autocomplete: "off",
-          oninput: (e) => { state.names[i] = e.target.value; update({ names: [...state.names] }, { rerender: false }); } }));
-    });
-    return el("fieldset", {}, el("legend", {}, "4. Passenger"),
-      el("p", { class: "hint" }, "No real personal details needed. A nickname is fine."),
-      el("div", { class: "row" }, names),
-      el("div", { class: "row" },
-        select("seatPref", "Seat preference", SEATS, state.seatPref, (v) => update({ seatPref: v })),
-        select("snack", "Snack", OA_SNACKS.map((s) => [s, s]), state.snack, (v) => update({ snack: v })),
-        select("bags", "Bags", [0, 1, 2, 3].map((n) => [n, String(n)]), state.bags, (v) => update({ bags: v }), "We will lose them in a random order.")));
-  },
+  o4: () => el("fieldset", {}, el("legend", {}, "4. Passenger"),
+    el("p", {}, el("strong", {}, state.passengers > 1 ? "Passengers: " : "Passenger: "), state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "(add the name in step 1)", " ", el("span", { class: "tag oa" }, "from step 1")),
+    el("div", { class: "row" },
+      select("seatPref", "Seat preference", SEATS, state.seatPref, (v) => update({ seatPref: v })),
+      select("snack", "Snack", OA_SNACKS.map((s) => [s, s]), state.snack, (v) => update({ snack: v })),
+      select("bags", "Bags", [0, 1, 2, 3].map((n) => [n, String(n)]), state.bags, (v) => update({ bags: v }), "We will lose them in a random order."))),
   o5: () => el("fieldset", {}, el("legend", {}, "5. Fun extras"),
     select("reason", "Reason for travelling", OA_REASONS.map((r) => [r, r]), state.reason, (v) => update({ reason: v })),
     check("joelmobile", "JOELMOBILE pickup to my gate (optional; arrival not guaranteed)", state.joelmobile, (v) => update({ joelmobile: v })),
@@ -271,9 +273,9 @@ const stepOA = {
 const ouLegs = () => allLegs().filter((s) => s.airline === "OU");
 const stepOU = {
   u1: () => el("fieldset", { class: "ou-form" }, el("legend", {}, "One United form · 1. Flights"),
-    el("p", {}, "These One United flights are fixed by your trip. Same passenger as your FIA form. Unitation is a dream."),
+    el("p", {}, "These One United flights are fixed by your trip. Same passengers as step 1. Unitation is a dream."),
     ouLegs().length ? itinView(ouLegs()) : el("p", { class: "msg error" }, "Pick your flights in step 1 first."),
-    el("p", {}, el("strong", {}, "Passengers: "), (state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "(from your FIA form)"), " ", el("span", { class: "tag ou" }, "locked"))),
+    el("p", {}, el("strong", {}, "Passengers: "), (state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "(from step 1)"), " ", el("span", { class: "tag ou" }, "locked"))),
   u2: () => el("fieldset", { class: "ou-form" }, el("legend", {}, "One United form · 2. Unitation"),
     el("p", { class: "hint" }, "How united would you like to be? All levels are free. All levels are chaos."),
     radios("ou-level", OU_LEVELS.map((c) => ({ id: c.id, name: c.name, blurb: c.joke })), state.ou.level, (v) => updateOU({ level: v }))),
@@ -290,9 +292,9 @@ const stepOU = {
 const saLegs = () => allLegs().filter((s) => s.airline === "SA");
 const stepSA = {
   s1: () => el("fieldset", { class: "sia-form" }, el("legend", {}, "SIA form · 1. Trip"),
-    el("p", {}, "These Scraggy Airlines flights are fixed by your trip. Same passenger as your FIA form."),
+    el("p", {}, "These Scraggy Airlines flights are fixed by your trip. Same passenger as step 1."),
     saLegs().length ? itinView(saLegs()) : el("p", { class: "msg error" }, "Pick your flights in step 1 first."),
-    el("p", {}, el("strong", {}, "Passenger: "), (state.names[0] || "(from your FIA form)"), " ", el("span", { class: "tag sa" }, "locked"))),
+    el("p", {}, el("strong", {}, "Passenger: "), (state.names[0] || "(from step 1)"), " ", el("span", { class: "tag sa" }, "locked"))),
   s2: () => el("fieldset", { class: "sia-form" }, el("legend", {}, "SIA form · 2. Aircraft"),
     radios("sa-aircraft", [...SA.data.AIRCRAFT, SA.data.SURPRISE], state.sa.aircraft, (v) => updateSA({ aircraft: v }))),
   s3: () => el("fieldset", { class: "sia-form" }, el("legend", {}, "SIA form · 3. Class"),
@@ -319,7 +321,7 @@ function stepReview() {
   const u = currentUser();
   const o = out(), b = back();
   const miles = (o ? itineraryMiles(o, state.travelClass) : 0) + (b ? itineraryMiles(b, state.travelClass) : 0);
-  const confirm = el("button", { class: "btn", type: "button", id: "confirm", disabled: all.length > 0 || !u }, formCount() > 1 ? `Confirm all ${formCount()} forms (no money will be taken)` : "Confirm (no money will be taken)");
+  const confirm = el("button", { class: "btn", type: "button", id: "confirm", disabled: all.length > 0 || !u }, formCount() > 1 ? `Confirm ${formCount() === 2 ? "both" : "all " + formCount()} forms (no money will be taken)` : "Confirm (no money will be taken)");
   confirm.addEventListener("click", doConfirm);
   const why = all.length ? `Finish ${[...new Set(all.map((x) => stepLabel(x.id)))].join(", ")} first.` : !u ? "Log in to confirm and earn Octmiles." : "";
   return el("fieldset", {}, el("legend", {}, "Review & confirm"),
@@ -330,7 +332,8 @@ function stepReview() {
       needsOA() ? [el("dt", {}, "Octee class"), el("dd", {}, (OA_CLASSES.find((c) => c.id === state.travelClass)?.name || "—") + (hasOA() && classTokens(state.travelClass) ? ` · ${classTokens(state.travelClass)} Octeetokens` : !hasOA() && classTokens(state.travelClass) ? " · not charged (no Octee flights on this trip)" : ""))] : "",
       needsOU() ? [el("dt", {}, "One United"), el("dd", {}, OU_LEVELS.find((c) => c.id === state.ou.level)?.name || "—")] : "",
       needsSA() ? [el("dt", {}, "Scraggy class"), el("dd", {}, SA.data.CLASSES.find((c) => c.id === state.sa.travelClass)?.name || "—")] : "",
-      el("dt", {}, "Octmiles"), el("dd", {}, `+${miles.toLocaleString("en-GB")} (Octee flights; One United earns half; Scraggy none)`),
+      el("dt", {}, "Octmiles"), el("dd", {}, `+${miles.toLocaleString("en-GB")} (Octee flights; One United earns half)`),
+      needsSA() ? [el("dt", {}, "Scraggymiles"), el("dd", {}, `+${saLegs().reduce((n, x) => n + scraggyMilesFor(x), 0).toLocaleString("en-GB")} (Scraggy Airlines flights; 1 Scraggymile = 2 Octmiles)`)] : "",
       el("dt", {}, "Payment"), el("dd", {}, "Paid in peanuts.")),
     all.length ? el("div", { class: "msg error missing" }, el("p", { style: "margin:0 0 4px" }, "Still missing:"),
       el("ul", {}, all.map((x) => el("li", {}, el("a", { href: "#", onclick: (e) => { e.preventDefault(); go(steps().indexOf(x.id)); } }, stepLabel(x.id)), ": ", x.p)))) : "",
@@ -341,8 +344,8 @@ function stepReview() {
 }
 
 const FORM_NAME = { oa: "FIA form", ou: "One United form", sa: "SIA form" };
-const stepLabel = (id) => (formCount() > 1 ? FORM_NAME[STEPS[id].form] + " " : "") + "step " + STEPS[id].title.split(".")[0];
-const navPrefix = (id) => ({ sa: "SIA ", ou: "OU " })[STEPS[id].form] || "";
+const stepLabel = (id) => (FORM_NAME[STEPS[id].form] && (formCount() > 1 || !needsOA()) ? FORM_NAME[STEPS[id].form] + " " : "") + "step " + STEPS[id].title.split(".")[0];
+const navPrefix = (id) => ({ sa: "SIA ", ou: "OU ", oa: needsOA() && formCount() > 1 ? "FIA " : "" })[STEPS[id].form] || "";
 
 /* ---------------- render ---------------- */
 function renderNav() {
@@ -361,8 +364,8 @@ function renderNav() {
   const banner = $("#form-banner");
   if (formCount() > 1) {
     const now = ids[current] === "review" ? "review" : STEPS[ids[current]].form;
-    const parts = [["oa", "FIA form"], needsOU() && ["ou", "One United form"], needsSA() && ["sa", "SIA form (Scraggy)"], ["review", formCount() > 2 ? "Confirm all" : "Confirm both"]].filter(Boolean);
-    const nums = "①②③④";
+    const parts = [["trip", "Trip"], needsOA() && ["oa", "FIA form"], needsOU() && ["ou", "One United form"], needsSA() && ["sa", "SIA form (Scraggy)"], ["review", formCount() > 2 ? "Confirm all" : "Confirm both"]].filter(Boolean);
+    const nums = "①②③④⑤";
     banner.replaceChildren(...parts.flatMap(([f, label], i) => [i ? "→" : "", el("span", { class: now === f ? "on" : "" }, `${nums[i]} ${label}`)]));
     banner.hidden = false;
   } else banner.hidden = true;
@@ -405,6 +408,9 @@ $("#btn-back").addEventListener("click", () => go(current - 1));
 const ref = (prefix) => prefix + "-" + String(Math.floor(Math.random() * 10000)).padStart(4, "0");
 const gateFor = (s) => s.airline === "SA" ? s.gate : s.from === "FIA" ? fiaGate(s.airline) : s.from + String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
 
+// Scraggy Airlines flights earn Scraggymiles: Scraggy's own points for that route and class.
+const scraggyMilesFor = (s) => { try { return SA.data.legPoints(s.scraggyId, state.sa.travelClass) || 0; } catch { return 0; } };
+
 function doConfirm() {
   triedConfirm = true;
   const msg = $("#confirm-msg");
@@ -430,6 +436,7 @@ function doConfirm() {
           airline: s.airline, no: s.no, date: s.date, from: s.from, to: s.to, dep: s.dep, arr: s.arr, via: s.via,
           fromStop: s.fromStop, toStop: s.toStop, direction: s.direction, passengers: state.passengers, gate: gateFor(s),
           miles: s.airline !== "SA" ? s.miles + (state.travelClass === "first" && s.airline === "OA" ? 50 : 0) : 0,
+          scraggymiles: s.airline === "SA" ? scraggyMilesFor(s) : 0,
           aircraft: s.airline === "SA" ? saAircraft : s.airline === "OU" ? OU_AIRCRAFT : oaAircraft,
           travelClass: s.airline === "SA" ? state.sa.travelClass : s.airline === "OU" ? state.ou.level : state.travelClass,
           seat: s.airline === "SA" ? state.sa.seat : s.airline === "OU" ? state.ou.seat : state.seatPref
@@ -437,6 +444,8 @@ function doConfirm() {
         details: { snack: state.snack, bags: state.bags, reason: state.reason, joelmobile: state.joelmobile, ou: needsOU() ? { ...state.ou } : null, sa: needsSA() ? { ...state.sa } : null }
       };
       b.miles = b.legs.reduce((n, l) => n + l.miles, 0);
+      b.scraggymiles = b.legs.reduce((n, l) => n + (l.scraggymiles || 0), 0);
+      if (b.scraggymiles) addScraggymiles(u, b.scraggymiles, `Booking ${saRef}: Scraggy Airlines flights`);
       u.trips.push(b);
       if (b.miles) addMiles(u, b.miles, `Booking ${oaRef}: ${placeShort(b.from)} → ${placeShort(b.to)}`);
       return b;
@@ -454,7 +463,7 @@ function showPasses(b) {
   res.hidden = false;
   res.replaceChildren(
     el("h2", {}, "You are booked (probably)"),
-    el("p", { class: "msg ok", role: "status" }, `Booking ${b.ref}${b.scraggyRef ? " + " + b.scraggyRef : ""} · +${b.miles.toLocaleString("en-GB")} Octmiles. Paid in peanuts.`),
+    el("p", { class: "msg ok", role: "status" }, `Booking ${b.ref}${b.scraggyRef ? " + " + b.scraggyRef : ""} · +${b.miles.toLocaleString("en-GB")} Octmiles${b.scraggymiles ? ` · +${b.scraggymiles.toLocaleString("en-GB")} Scraggymiles` : ""}. Paid in peanuts.`),
     ...b.legs.map((l, i) => [i > 0 && b.legs[i - 1].direction === l.direction && b.legs[i - 1].no !== l.no ? el("p", { class: "note" }, `⏱ Change planes at ${placeName(l.from)}`) : "", passCard(b, l, SA)]).flat(),
     el("div", { class: "actions" }, el("a", { class: "btn", href: "account.html" }, "My Trips"), el("a", { class: "btn secondary", href: "book.html" }, "Book another")));
   res.scrollIntoView({ block: "start" });

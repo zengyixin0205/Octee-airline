@@ -2,6 +2,8 @@
 import { currentUser, updateUser } from "./auth.js";
 import { codeHash, normalizeCode } from "./crypto.js";
 import { today } from "./dom.js";
+import { load, save } from "./store.js";
+import { grantsFor, requestPermission } from "./permissions.js";
 
 export const TIERS = [
   { name: "Economy Peanut", min: 0, perk: "One peanut." },
@@ -78,6 +80,48 @@ export function buyExtraCode() {
   });
 }
 
+// ----- Scraggymiles -----
+// Earned on Scraggy Airlines flights. 1 Scraggymile turns into 2 Octmiles (one way).
+export const SCRAGGY_RATE = 2;
+export const scraggyOf = (u) => (u && u.scraggymiles) || 0;
+export function addScraggymiles(u, amount, text) {
+  u.scraggymiles = scraggyOf(u) + amount;
+  u.history.unshift({ at: new Date().toISOString(), text, amount: 0, scraggy: amount });
+}
+// The pot shared with Scraggy Airlines. Both sites live at the same web address, so they read the same
+// browser storage. Scraggymiles moved here show on BOTH sites; spending them on either site takes them
+// off both; unspent, they stay on both. The pot belongs to the same username on the Scraggy site.
+const SHARED_KEY = "scraggy.shared.points";
+const sharedMap = () => load(SHARED_KEY, {}) || {};
+export const sharedScraggy = (u) => { const n = Math.floor(Number(sharedMap()[String((u && u.username) || "").toLowerCase()]) || 0); return n > 0 ? n : 0; };
+const setShared = (u, n) => { const m = sharedMap(); m[u.username.toLowerCase()] = Math.max(0, Math.floor(n)); save(SHARED_KEY, m); };
+export function transferScraggymiles(n) {
+  n = Math.floor(Number(n));
+  if (!(n >= 1)) throw new Error("Choose at least 1 Scraggymile.");
+  return updateUser((u) => {
+    if (scraggyOf(u) < n) throw new Error(`You only have ${scraggyOf(u).toLocaleString("en-GB")} Scraggymiles on Octee.`);
+    u.scraggymiles = scraggyOf(u) - n;
+    setShared(u, sharedScraggy(u) + n);
+    u.history.unshift({ at: new Date().toISOString(), text: "Shared with Scraggy Airlines (now usable on both airlines)", amount: 0, scraggy: -n });
+    return n;
+  });
+}
+export function exchangeScraggymiles(n) {
+  n = Math.floor(Number(n));
+  if (!(n >= 1)) throw new Error("Choose at least 1 Scraggymile.");
+  return updateUser((u) => {
+    const own = scraggyOf(u), shared = sharedScraggy(u);
+    if (own + shared < n) throw new Error(`You only have ${(own + shared).toLocaleString("en-GB")} Scraggymiles.`);
+    const fromOwn = Math.min(own, n), fromShared = n - fromOwn;      // Octee-only miles first, then the shared pot
+    u.scraggymiles = own - fromOwn;
+    if (fromShared) setShared(u, shared - fromShared);
+    const miles = n * SCRAGGY_RATE;
+    u.octmiles += miles; u.lifetime += miles;
+    u.history.unshift({ at: new Date().toISOString(), text: "Exchanged Scraggymiles for Octmiles" + (fromShared ? ` (${fromShared} from the pot shared with Scraggy Airlines)` : ""), amount: miles, scraggy: -n });
+    return miles;
+  });
+}
+
 // ----- Codes -----
 export const CODE_MESSAGES = {
   ok: (n) => `+${n.toLocaleString("en-GB")} Octmiles! Please don't spend them all on one peanut.`,
@@ -86,6 +130,7 @@ export const CODE_MESSAGES = {
   expired: "This code has expired. Like your boarding pass.",
   grounded: "This code has been grounded.",
   limit: `You have used all your codes for today (${CODES_PER_DAY} a day). Come back tomorrow, or get one more for ${TOKEN_PRICES.extraCode} Octeetokens on the Octmiles page.`,
+  permission: (n) => `You have used this code ${n} times since reaching the top tier. A message has been sent to the control tower. An admin or the owner must give permission before it works again.`,
   too_many: "Too many wrong codes. Please wait an hour and think about what you've done.",
   login: "Log in to use a code.",
   offline: "The code list is delayed. Please try again (or check you're online)."
@@ -106,7 +151,6 @@ export async function redeemCode(input) {
   if (!u) return { ok: false, message: CODE_MESSAGES.login };
   const hourAgo = Date.now() - 3600_000;
   if ((u.codeFails || []).filter((t) => t > hourAgo).length >= 10) return { ok: false, message: CODE_MESSAGES.too_many };
-  if (codesLeft(u) <= 0) return { ok: false, message: CODE_MESSAGES.limit };
   let codes;
   try { codes = await loadCodes(); } catch { return { ok: false, message: CODE_MESSAGES.offline }; }
   const hash = await codeHash(input);
@@ -115,20 +159,35 @@ export async function redeemCode(input) {
   // are worth their first three digits (23487 -> 234 Octmiles). Listed codes win.
   const digits = normalizeCode(input);
   if (!c && /^[12]\d{3}[13579]$/.test(digits)) c = { octmiles: Number(digits.slice(0, 3)), active: true, expires: null };
+  // Special codes (set in data/codes.json): "noLimit" codes do not use up one of the 5 daily codes,
+  // "repeat" codes can be used again and again on the same account.
+  if (!(c && c.noLimit) && codesLeft(u) <= 0) return { ok: false, message: CODE_MESSAGES.limit };
   let problem = null;
   if (!normalizeCode(input) || !c) problem = "not_real";
   else if (c.active === false) problem = "grounded";
   else if (c.expires && new Date(c.expires + "T23:59:59") < new Date()) problem = "expired";
-  else if (u.codesUsed && u.codesUsed[hash]) problem = "already";
+  else if (!c.repeat && u.codesUsed && u.codesUsed[hash]) problem = "already";
   if (problem) {
     updateUser((x) => { x.codeFails = [...(x.codeFails || []).filter((t) => t > hourAgo), Date.now()]; });
     return { ok: false, message: CODE_MESSAGES[problem] };
   }
+  // "atTopTier": what the code gives instead when the account is already in the highest tier.
+  const top = c.atTopTier && !nextTier(u.lifetime) ? c.atTopTier : null;
+  // "freeTopUses": how many times the top-tier bonus works by itself. After that, each further use needs
+  // permission from the control tower (one grant = one more use).
+  const topUses = ((u.repeatUses || {})[hash]) || 0;
+  if (top && c.freeTopUses != null && topUses >= c.freeTopUses + (await grantsFor(u.username))) {
+    requestPermission(u.username, "Crew code: one more use");
+    return { ok: false, needsPermission: true, message: CODE_MESSAGES.permission(topUses) };
+  }
+  const miles = top ? top.octmiles || 0 : c.octmiles, tokens = top ? top.tokens || 0 : 0;
   updateUser((x) => {
     x.codesUsed = x.codesUsed || {};
     x.codesUsed[hash] = new Date().toISOString();
-    x.codeDays = { [today()]: codesToday(x).used + 1 };   // only successful codes count towards the daily limit
-    addMiles(x, c.octmiles, "Code " + normalizeCode(input));
+    if (!c.noLimit) x.codeDays = { [today()]: codesToday(x).used + 1 };   // only successful codes count towards the daily limit
+    addMiles(x, miles, "Code " + normalizeCode(input));
+    if (tokens) { x.tokens = tokensOf(x) + tokens; x.history[0].tokens = tokens; }
+    if (top) x.repeatUses = { ...(x.repeatUses || {}), [hash]: topUses + 1 };
   });
-  return { ok: true, message: CODE_MESSAGES.ok(c.octmiles), amount: c.octmiles };
+  return { ok: true, message: CODE_MESSAGES.ok(miles) + (tokens ? ` And +${tokens} Octeetokens.` : ""), amount: miles, tokens };
 }

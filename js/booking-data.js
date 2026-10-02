@@ -49,7 +49,7 @@ export function passCard(b, l, SA) {
         el("dt", {}, ou ? "Unitation" : "Class"), el("dd", {}, cls || "—"),
         el("dt", {}, "Seat"), el("dd", {}, (ou && OU_SEATS.find((x) => x[0] === l.seat)?.[1]) || l.seat || "Somewhere"),
         el("dt", {}, "Gate"), el("dd", {}, l.gate),
-        el("dt", {}, sa ? "Points" : "Octmiles"), el("dd", {}, sa ? "Scraggy Points are collected with Scraggy Airlines." : "+" + l.miles + (ou ? " (One United shares the miles. Unevenly.)" : ""))),
+        el("dt", {}, sa ? "Scraggymiles" : "Octmiles"), el("dd", {}, sa ? (l.scraggymiles ? "+" + l.scraggymiles + " (1 Scraggymile = 2 Octmiles)" : "Scraggy Points are collected with Scraggy Airlines.") : "+" + l.miles + (ou ? " (One United shares the miles. Unevenly.)" : ""))),
       !sa && l.from === "FIA" ? el("p", {}, el("a", { href: "joelmobile.html" }, `Call the JOELMOBILE to gate ${l.gate}`)) : ""));
 }
 
