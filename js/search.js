@@ -42,6 +42,7 @@ export function mountSearchBox(holder, { onSearch, from = "FIA", query = "" } = 
 const legLine = (s) => el("li", { class: s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "" },
   el("strong", {}, s.no), ` ${placeShort(s.from)} ${s.dep} → ${placeShort(s.to)} ${s.arr}`,
   s.via.length ? ` (stops at ${s.via.map(placeShort).join(", ")}; stay on board)` : "",
+  s.airline === "OA" ? el("span", { class: "tag oa" }, "Octee") : "",
   s.airline === "OU" ? el("span", { class: "tag ou" }, "One United") : "",
   s.airline === "SA" ? el("span", { class: "tag sa" }, `Scraggy Airlines · gate ${s.gate}`) : "");
 

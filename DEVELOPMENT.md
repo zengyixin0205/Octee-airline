@@ -136,7 +136,7 @@ One United is **another airline at FIA** (flight code **OU**). It serves mainly 
 - **Connections with OA:** e.g. OA 103 from LIA lands at FIA 17:00 → OU 5 to Scraggy House 17:50 (Thu, Sun); OA 104 / OA 106 land at FIA 15:20 → OU 7 to SIA 16:30.
 - **Booking:** OU flights are booked on the normal **Octee form** (no extra form) and appear in the same flight options, marked "One United". They follow the same rules (45 minutes to change, max 2 changes, 180 seats per stretch).
 - **Octmiles:** OU flights earn **half** the Octmiles of the same stretch on Octee. *"One United shares the miles. Unevenly."*
-- **Where it shows:** its own page `oneunited.html` (headline + timetable + live examples of connections), a banner on Home, the search results, the Destinations cards, the status board (marked "[One United]") and boarding passes (dark brown with orange).
+- **Where it shows:** its own page `oneunited.html` (headline + timetable + live examples of connections), a banner on Home, the search results, the Destinations cards, the status board (marked "[One United]") and boarding passes (light blue).
 - Data: `OU_FLIGHTS` in `js/destinations.js`.
 
 ### Partner airline: Scraggy Airlines (SA)
@@ -587,7 +587,7 @@ Search order: OA direct match first, then partner (transfer) match, then FIA, th
 | `--mess-gray` | `#6B7280` | Tiny footnotes |
 
 - Hero banners: a dark-brown to orange gradient with white text. Buttons: orange with dark brown text (readable contrast).
-- Other airlines keep their own accent inside the orange site: **Scraggy Airlines** = yellow + brown; **One United** = dark brown + orange.
+- **Airline liveries** (tags, flight lists, boarding passes, banners): **Octee Airlines (OA) = orange** `#FF7A00`, **One United (OU) = light blue** `#A8DCF7`, **Scraggy Airlines (SA) = light yellow** `#FFF1A8`, each with dark text for contrast. Tokens `--oa`, `--ou`, `--sa` in `css/styles.css`.
 - **Headings:** elegant serif (*Playfair Display*). **Body:** *Inter*. **Departures board:** *JetBrains Mono*, yellow on black.
 
 ### Comedy details (use sparingly)

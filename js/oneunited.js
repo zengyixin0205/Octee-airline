@@ -25,7 +25,7 @@ scraggyData().then(({ routes }) => {
       el("p", { class: "note" }, `${niceDate(found.date)} · ${describeItinerary(found.it)}`),
       el("ul", { class: "legs" }, found.it.map((s) => el("li", { class: s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "" },
         el("strong", {}, s.no), ` ${placeShort(s.from)} ${s.dep} → ${placeShort(s.to)} ${s.arr} `,
-        el("span", { class: "tag " + (s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "") }, s.airline === "SA" ? "Scraggy Airlines" : s.airline === "OU" ? "One United" : "Octee Airlines")))),
+        el("span", { class: "tag " + (s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "oa") }, s.airline === "SA" ? "Scraggy Airlines" : s.airline === "OU" ? "One United" : "Octee Airlines")))),
       bookable ? el("a", { class: "btn small", href: `book.html?from=${from}&to=${to}&date=${found.date}` }, "Book this trip") : ""));
   }
   $("#ou-connections").replaceChildren(...(cards.length ? cards : [el("p", { class: "note" }, "No connections found this fortnight. United, as ever.")]));

@@ -7,6 +7,10 @@
   --octee-orange: #ff7a00;
   --octee-orange-deep: #c25500;
   --octee-cream: #fff3e6;
+  /* Airline liveries: Octee = orange, One United = light blue, Scraggy Airlines = light yellow */
+  --oa: #ff7a00;  --oa-ink: #2b1a0e;
+  --ou: #a8dcf7;  --ou-ink: #0b3a55;
+  --sa: #fff1a8;  --sa-ink: #4a2c12;
   --octee-white: #ffffff;
   --mess-red: #c03a3a;
   --mess-gray: #6b7280;
@@ -94,8 +98,9 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 16px 48px; }
 .card.navy h3, .card.navy .headline { color: #fff; }
 .tag { display: inline-block; background: var(--octee-cream); color: var(--octee-ink); border-radius: 99px; padding: 2px 10px; margin: 2px 4px 2px 0; font-size: .82rem; font-weight: 600; }
 .tag.red { background: #fde8e8; color: var(--mess-red); }
-.tag.sa { background: #ffe98a; color: #4a2c12; }
-.tag.ou { background: #2b1a0e; color: #ffb766; }           /* One United: dark brown + orange */   /* Scraggy Airlines: yellow + brown */
+.tag.oa { background: var(--oa); color: var(--oa-ink); }   /* Octee Airlines: orange */
+.tag.ou { background: var(--ou); color: var(--ou-ink); }   /* One United: light blue */
+.tag.sa { background: var(--sa); color: var(--sa-ink); }   /* Scraggy Airlines: light yellow */
 .foot { font-size: .72rem; color: var(--mess-gray); }
 .note { color: var(--mess-gray); font-size: .9rem; }
 .badge-new { background: var(--mess-red); color: #fff; font-size: .7rem; padding: 2px 8px; border-radius: 99px; vertical-align: middle; font-family: var(--sans); }
@@ -166,8 +171,8 @@ legend { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; color:
 .legs li::before { content: "✈"; position: absolute; left: 4px; top: 6px; color: var(--octee-orange-dark); }
 .legs li.change::before { content: "⏱"; }
 .legs li.stay::before { content: "•"; }
-.legs li.sa::before { color: #8a6d00; }
-.legs li.ou::before { color: #2b1a0e; }
+.legs li.sa::before { color: #b89500; }
+.legs li.ou::before { color: #2a8fc4; }
 
 /* ---------- Departures board ---------- */
 .board { background: #111; color: #ffd84a; font-family: var(--mono); border-radius: var(--radius); padding: 12px; overflow-x: auto; }
@@ -198,7 +203,7 @@ table.plain th { background: var(--octee-ink); color: var(--octee-orange); font-
 .form-banner { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 700; margin-top: 10px; }
 .form-banner span { padding: 4px 12px; border-radius: 99px; background: #fff; border: 1.5px solid #e6d5c3; }
 .form-banner span.on { background: var(--octee-orange); border-color: var(--octee-orange); color: var(--octee-ink); }
-.sia-form { background: #fffbe0; border: 2px dashed #c9a400; border-radius: var(--radius); padding: 14px; }
+.sia-form { background: #fffbe0; border: 2px dashed #d9bf3a; border-radius: var(--radius); padding: 14px; }
 .sia-form legend::after { content: " · Operated by Scraggy Airlines"; font-family: var(--sans); font-size: .8rem; color: #4a2c12; }
 .itin { display: grid; gap: 8px; }
 .itin .opt { flex-direction: row; }
@@ -257,12 +262,16 @@ table.plain th { background: var(--octee-ink); color: var(--octee-orange); font-
 
 /* ---------- Boarding pass ---------- */
 .pass { background: #fff; border-radius: 16px; box-shadow: var(--shadow); margin: 14px 0; overflow: hidden; border: 1px solid #eadbcb; }
-.pass-top { background: var(--octee-ink); color: var(--octee-orange); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 10px 16px; font-weight: 700; }
-.pass.sa .pass-top { background: #4a2c12; color: #ffd23f; }
-.pass.ou .pass-top { background: #2b1a0e; color: #ff9330; }
-.ou-hero { background: linear-gradient(150deg, #2b1a0e, #5c2200 55%, #b34700); color: #fff; border-radius: var(--radius); padding: 30px 22px; margin: 24px 0; }
-.ou-hero .headline { color: #fff; letter-spacing: 3px; }
-.ou-hero .punch { color: #ffd9b0; }
+.pass-top { background: var(--oa); color: var(--oa-ink); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 10px 16px; font-weight: 700; }
+.pass.sa .pass-top { background: var(--sa); color: var(--sa-ink); }
+.pass.ou .pass-top { background: var(--ou); color: var(--ou-ink); }
+.pass { border-top: 0; }
+.pass.sa { border-color: #e6d27a; }
+.pass.ou { border-color: #8cc9ea; }
+.ou-hero { background: linear-gradient(150deg, #d6f0ff, #a8dcf7 55%, #7cc7f0); color: var(--ou-ink); border-radius: var(--radius); padding: 30px 22px; margin: 24px 0; }
+.ou-hero .headline { color: var(--ou-ink); letter-spacing: 3px; }
+.ou-hero .punch { color: #0b5c85; }
+.ou-hero p { color: var(--ou-ink); }
 .ou-hero a.btn { margin-top: 12px; }
 .pass-body { padding: 12px 16px; }
 .pass .route { font-family: var(--serif); font-size: 1.3rem; color: var(--octee-ink); margin: 0 0 6px; }
