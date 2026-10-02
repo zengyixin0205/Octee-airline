@@ -16,6 +16,15 @@ export const OA_CLASSES = [
 ];
 // tokens = Octeetokens to pay for that class, per booking (Economy is free).
 export const classTokens = (id) => (OA_CLASSES.find((c) => c.id === id) || {}).tokens || 0;
+// One United has its own form ("unitation is a dream, it's chaos").
+export const OU_LEVELS = [
+  { id: "united", name: "United", joke: "Everyone sits together. In one seat." },
+  { id: "semi", name: "Semi-united", joke: "Together, but in different rows. Possibly different planes." },
+  { id: "chaos", name: "Chaos", joke: "The default. You were getting this anyway." }
+];
+export const OU_SEATS = [["friend", "Next to someone I know"], ["stranger", "Next to a stranger"], ["engine", "Next to the engine (if working)"]];
+export const OU_SNACKS = ["Half a peanut (shared)", "The other half", "A photo of the peanut"];
+export const OU_AIRCRAFT = "Whichever plane is free";
 export const OA_SNACKS = ["One Peanut", "One Peanut (vegetarian)", "One Peanut (served warm)"];
 export const OA_REASONS = ["Business (unclear)", "Visiting Scraggy (long story)", "Escaping FIA", "Looking for my bag",
   "The JOELMOBILE dropped me here", "I was told this was a train"];
@@ -23,7 +32,8 @@ export const SEATS = [["window", "Window"], ["aisle", "Aisle"], ["somewhere", "S
 
 export function passCard(b, l, SA) {
   const sa = l.airline === "SA";
-  const cls = sa ? SA?.data?.CLASSES?.find((c) => c.id === l.travelClass)?.name : OA_CLASSES.find((c) => c.id === l.travelClass)?.name;
+  const cls = sa ? SA?.data?.CLASSES?.find((c) => c.id === l.travelClass)?.name
+    : (l.airline === "OU" && OU_LEVELS.find((c) => c.id === l.travelClass)?.name) || OA_CLASSES.find((c) => c.id === l.travelClass)?.name;
   const air = ((sa ? SA?.data?.AIRCRAFT : OA_AIRCRAFT) || []).find((a) => a.id === l.aircraft)?.name || l.aircraft;
   const ou = l.airline === "OU";
   return el("article", { class: "pass" + (sa ? " sa" : ou ? " ou" : ""), "aria-label": "Boarding pass " + l.no },
@@ -36,8 +46,8 @@ export function passCard(b, l, SA) {
         el("dt", {}, "Departs"), el("dd", {}, l.dep),
         el("dt", {}, "Arrives"), el("dd", {}, l.arr + (l.via?.length ? ` (via ${l.via.map(placeShort).join(", ")}, stay on board)` : "")),
         el("dt", {}, "Aircraft"), el("dd", {}, air || "—"),
-        el("dt", {}, "Class"), el("dd", {}, cls || "—"),
-        el("dt", {}, "Seat"), el("dd", {}, l.seat || "Somewhere"),
+        el("dt", {}, ou ? "Unitation" : "Class"), el("dd", {}, cls || "—"),
+        el("dt", {}, "Seat"), el("dd", {}, (ou && OU_SEATS.find((x) => x[0] === l.seat)?.[1]) || l.seat || "Somewhere"),
         el("dt", {}, "Gate"), el("dd", {}, l.gate),
         el("dt", {}, sa ? "Points" : "Octmiles"), el("dd", {}, sa ? "Scraggy Points are collected with Scraggy Airlines." : "+" + l.miles + (ou ? " (One United shares the miles. Unevenly.)" : ""))),
       !sa && l.from === "FIA" ? el("p", {}, el("a", { href: "joelmobile.html" }, `Call the JOELMOBILE to gate ${l.gate}`)) : ""));

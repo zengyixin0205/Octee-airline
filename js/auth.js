@@ -1,4 +1,8 @@
-// Accounts — saved in THIS browser only (localStorage). There is no server.
+// Accounts. There is no server, so an account lives in two possible places:
+//  * THIS browser (localStorage): every account made with Sign up.
+//  * THE CODE (data/accounts.json): accounts the airline has "etched" into the website from the FAG
+//    administration. Those can log in on ANY device and arrive with their Octmiles, Octeetokens and trips
+//    as they were when the file was last published.
 // Passwords are never stored: only a salted PBKDF2 hash.
 import { load, save, remove } from "./store.js";
 import { hashPassword, randomSalt } from "./crypto.js";
@@ -25,6 +29,37 @@ export const MESSAGES = {
 const allUsers = () => load(USERS, {});
 const saveUsers = (u) => save(USERS, u);
 
+// ----- accounts etched in the code -----
+let etchedCache = null;
+export function etchedAccounts() {
+  if (!etchedCache) {
+    etchedCache = fetch("data/accounts.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { accounts: [] }))
+      .then((j) => (Array.isArray(j.accounts) ? j.accounts.filter((a) => a && USERNAME_RE.test(a.username || "") && a.salt && a.hash) : []))
+      .catch(() => []);
+  }
+  return etchedCache;
+}
+const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
+const fromEtched = (e) => ({ ...BLANK(), ...e });
+const etchedFor = async (key) => (await etchedAccounts()).find((a) => a.username.toLowerCase() === key) || null;
+// What the Account page shows: is this account in the code, and since when?
+export async function etchedInfo(username) {
+  const e = await etchedFor(String(username || "").toLowerCase());
+  return e ? { etchedAt: e.etchedAt || null } : null;
+}
+// A logged-in account picks up a newer copy from the code by itself (same password only).
+export async function syncEtched() {
+  const key = load(SESSION, null);
+  if (!key) return false;
+  const users = allUsers(), u = users[key], e = await etchedFor(key);
+  if (!u || !e || !(String(e.etchedAt || "") > String(u.etchedAt || "")) || e.hash !== u.hash || e.salt !== u.salt) return false;
+  users[key] = fromEtched(e);
+  saveUsers(users);
+  notify();
+  return true;
+}
+
 export function notify() { window.dispatchEvent(new CustomEvent("octee:account")); }
 
 export async function signUp(username, password, confirm) {
@@ -34,7 +69,7 @@ export async function signUp(username, password, confirm) {
   if (confirm !== undefined && password !== confirm) throw new AuthError("mismatch");
   const users = allUsers();
   const key = username.toLowerCase();
-  if (users[key]) throw new AuthError("taken");
+  if (users[key] || (await etchedFor(key))) throw new AuthError("taken");
   const salt = randomSalt();
   const now = new Date().toISOString();
   users[key] = {
@@ -51,8 +86,14 @@ export async function signUp(username, password, confirm) {
 
 export async function logIn(username, password) {
   const key = String(username || "").trim().toLowerCase();
-  const u = allUsers()[key];
-  if (!u || (await hashPassword(password || "", u.salt)) !== u.hash) throw new AuthError("bad_login");
+  const users = allUsers();
+  let u = users[key];
+  // The copy in the code wins when this browser has no copy, or an older one.
+  const e = await etchedFor(key);
+  if (e && (!u || String(e.etchedAt || "") > String(u.etchedAt || "")) && (await hashPassword(password || "", e.salt)) === e.hash) {
+    u = users[key] = fromEtched(e);
+    saveUsers(users);
+  } else if (!u || (await hashPassword(password || "", u.salt)) !== u.hash) throw new AuthError("bad_login");
   save(SESSION, key);
   notify();
   return u;

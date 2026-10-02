@@ -1,5 +1,5 @@
 import { $, el, niceDate, fmtMiles, setMsg } from "./dom.js";
-import { currentUser, requireLogin, logOut, updateUser } from "./auth.js";
+import { currentUser, requireLogin, logOut, updateUser, etchedInfo } from "./auth.js";
 import { tierFor, spendTokens, tokensOf } from "./miles.js";
 import { placeShort } from "./destinations.js";
 import { passCard, OA_CLASSES, classTokens } from "./booking-data.js";
@@ -17,7 +17,11 @@ function render(SA) {
       el("dt", {}, "Octmiles"), el("dd", {}, fmtMiles(u.octmiles), " (", el("a", { href: "octmiles.html" }, "details"), ")"),
       el("dt", {}, "Octeetokens"), el("dd", {}, fmtMiles(tokensOf(u)), " (", el("a", { href: "octmiles.html#tokens" }, "get more"), ")"),
       el("dt", {}, "Tier"), el("dd", {}, tierFor(u.lifetime).name)),
-    el("p", { class: "note" }, "Your account lives in this browser only. Another device or browser won't know you. We won't either."));
+    el("p", { class: "note", id: "where-note" }, "Your account lives in this browser only. Another device or browser won't know you. We won't either."));
+  etchedInfo(u.username).then((info) => {
+    const note = $("#where-note");
+    if (info && note) note.textContent = `This account is etched in the code${info.etchedAt ? " (saved " + niceDate(info.etchedAt.slice(0, 10)) + ")" : ""}, so you can log in on any device. Anything earned after that date stays on this device until the airline saves it again.`;
+  });
   const trips = [...(u.trips || [])].reverse();
   const box = $("#trips");
   if (!trips.length) { box.replaceChildren(el("p", {}, "No trips yet. ", el("a", { href: "book.html" }, "Book a flight"), " (we will try).")); return; }
@@ -31,7 +35,7 @@ function render(SA) {
 
 // Pay Octeetokens to move a booking's Octee / One United flights up a class.
 function upgradeBox(b, SA) {
-  const mine = b.legs.filter((l) => l.airline !== "SA");
+  const mine = b.legs.filter((l) => l.airline === "OA");
   if (!mine.length) return "";
   const now = mine[0].travelClass;
   const better = OA_CLASSES.filter((c) => c.tokens > classTokens(now));
@@ -47,7 +51,7 @@ function upgradeBox(b, SA) {
             const trip = u.trips.find((t) => t.ref === b.ref && t.createdAt === b.createdAt);
             if (!trip) throw new Error("We lost this booking. Sorry.");
             spendTokens(u, cost, `Upgrade to ${c.name} (${b.ref})`);
-            trip.legs.forEach((l) => { if (l.airline !== "SA") l.travelClass = c.id; });
+            trip.legs.forEach((l) => { if (l.airline === "OA") l.travelClass = c.id; });
           });
           render(SA);
         } catch (e) { setMsg(msg, e.message, "error"); }

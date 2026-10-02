@@ -9,7 +9,7 @@ export const PLACES = {
   MIA: { name: "Mdm Wrong-Wrong International Airport", short: "MIA", oa: true, aliases: ["mia", "mdm wrong wrong", "madam wrong wrong", "wrong wrong", "mdm wrong wrong house", "mdm wrongwrongs", "mdm wrong wrong international"] },
   LUJ: { name: "Lujin's", short: "Lujin's", oa: false, aliases: ["lujin", "lujins"] }
 };
-// Places you can start a trip from on the Octee form (served by Octee or One United)
+// Places you can start a trip from on the FIA form (served by Octee or One United)
 export const OA_PLACES = ["FIA", "SIA", "LIA", "SCH", "MIA"];
 export const placeName = (c) => PLACES[c]?.name || c;
 export const placeShort = (c) => PLACES[c]?.short || c;
@@ -44,7 +44,7 @@ export const OA_FLIGHTS = [
 ];
 // ONE UNITED (OU) — "unitation is a dream, it's chaos." Another airline at FIA, serving mainly
 // Scraggy House and SIA. Its flights are timed to connect with Octee (OA) and Scraggy Airlines (SA).
-// Booked on the Octee form; earns half Octmiles.
+// Booked on the FIA form; earns half Octmiles.
 export const OU_FLIGHTS = [
   { no: "OU 1", days: ALL,       stops: [["FIA", null, "06:45"], ["SIA", "08:35", null]] },
   { no: "OU 2", days: ALL,       stops: [["SIA", null, "13:20"], ["FIA", "15:10", null]] },
@@ -62,7 +62,7 @@ export const AIRLINES = {
   OU: { name: "One United", milesFactor: 0.5 },
   SA: { name: "Scraggy Airlines", milesFactor: 0 }
 };
-// Every flight sold on the Octee form (Octee + One United)
+// Every flight sold on the FIA form (Octee + One United)
 export const ALL_FLIGHTS = [...OA_FLIGHTS.map((f) => ({ ...f, airline: "OA" })), ...OU_FLIGHTS.map((f) => ({ ...f, airline: "OU" }))];
 export const isOcteeForm = (s) => s.airline !== "SA";
 
@@ -150,7 +150,7 @@ export function seatsLeft(seg, browserTrips = []) {
 }
 
 export const itineraryMiles = (it, travelClass) =>
-  it.filter(isOcteeForm).reduce((n, s) => n + s.miles + (travelClass === "first" ? 50 : 0), 0);
+  it.filter(isOcteeForm).reduce((n, s) => n + s.miles + (travelClass === "first" && s.airline === "OA" ? 50 : 0), 0);
 
 export function describeItinerary(it) {
   if (it.length === 1) return it[0].via.length ? `Direct (stops at ${it[0].via.map(placeShort).join(", ")}, stay on board)` : "Direct";

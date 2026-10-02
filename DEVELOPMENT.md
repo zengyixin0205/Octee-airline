@@ -134,7 +134,7 @@ One United is **another airline at FIA** (flight code **OU**). It serves mainly 
 
 - **More connections with SA:** OU 1 (daily) and OU 3 land at SIA in time for every morning Scraggy flight (SA101 10:20, SA103 10:30, SA105 10:45, SA107 11:00). Coming back, the Scraggy flights land at SIA by 12:30 and OU 2 (daily, 13:20), OU 4 (13:45) and OU 8 (19:10) fly home to FIA. So there is now a way to and from MIA and Lujin's **every day**. OA 100 was also moved 30 minutes earlier (lands SIA 09:30) so it connects with all four SA flights.
 - **Connections with OA:** e.g. OA 103 from LIA lands at FIA 17:00 → OU 5 to Scraggy House 17:50 (Thu, Sun); OA 104 / OA 106 land at FIA 15:20 → OU 7 to SIA 16:30.
-- **Booking:** OU flights are booked on the normal **Octee form** (no extra form) and appear in the same flight options, marked "One United". They follow the same rules (45 minutes to change, max 2 changes, 180 seats per stretch).
+- **Booking:** OU flights appear in the same flight options, marked "One United". A trip with any OU flight adds the special **One United form** after the FIA form (see "Forms" below). They follow the same rules (45 minutes to change, max 2 changes, 180 seats per stretch).
 - **Octmiles:** OU flights earn **half** the Octmiles of the same stretch on Octee. *"One United shares the miles. Unevenly."*
 - **Where it shows:** its own page `oneunited.html` (headline + timetable + live examples of connections), a banner on Home, the search results, the Destinations cards, the status board (marked "[One United]") and boarding passes (light blue).
 - Data: `OU_FLIGHTS` in `js/destinations.js`.
@@ -437,11 +437,31 @@ This is the main change from Scraggy:
 - Step 6 lists anything still missing, with links back to that step, e.g. *"Step 4: number of bags is missing."*
 - When Confirm is pressed, every step is checked again (including all three tick boxes); if anything is missing, nothing is booked.
 
-#### Transfer bookings: two forms (Octee form + SIA form)
+#### Forms: FIA form, One United form, SIA form
+
+The main booking form is called the **FIA form** (it used to be called the Octee form). Extra forms are added by the flights chosen, and **every form must be finished before Confirm**:
+
+| Trip includes | Forms to fill | Banner |
+|---|---|---|
+| Octee flights only | FIA form | (none) |
+| a One United flight | FIA form + **One United form** | ① FIA form → ② One United form → ③ Confirm both |
+| a Scraggy Airlines flight | FIA form + SIA form | ① FIA form → ② SIA form (Scraggy) → ③ Confirm both |
+| both | all three | ① FIA form → ② One United form → ③ SIA form (Scraggy) → ④ Confirm all |
+
+**One United form** (light blue, dotted steps marked "OU"; "unitation is a dream, it's chaos"):
+
+1. **Flights** — the One United flights from the trip, fixed; passengers copied from the FIA form and locked.
+2. **Unitation** — United / Semi-united / Chaos (all free).
+3. **Seat & snack** — sit next to someone I know / a stranger / the engine (if working); half a peanut (shared) / the other half / a photo of the peanut.
+4. **Declarations** — both required: "I accept that unitation is a dream" and "I accept that it's chaos".
+
+One United boarding passes show "Unitation" instead of Class, the chosen seat, and the aircraft "Whichever plane is free". Octee class prices (Octeetokens), the Octee First bonus and My Trips upgrades apply to **Octee (OA) flights only**.
+
+#### Transfer bookings: two forms (FIA form + SIA form)
 
 When the destination is a Scraggy Airlines place (MIA, Lujin's, or Scraggy House "via SIA"), the user fills in **two forms, one after the other**:
 
-| | Form 1: **Octee form** | Form 2: **SIA form** |
+| | Form 1: **FIA form** | Form 2: **SIA form** |
 |---|---|---|
 | Airline | Octee Airlines (OA) | Scraggy Airlines (SA), based at SIA |
 | Flight | The OA flight(s) that get the passenger to SIA (e.g. OA 58 from FIA, OA 101 from LIA), and back from SIA if return | SIA → destination (SA103 / SA105 / SA101), and back to SIA (SA104 / SA106 / SA102) if return |
@@ -450,7 +470,7 @@ When the destination is a Scraggy Airlines place (MIA, Lujin's, or Scraggy House
 | Tick boxes | Octee's three (I accept Octee to be CEO, engines MAY be working, FIA and SIA not responsible for loss of luggage) | Scraggy's two: "I accept that Scraggy is the CEO." and "I accept that we may go somewhere else eventually." |
 | Rewards | Octmiles | Scraggy Points (on Scraggy's side; see below) |
 
-A banner across the top shows the progress: **① Octee form → ② SIA form (Scraggy) → ③ Confirm both**.
+A banner across the top shows the progress: **① FIA form → ② SIA form (Scraggy) → ③ Confirm both**.
 
 **The SIA form must match the real Scraggy flights.** Don't copy Scraggy's options by hand. Load them from Scraggy's own data file, so if Scraggy changes something, Octee changes too:
 
@@ -465,11 +485,11 @@ So the SIA form offers exactly Scraggy's: Airbus 777 / Boeing 330 / Airbus 747 /
 
 **Rules that join the two forms:**
 
-- **Same passenger:** the passenger name from the Octee form is copied into the SIA form and locked.
+- **Same passenger:** the passenger name from the FIA form is copied into the SIA form and locked.
 - **Times must connect:** the SA flight must leave SIA **at least 45 minutes after** the Octee flight lands there (e.g. OA 101 lands 09:34 → SA103 at 10:30 ✓). On the way back, the SA flight must land at SIA at least 45 minutes before the Octee flight home leaves. Times come from the timetable (§2) and Scraggy's `data.js`.
 - **Route must be real:** the SIA form's route is fixed to SIA → the chosen destination and checked with Scraggy's `planLegs()`.
 - **Confirm both at once:** the **Confirm** button only appears after **both** forms are fully filled in (every step, every required tick box). It books all the legs together; if anything in either form is wrong, nothing is booked.
-- Going back to the Octee form and changing the date re-checks the SIA form, and Confirm locks again if the dates no longer connect.
+- Going back to the FIA form and changing the date re-checks the SIA form, and Confirm locks again if the dates no longer connect.
 
 **After confirming a transfer**, show one itinerary with every boarding pass in order: OA 58 (Octee style, gate FIA01–FIA12, `OCT-####`) → change at SIA → SA103 (Scraggy style, gate SCG002, `SCRAG-####`), then the return legs. Octmiles are earned on the OA legs only; the SA legs show *"Scraggy Points are collected with Scraggy Airlines."*
 
@@ -733,6 +753,26 @@ Clicking the Octee logo **8 times within 4 seconds** on any page opens a pop-up 
 
 ---
 
+### Accounts etched in the code (log in on any device)
+
+There is still no server. An account can live in two places:
+
+- **This browser** (localStorage): every account made with Sign up.
+- **The code** (`data/accounts.json`): accounts the owner has saved from the FAG administration. Anyone can log in to these on **any device**, and they arrive with their Octmiles, Octeetokens, trips, rewards and used codes as they were when the file was last published.
+
+How it works (`js/auth.js`):
+
+- `logIn` checks the file. If the browser has no copy of that account, or an older one (`etchedAt`), and the password matches the file's hash, the file's copy is loaded into the browser. Otherwise the browser's own copy is used.
+- `signUp` refuses a username that is already in the file.
+- `syncEtched()` runs on every page: a logged-in account with the same password picks up a newer copy from the file by itself.
+- **The file wins.** Points earned on a device after the last save stay on that device until the owner saves the account again; when a newer file is published, it replaces the device copy.
+
+Two accounts are etched from the start: **Octee** and **Joel** (100 Octmiles each).
+
+How to etch an account (FAG administration → **Accounts** tab): tick the accounts in this browser, press **Download accounts.json**, put it in `data/`, commit and push. "Remove from file" takes an account out.
+
+Privacy: `data/accounts.json` is **public** in the repo. It holds usernames, salted PBKDF2 password hashes, balances and trips (with passenger names). Only save accounts whose owners agree, with passwords not used anywhere else. No real passwords, emails or payment details are ever stored.
+
 ### Octeetokens (second currency)
 
 Octmiles are **earned**; Octeetokens are what you **pay with**. All in `js/miles.js`, stored on the account in the browser (`u.tokens`).
@@ -889,7 +929,7 @@ export const FIA_TAGLINES = [
 - [x] 8 quick clicks on the logo open the serious FAG (Fuji Airport Group) sign-in; a wrong password makes it vanish instantly; signed in, it makes codes/admins and downloads the files to commit
 - [x] The whole site revolves around orange (buttons, banners, calendar)
 - [x] One calendar picks the departure and arrival dates; the days between are shaded; Done saves
-- [x] ONE UNITED section ("unitation is a dream, it's chaos.") with OU 1–OU 8; OU flights connect with OA and SA and can be booked on the Octee form
+- [x] ONE UNITED section ("unitation is a dream, it's chaos.") with OU 1–OU 8; OU flights connect with OA and SA and can be booked on the FIA form
 - [x] There is a way to and from MIA and Lujin's every day (via OU or OA + SA)
 - [x] Works on phones (no sideways scroll) and with reduced motion
 - [ ] Deployed to GitHub Pages

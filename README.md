@@ -30,6 +30,7 @@ Things everyone sees live in `data/` and change when you commit:
 | `data/codes.json` | Octmiles codes, stored only as hashes |
 | `data/reviews.json` | Published reviews |
 | `data/control-tower.json` | Who can sign in to the FAG code administration (password hashes only) |
+| `data/accounts.json` | Accounts etched in the code: they can log in on any device (password hashes, balances, trips) |
 
 ## FAG code administration (making codes)
 

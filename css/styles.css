@@ -197,6 +197,7 @@ table.plain th { background: var(--octee-ink); color: var(--octee-orange); font-
 .steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 14px 0; counter-reset: s; }
 .steps li { font-size: .8rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: #fff; border: 1.5px solid #e6d5c3; color: var(--mess-gray); }
 .steps li.sia { border-style: dashed; }
+.steps li.ou { border-style: dotted; border-color: #6ec3f0; }
 .steps li.done { border-color: var(--ok); color: var(--ok); }
 .steps li.bad { border-color: var(--mess-red); color: var(--mess-red); }
 .steps li[aria-current="step"] { background: var(--octee-ink); color: var(--octee-orange); border-color: var(--octee-ink); }
@@ -463,3 +464,7 @@ details.lost summary { cursor: pointer; font-weight: 700; color: var(--octee-ink
   .hero.photo.dest #search { max-width: none; }
   .hero.photo.dest #results:not(:empty) { margin-top: 16px !important; }
 }
+
+/* One United's own booking form */
+.ou-form { background: #eaf6fe; border: 2px dashed #6ec3f0; border-radius: var(--radius); padding: 14px; }
+.ou-form legend::after { content: " · Operated by One United"; font-family: var(--sans); font-size: .8rem; color: var(--ou-ink); }

@@ -1,0 +1,52 @@
+{
+  "accounts": [
+    {
+      "username": "Joel",
+      "salt": "dfoVD5/UGHTAL8xdmm5ltw==",
+      "hash": "Twutl40Bu0ZCLvFuycGjATCnPzIHzhytWdheEKb22cQ=",
+      "createdAt": "2026-10-02T15:06:35.000Z",
+      "etchedAt": "2026-10-02T15:06:35.000Z",
+      "octmiles": 100,
+      "lifetime": 100,
+      "tokens": 0,
+      "history": [
+        {
+          "at": "2026-10-02T15:06:35.000Z",
+          "text": "Welcome bonus. Please do not ask what they are worth.",
+          "amount": 100
+        }
+      ],
+      "trips": [],
+      "redemptions": [],
+      "codesUsed": {},
+      "codeDays": {},
+      "codeExtra": {},
+      "rides": [],
+      "reviewBonus": false
+    },
+    {
+      "username": "Octee",
+      "salt": "PlOHokrxXigG13pTpBnHmQ==",
+      "hash": "ADGy6QbvyHPBmLA3O9kCcnqwgVkBCslLbCI39Ilw8Ac=",
+      "createdAt": "2026-10-02T15:06:35.000Z",
+      "etchedAt": "2026-10-02T15:06:35.000Z",
+      "octmiles": 100,
+      "lifetime": 100,
+      "tokens": 0,
+      "history": [
+        {
+          "at": "2026-10-02T15:06:35.000Z",
+          "text": "Welcome bonus. Please do not ask what they are worth.",
+          "amount": 100
+        }
+      ],
+      "trips": [],
+      "redemptions": [],
+      "codesUsed": {},
+      "codeDays": {},
+      "codeExtra": {},
+      "rides": [],
+      "reviewBonus": false
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // Shared on every page: header + nav, account area, side clock, footer, and the secret 8-click logo.
 import { CONFIG } from "./config.js";
 import { $, el, fmtMiles } from "./dom.js";
-import { currentUser, logOut } from "./auth.js";
+import { currentUser, logOut, syncEtched } from "./auth.js";
 import { tierFor } from "./miles.js";
 
 const PAGES = [
@@ -129,3 +129,6 @@ function buildFooter() {
 buildHeader();
 buildClock();
 buildFooter();
+
+// If the code holds a newer copy of the logged-in account, use it.
+syncEtched().catch(() => {});

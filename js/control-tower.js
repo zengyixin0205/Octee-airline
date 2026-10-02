@@ -112,15 +112,20 @@ async function tower(session, crew, notice = "") {
   let codes = load(DRAFT_CODES, null) || published.codes || [];
   const tabCodes = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "Codes");
   const tabCrew = session.role === "owner" ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
+  const tabAccounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Accounts");
+  const publishedAccounts = (await fetchJson("data/accounts.json", { accounts: [] })).accounts || [];
+  const removed = new Set();
   const body = el("div");
   const top = el("p", { class: "msg ok" }, notice);
   const show = (which) => {
     tabCodes.setAttribute("aria-selected", String(which === "codes"));
     tabCrew?.setAttribute("aria-selected", String(which === "crew"));
-    body.replaceChildren(which === "codes" ? codesPanel() : crewPanel());
+    tabAccounts.setAttribute("aria-selected", String(which === "accounts"));
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "accounts" ? accountsPanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabCrew?.addEventListener("click", () => show("crew"));
+  tabAccounts.addEventListener("click", () => show("accounts"));
 
   const saveCodes = (next) => { codes = next; save(DRAFT_CODES, codes); show("codes"); };
 
@@ -172,6 +177,64 @@ async function tower(session, crew, notice = "") {
         el("p", { class: "hint" }, "To publish: put the downloaded codes.json in the website's data/ folder (replace the old one), commit and push. GitHub Pages updates in about a minute, then the codes work on every device.")));
   }
 
+  // Accounts "etched in the code": data/accounts.json. An account in that file can log in on any device and
+  // arrives with its balances and trips as saved here.
+  function accountsPanel() {
+    const USERS = "octee.users";
+    const local = load(USERS, {});
+    const pubKey = (a) => a.username.toLowerCase();
+    const keys = [...new Set([...Object.keys(local), ...publishedAccounts.map(pubKey)])].sort();
+    const picked = new Set();
+    const msg = el("p", { class: "msg", "aria-live": "polite" });
+    const snapshot = (u, at) => ({
+      username: u.username, salt: u.salt, hash: u.hash, createdAt: u.createdAt, etchedAt: at,
+      octmiles: u.octmiles || 0, lifetime: u.lifetime || 0, tokens: u.tokens || 0,
+      history: (u.history || []).slice(0, 50), trips: u.trips || [], redemptions: u.redemptions || [],
+      codesUsed: u.codesUsed || {}, codeDays: u.codeDays || {}, codeExtra: u.codeExtra || {}, rides: u.rides || [], reviewBonus: !!u.reviewBonus
+    });
+    const rows = keys.map((k) => {
+      const u = local[k], p = publishedAccounts.find((a) => pubKey(a) === k);
+      const state = removed.has(k) ? "Will be removed from the file"
+        : p && u ? (String(u.etchedAt || "") === String(p.etchedAt || "") && u.octmiles === p.octmiles && (u.tokens || 0) === (p.tokens || 0) && (u.trips || []).length === (p.trips || []).length
+          ? "In the file, unchanged" : "In the file; this browser has a different copy")
+        : p ? "In the file (not on this device)" : "This browser only";
+      const src = u || p;
+      return el("tr", {},
+        el("td", {}, u ? el("input", { type: "checkbox", "aria-label": "Save " + src.username + " to the file", onchange: (e) => { e.target.checked ? picked.add(k) : picked.delete(k); } }) : ""),
+        el("td", {}, src.username), el("td", {}, String(src.octmiles || 0)), el("td", {}, String(src.tokens || 0)), el("td", {}, String((src.trips || []).length)),
+        el("td", {}, state),
+        el("td", {}, p && !removed.has(k) ? el("button", { class: "btn small ghost danger", type: "button", onclick: () => { removed.add(k); show("accounts"); } }, "Remove from file") : ""));
+    });
+    const build = () => {
+      const at = new Date().toISOString();
+      const users = load(USERS, {});
+      const out = publishedAccounts.filter((a) => !removed.has(pubKey(a)) && !picked.has(pubKey(a)));
+      for (const k of picked) {
+        if (!users[k]) continue;
+        users[k].etchedAt = at;          // this browser's copy now matches the file it is about to publish
+        out.push(snapshot(users[k], at));
+      }
+      save(USERS, users);
+      out.sort((a, b) => a.username.localeCompare(b.username));
+      return { accounts: out };
+    };
+    return el("div", {},
+      el("div", { class: "card" },
+        el("h3", {}, `Accounts (${keys.length})`),
+        el("p", { class: "note" }, "An account saved to data/accounts.json can sign in on any device and receives the balances and trips recorded at the time of saving. Tick the accounts to save from this browser, then download the file."),
+        keys.length ? el("div", { class: "table-wrap" }, el("table", { class: "plain" },
+          el("thead", {}, el("tr", {}, ["Save", "Username", "Octmiles", "Octeetokens", "Trips", "Status", ""].map((h) => el("th", {}, h)))),
+          el("tbody", {}, rows))) : el("p", { class: "note" }, "No accounts in this browser or in the file."),
+        el("p", { class: "msg info" }, "Notice: data/accounts.json is public in the repository. It contains usernames, password hashes, balances and trips, including passenger names. Save only accounts whose owners agree, and only with passwords that are not used anywhere else."),
+        el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => {
+          if (!picked.size && !removed.size) return setMsg(msg, "Tick at least one account, or remove one from the file.", "error");
+          download("accounts.json", build());
+          setMsg(msg, "accounts.json downloaded. Place it in the website's data/ folder, then commit and push.", "ok");
+        } }, "Download accounts.json")),
+        msg,
+        el("p", { class: "hint" }, "To publish: replace data/accounts.json with the downloaded file, commit and push. Balances earned on a device after saving stay on that device until the account is saved again here; when the file holds a newer copy, the file replaces the device copy at the next sign-in.")));
+  }
+
   function crewPanel() {
     const msg = el("p", { class: "msg", "aria-live": "polite" });
     const form = el("form", { class: "card" },
@@ -209,7 +272,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabAccounts, tabCrew),
     body,
     el("p", { class: "hint" }, "This system only prepares files. No change takes effect for other users until the files are committed to the repository."));
   if (!notice) top.remove();
