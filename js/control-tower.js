@@ -163,7 +163,7 @@ async function tower(session, crew, notice = "") {
         el("p", { class: changed ? "msg info" : "note" }, changed ? "You have changes that aren't published yet." : "Matches the published data/codes.json."),
         el("div", { class: "actions" },
           el("button", { class: "btn", type: "button", onclick: () => download("codes.json", { codes }) }, "Download codes.json"),
-          el("button", { class: "btn small ghost", type: "button", style: "color:var(--octee-gold);border-color:var(--octee-gold)", onclick: () => { remove(DRAFT_CODES); codes = published.codes || []; show("codes"); } }, "Undo my changes")),
+          el("button", { class: "btn small ghost", type: "button", style: "color:var(--octee-orange);border-color:var(--octee-orange)", onclick: () => { remove(DRAFT_CODES); codes = published.codes || []; show("codes"); } }, "Undo my changes")),
         el("p", { class: "hint" }, "To publish: put the downloaded codes.json in the website's data/ folder (replace the old one), commit and push. GitHub Pages updates in about a minute, then the codes work on every device.")));
   }
 
@@ -203,7 +203,7 @@ async function tower(session, crew, notice = "") {
   shell(
     top,
     el("p", {}, `Welcome to the Control Tower, Captain ${session.name}. `, el("span", { class: "tag" }, session.role),
-      " ", el("button", { class: "btn small ghost", type: "button", style: "color:var(--octee-gold);border-color:var(--octee-gold)", onclick: () => { removeSession(SESSION); back.remove(); } }, "Leave")),
+      " ", el("button", { class: "btn small ghost", type: "button", style: "color:var(--octee-orange);border-color:var(--octee-orange)", onclick: () => { removeSession(SESSION); back.remove(); } }, "Leave")),
     el("div", { class: "tabs", role: "tablist" }, tabCodes, tabCrew),
     body,
     el("p", { class: "hint" }, "This is a static website: the Control Tower only prepares files. Nothing changes for other people until you commit them to GitHub."));

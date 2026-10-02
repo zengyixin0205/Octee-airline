@@ -23,8 +23,9 @@ export function passCard(b, l, SA) {
   const sa = l.airline === "SA";
   const cls = sa ? SA?.data?.CLASSES?.find((c) => c.id === l.travelClass)?.name : OA_CLASSES.find((c) => c.id === l.travelClass)?.name;
   const air = ((sa ? SA?.data?.AIRCRAFT : OA_AIRCRAFT) || []).find((a) => a.id === l.aircraft)?.name || l.aircraft;
-  return el("article", { class: "pass" + (sa ? " sa" : ""), "aria-label": "Boarding pass " + l.no },
-    el("div", { class: "pass-top" }, el("span", {}, (sa ? "Scraggy Airlines · " : "Octee Airlines · ") + l.no), el("span", {}, "Ref " + (sa ? b.scraggyRef : b.ref))),
+  const ou = l.airline === "OU";
+  return el("article", { class: "pass" + (sa ? " sa" : ou ? " ou" : ""), "aria-label": "Boarding pass " + l.no },
+    el("div", { class: "pass-top" }, el("span", {}, (sa ? "Scraggy Airlines · " : ou ? "One United · " : "Octee Airlines · ") + l.no), el("span", {}, "Ref " + (sa ? b.scraggyRef : b.ref))),
     el("div", { class: "pass-body" },
       el("p", { class: "route" }, `${placeName(l.from)} → ${placeName(l.to)}`),
       el("dl", { class: "kv" },
@@ -36,7 +37,7 @@ export function passCard(b, l, SA) {
         el("dt", {}, "Class"), el("dd", {}, cls || "—"),
         el("dt", {}, "Seat"), el("dd", {}, l.seat || "Somewhere"),
         el("dt", {}, "Gate"), el("dd", {}, l.gate),
-        el("dt", {}, sa ? "Points" : "Octmiles"), el("dd", {}, sa ? "Scraggy Points are collected with Scraggy Airlines." : "+" + l.miles)),
+        el("dt", {}, sa ? "Points" : "Octmiles"), el("dd", {}, sa ? "Scraggy Points are collected with Scraggy Airlines." : "+" + l.miles + (ou ? " (One United shares the miles. Unevenly.)" : ""))),
       !sa && l.from === "FIA" ? el("p", {}, el("a", { href: "joelmobile.html" }, `Call the JOELMOBILE to gate ${l.gate}`)) : ""));
 }
 

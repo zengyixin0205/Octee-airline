@@ -1,6 +1,6 @@
 import { $, el } from "./dom.js";
 import { mountSearchBox, renderResults } from "./search.js";
-import { OA_FLIGHTS, daysText, routeText } from "./destinations.js";
+import { ALL_FLIGHTS, daysText } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
 
 const params = new URLSearchParams(location.search);
@@ -13,10 +13,10 @@ mountSearchBox($("#search"), { onSearch: run, from: params.get("from") || "FIA",
 if (params.get("q")) renderResults(results, params.get("q"), params.get("from") || "FIA");
 
 // Flight numbers on each destination card, straight from the timetable
-const towards = (place) => OA_FLIGHTS.filter((f) => f.stops.findIndex((s) => s[0] === place) > 0);
+const towards = (place) => ALL_FLIGHTS.filter((f) => f.stops.findIndex((s) => s[0] === place) > 0);
 for (const card of document.querySelectorAll("[data-place]")) {
   const place = card.dataset.place;
-  card.querySelector(".flights").append(...towards(place).map((f) => el("span", { class: "tag" }, `${f.no} · ${daysText(f.days)}`)));
+  card.querySelector(".flights").append(...towards(place).map((f) => el("span", { class: f.airline === "OU" ? "tag ou" : "tag" }, `${f.no} · ${daysText(f.days)}`)));
 }
 
 // Partner (Scraggy Airlines) destinations from the real Scraggy data

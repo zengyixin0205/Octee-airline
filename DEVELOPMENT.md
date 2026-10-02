@@ -59,7 +59,7 @@ Flight numbers: **OA 58** is the flight to Scraggy International (SIA). **OA 100
 | Flight | Route (stops) | Days | Times |
 |---|---|---|---|
 | **OA 58** | FIA → SIA | Every day | FIA 07:30 → SIA 09:20 |
-| OA 100 | FIA → **SIA** → LIA | Mon, Thu | FIA 08:10 → SIA 10:00 / 10:40 → LIA 11:55 |
+| OA 100 | FIA → **SIA** → LIA | Mon, Thu | FIA 07:40 → SIA 09:30 / 10:10 → LIA 11:25 |
 | OA 101 | LIA → **SIA** → FIA | Tue, Fri | LIA 07:45 → SIA **09:34** / 10:15 → FIA 12:05 |
 | OA 102 | FIA → **SIA** → LIA | Wed, Sat | FIA 14:30 → SIA 16:20 / 17:00 → LIA 18:15 |
 | OA 103 | LIA → **SIA** → FIA | Thu, Sun | LIA 13:20 → SIA 14:35 / 15:10 → FIA 17:00 |
@@ -113,6 +113,31 @@ Rules:
 - **Staying on a flight that stops** is not a connection (no minimum time, same seat).
 - At most **2 changes** (3 flights) in one direction, all on the **same day**.
 - Each OA flight has **180 seats**, counted **per stretch**: a passenger from LIA to Scraggy House on OA 115 uses a seat on LIA → FIA and FIA → SCH; one from FIA uses a seat only on FIA → SCH. A static site can't see other visitors' bookings, so "other passengers" are a steady made-up number per flight and date, minus the real bookings saved in this browser. When a stretch is full, the calendar greys the day out.
+
+### ONE UNITED (OU)
+
+> **ONE UNITED**
+> *unitation is a dream, it's chaos.*
+
+One United is **another airline at FIA** (flight code **OU**). It serves mainly **Scraggy House and SIA** from FIA, and its flights are timed so they can be **one part of a longer trip with Octee (OA) or Scraggy Airlines (SA)**.
+
+| Flight | Route (stops) | Days | Times |
+|---|---|---|---|
+| OU 1 | FIA → SIA | Every day | FIA 06:45 → SIA 08:35 |
+| OU 2 | SIA → FIA | Every day | SIA 13:20 → FIA 15:10 |
+| OU 3 | FIA → **Scraggy House** → SIA | Mon, Wed, Fri | FIA 06:30 → SCH 08:20 / 08:45 → SIA 09:20 |
+| OU 4 | SIA → **Scraggy House** → FIA | Mon, Wed, Fri | SIA 13:45 → SCH 14:20 / 14:50 → FIA 16:40 |
+| OU 5 | FIA → Scraggy House | Thu, Sun | FIA 17:50 → SCH 19:40 |
+| OU 6 | Scraggy House → FIA | Thu, Sun | SCH 20:20 → FIA 22:10 |
+| OU 7 | FIA → SIA | Every day | FIA 16:30 → SIA 18:20 |
+| OU 8 | SIA → FIA | Every day | SIA 19:10 → FIA 21:00 |
+
+- **More connections with SA:** OU 1 (daily) and OU 3 land at SIA in time for every morning Scraggy flight (SA101 10:20, SA103 10:30, SA105 10:45, SA107 11:00). Coming back, the Scraggy flights land at SIA by 12:30 and OU 2 (daily, 13:20), OU 4 (13:45) and OU 8 (19:10) fly home to FIA. So there is now a way to and from Mdm Wrong-Wrong's and Lujin's **every day**. OA 100 was also moved 30 minutes earlier (lands SIA 09:30) so it connects with all four SA flights.
+- **Connections with OA:** e.g. OA 103 from LIA lands at FIA 17:00 → OU 5 to Scraggy House 17:50 (Thu, Sun); OA 104 / OA 106 land at FIA 15:20 → OU 7 to SIA 16:30.
+- **Booking:** OU flights are booked on the normal **Octee form** (no extra form) and appear in the same flight options, marked "One United". They follow the same rules (45 minutes to change, max 2 changes, 180 seats per stretch).
+- **Octmiles:** OU flights earn **half** the Octmiles of the same stretch on Octee. *"One United shares the miles. Unevenly."*
+- **Where it shows:** its own page `oneunited.html` (headline + timetable + live examples of connections), a banner on Home, the search results, the Destinations cards, the status board (marked "[One United]") and boarding passes (dark brown with orange).
+- Data: `OU_FLIGHTS` in `js/destinations.js`.
 
 ### Partner airline: Scraggy Airlines (SA)
 
@@ -209,6 +234,7 @@ ONE PEANUT
 | My Account | `account.html` | Profile and My Trips (logged-in only) |
 | Octmiles | `octmiles.html` | Octmiles balance, tier, history, rewards shop and the **"Have a code?"** box (see §7) |
 | JOELMOBILE | `joelmobile.html` | The airport "help" buggy at FIA (see §5.9) |
+| One United | `oneunited.html` | **ONE UNITED / unitation is a dream, it's chaos.** The OU airline: timetable and connections (see §2) |
 | Book a Flight | `book.html` | The booking form. **The only way to book a flight** (see §5.10) |
 | Reviews | `reviews.html` | Passenger reviews and a write-a-review form (see §5.11) |
 
@@ -350,30 +376,28 @@ The form **follows Scraggy Airlines' booking form** (`Scraggy-airlines/book.html
 
 | Step (same as Scraggy) | Octee version |
 |---|---|
-| **1. Trip** | One-way or return, **From** and **To**, **departure and return dates picked on the flight calendar** (below), passengers (1–9). From / To can be any two of FIA, SIA, LIA and Scraggy House. After picking a date, the form lists the **flight options** for that day, like a real airline: direct, flights with a stop (stay on board), and connections (change planes). The passenger picks one. E.g. LIA → SIA on a Tuesday: *"OA 101 · LIA 07:45 → SIA 09:34 · direct (this flight continues to FIA)"*. The To list also shows Mdm Wrong-Wrong's and Lujin's, marked "transfer via SIA (2 forms)"; picking one switches to the **transfer booking** below (this form books the Octee flights to SIA; passengers are fixed at 1). If there's nothing that day: *"No flights that day. Not even eventually."* Mdm Wrong-Wrong's and Lujin's can be booked from anywhere that reaches SIA in time. |
+| **1. Trip** | The form **asks three things, in this order**, in a highlighted box: **① Destination** ("Where are you going?"), **② Departure date** (the day you leave) and **③ Arrival date** (the day you fly back). Both dates are picked on the flight calendar (below). Underneath: **Departing from** (FIA by default; any of FIA, SIA, LIA, Scraggy House), **Passengers** (1–9) and a tick box **"One-way only (I'm not flying back)"**, which removes the arrival date. After a date is picked, the form lists that day's flights, like a real airline: direct, flights with a stop (stay on board) and connections (change planes); the passenger picks one for the departure and one for the flight back. Destinations marked "transfer via SIA (2 forms)" (Mdm Wrong-Wrong's, Lujin's) switch to the transfer booking below with 1 passenger. Missing answers: *"Pick your departure date on the calendar."* / *"Pick your arrival date (the day you fly back) on the calendar, or tick One-way."* If there's nothing that day: *"No flights that day. Not even eventually."* |
 | **2. Aircraft** | Choose from the Octee fleet (Airbus 777, Boeing 330, Airbus 747, Boeing 380, same joke mix-up as Scraggy) or "Surprise me (we will pick the wrong one)". |
 | **3. Class** | Octee Economy, Octee Business, or **Octee First** ("Economy with a curtain"). Octee First earns +50 Octmiles per leg. |
 | **4. Passenger** | Name for each passenger (first one defaults to the username; a nickname is fine), seat preference (window, aisle, "somewhere"), snack preference (One Peanut · One Peanut (vegetarian) · One Peanut (served warm)), number of bags (0–3, *"We will lose them in a random order."*). |
 | **5. Fun extras** | "Reason for travelling" (dropdown of joke options), ☐ JOELMOBILE pickup to my gate (optional), and **three tick boxes that must all be ticked** (below). |
 | **6. Review and confirm** | Shows the whole trip, the Octmiles that will be earned, and **"Confirm (no money will be taken)"**. Payment is just *"Paid in peanuts."* |
 
-#### Flight calendar (depart and return)
+#### Flight calendar (departure and arrival dates)
 
-Dates are picked on a **calendar, like on a real airline website**. Passengers can't type a date.
+Dates are picked on **one calendar for both dates, like an airline app**. Passengers can't type a date.
 
-- Clicking **Depart** (or **Return**) opens a calendar pop-up: **two months side by side** on computers, one month on phones, with ◀ ▶ buttons to change month.
-- Each day shows the day number and, if the route flies that day, the **flight number and time** in small text, e.g. `OA 107 · 09:00`.
-- Days with **no flight** on that route are greyed out with "No flight" and can't be picked. Past days are greyed out too. Bookings open up to 11 months ahead.
-- **Stops and connections:** a day can be picked if **at least one** way to get there works that day (direct, a flight with a stop, or connections with 45+ minutes each and free seats). The day shows the earliest option, e.g. `OA 101 · 07:45` or `2 flights`.
-- **Return trips:** after picking the departure day, the calendar switches to "Select your return". Only days after the departure (or the same day, if the return leaves at least 90 minutes after landing: *"time to look for your bags"*) that have a return flight can be picked. The days in between are shaded as a range, like real airline sites.
-- If the visitor looks at a month with no flights left, show a hint: *"Next OA 108: Wed 7 Oct."*
-- Under the calendar, a summary of each leg with the **depart and arrive** date and time:
-  > **Depart:** Tue 6 Oct 2026 · **OA 107** FIA 09:00 → LIA 11:30
-  > **Return:** Wed 7 Oct 2026 · **OA 109** LIA 07:10 → FIA 09:40
-
-  For a connection, every flight and the wait in between:
-  > **Depart:** Tue 6 Oct 2026 · **OA 101** LIA 07:45 → SIA 09:34 · *change at SIA, 56 min* · **SA103** SIA 10:30 → Mdm Wrong-Wrong's 11:20
-- A small legend: ● flight available · ○ no flight · ▬ your trip.
+- Clicking **Departure date** or **Arrival date** opens the calendar. At the top are two tabs, **Departure Date** and **Arrival Date**, each showing the month, weekday and a big day number once picked.
+- Months are stacked and scroll (weeks start on Sunday). Tap the **departure day**, then the **arrival day** (the day you fly back). The two days are filled orange with a little arrow shape, and the **days in between are shaded** light orange.
+- A big orange **Done** button at the bottom saves both dates. × closes without saving.
+- Each day shows, in small text, the first flight that day (e.g. `OA 107`). Days with **no flight** on that route (or no seats) are greyed out and can't be picked; so are past days. Bookings open up to 11 months ahead.
+- **Stops and connections:** a day can be picked if **at least one** way to get there works that day (direct, a flight with a stop, or changes of plane with 45+ minutes each), on Octee, One United or Scraggy flights.
+- **Arrival date:** only days on or after the departure day that have a flight back; same-day only if the flight back leaves at least 90 minutes after landing (*"time to look for your bags"*). One-way trips only pick a departure date.
+- After **Done**, the form lists that day's flights for the departure and for the flight back, and a summary:
+  > **Departure:** Tue 6 Oct 2026 · **OA 107** FIA 09:00 → LIA 11:30
+  > **Arrival (flight back):** Wed 7 Oct 2026 · **OA 109** LIA 07:10 → FIA 09:40
+- **Keyboard:** arrow keys move between days (skipping days with no flight), Enter picks, Esc closes. Each day has a full label like "Tuesday 6 October 2026, departure date".
+- Built as `js/calendar.js` (`openRangeCalendar`).
 - **Keyboard:** arrow keys move between days, Page Up / Page Down change month, Enter picks, Esc closes. Follow the WAI-ARIA "date picker dialog" pattern (`role="dialog"`, grid of days, `aria-selected`, each day has a full label like "Tuesday 6 October 2026, OA 107 at 09:00").
 - Built once as `js/calendar.js` and reused by the Home widget and the booking form. The flight days come from `js/destinations.js`.
 
@@ -549,20 +573,22 @@ Search order: OA direct match first, then partner (transfer) match, then FIA, th
 - Favicon: crop the creature only.
 - Transparent PNG, so it works on any light background.
 
-### Brand (the facade)
+### Brand: everything revolves around orange
 
 | Token | Value | Use |
 |---|---|---|
-| `--octee-navy` | `#0B1F3A` | Primary, nav, headings |
-| `--octee-gold` | `#C9A44C` | Accents, "premium" touches |
-| `--octee-sky` | `#E8F1FA` | Backgrounds |
+| `--octee-orange` | `#FF7A00` | Buttons, accents, selected things, the calendar's Done button |
+| `--octee-orange-dark` | `#B34700` | Banners, the nav's current page, links |
+| `--octee-orange-deep` | `#C25500` | Hover states, gradients |
+| `--octee-ink` | `#2B1A0E` | Text, headings, dark panels (clock, footer) |
+| `--octee-cream` | `#FFF3E6` | Page background |
 | `--octee-white` | `#FFFFFF` | Cards |
-| `--mess-red` | `#D64545` | DELAYED, errors, cracks in the facade |
-| `--mess-gray` | `#8A8F98` | Tiny footnotes, punchlines |
+| `--mess-red` | `#C03A3A` | DELAYED, errors, cracks in the facade |
+| `--mess-gray` | `#6B7280` | Tiny footnotes |
 
-- **Headings:** elegant serif (e.g. *Playfair Display*) for the luxury feel.
-- **Body:** clean sans-serif (e.g. *Inter*).
-- **Departures board:** monospace (e.g. *JetBrains Mono*), yellow on black.
+- Hero banners: a dark-brown to orange gradient with white text. Buttons: orange with dark brown text (readable contrast).
+- Other airlines keep their own accent inside the orange site: **Scraggy Airlines** = yellow + brown; **One United** = dark brown + orange.
+- **Headings:** elegant serif (*Playfair Display*). **Body:** *Inter*. **Departures board:** *JetBrains Mono*, yellow on black.
 
 ### Comedy details (use sparingly)
 
@@ -620,6 +646,7 @@ GitHub Pages only serves static files: no server, no database. So everything tha
 |---|---|
 | Sign up | 100 |
 | Octee flights, per stretch flown | FIA ↔ SIA 150 · FIA ↔ LIA 200 · FIA ↔ Scraggy House 250 · SIA ↔ LIA 120 · SIA ↔ Scraggy House 80 |
+| One United (OU) flights | Half the Octee rate for the same stretch |
 | Octee First | +50 per flight |
 | JOELMOBILE ride | 20 (max 3 a day) |
 | First review | 30 (once) |
@@ -667,7 +694,7 @@ A second peanut (250, always out of stock) · Priority JOELMOBILE pickup (300) �
 
 - Real `<label>`s everywhere; `autocomplete="username"`, `"current-password"`, `"new-password"`; "Show password" toggles.
 - Messages use `role="status"` / `aria-live="polite"`; booking errors use `role="alert"`.
-- The flight calendar follows the WAI-ARIA date picker dialog pattern (arrow keys, Page Up/Down, Enter, Esc; full labels like "Tuesday 6 October 2026, 2 options, first OA 101 at 07:45").
+- The flight calendar follows the WAI-ARIA date picker dialog pattern (arrow keys, Enter, Esc; full labels like "Tuesday 6 October 2026, departure date").
 - The destination search is a combobox (`role="combobox"`, `aria-expanded`, `aria-activedescendant`, `role="listbox"`).
 - `prefers-reduced-motion`: no tagline rotation animation, no button dodge, the JOELMOBILE stays parked.
 - All user text (names, reviews) is set with `textContent`, never `innerHTML`.
@@ -691,6 +718,7 @@ Octee-airline/
 ├── experience.html     One peanut
 ├── fia.html            FIA map + tagline posters
 ├── joelmobile.html     "I'm a joel!"
+├── oneunited.html      ONE UNITED: the OU airline, timetable, connections
 ├── reviews.html        4.9★* facade + real average + lost-with-baggage reviews
 ├── octmiles.html       Balance, tiers, rewards shop, "Have a code?"
 ├── login.html          Log in / Sign up
@@ -711,7 +739,7 @@ Octee-airline/
 │   ├── calendar.js     Flight calendar
 │   ├── book.js  booking-data.js   Booking form + boarding passes
 │   ├── search.js  taglines.js  reviews-data.js  code-box.js  control-tower.js
-│   └── home.js  destinations-page.js  status.js  baggage.js  experience.js  fia.js
+│   └── home.js  destinations-page.js  status.js  baggage.js  experience.js  fia.js  oneunited.js
 │       joelmobile.js  reviews.js  octmiles-page.js  login.js  account.js  contact.js
 ├── data/
 │   ├── codes.json          Octmiles codes (hashes only)
@@ -777,6 +805,7 @@ export const FIA_TAGLINES = [
 | M10 | JOELMOBILE | ✅ |
 | M11 | Reviews | ✅ |
 | M12 | Codes + Control Tower (static files) | ✅ |
+| M12b | Orange theme, one range calendar for both dates, One United (OU) airline | ✅ |
 | M13 | Deploy to GitHub Pages; push Scraggy changes; Bo sets up the Control Tower owner | To do |
 
 ---
@@ -804,5 +833,9 @@ export const FIA_TAGLINES = [
 - [x] Reviews: 4.9★* facade **and** the real average; 1–3★ are in "lost with your baggage", not removed
 - [x] "Have a code?" works with `data/codes.json` (hashes only), once per code per account, 10 wrong tries an hour
 - [x] 8 quick clicks on the logo open the Control Tower; it makes codes/admins and downloads the files to commit
+- [x] The whole site revolves around orange (buttons, banners, calendar)
+- [x] One calendar picks the departure and arrival dates; the days between are shaded; Done saves
+- [x] ONE UNITED section ("unitation is a dream, it's chaos.") with OU 1–OU 8; OU flights connect with OA and SA and can be booked on the Octee form
+- [x] There is a way to and from Mdm Wrong-Wrong's and Lujin's every day (via OU or OA + SA)
 - [x] Works on phones (no sideways scroll) and with reduced motion
 - [ ] Deployed to GitHub Pages

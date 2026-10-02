@@ -1,6 +1,6 @@
 // FIA departures & arrivals for today (FIA time). Never "ON TIME".
 import { $, el, pick } from "./dom.js";
-import { OA_FLIGHTS, placeShort } from "./destinations.js";
+import { ALL_FLIGHTS, placeShort } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
 import { CONFIG } from "./config.js";
 
@@ -15,14 +15,14 @@ function fiaNow() {
 async function build() {
   const day = fiaNow();
   const rows = [];
-  for (const f of OA_FLIGHTS) {
+  for (const f of ALL_FLIGHTS) {
     if (!f.days.includes(day)) continue;
     const i = f.stops.findIndex((s) => s[0] === "FIA");
     if (i < 0) continue;
     const later = f.stops.slice(i + 1).map((s) => placeShort(s[0]));
     const earlier = f.stops.slice(0, i).map((s) => placeShort(s[0]));
-    if (f.stops[i][2]) rows.push({ no: f.no, where: later[later.length - 1] + (later.length > 1 ? " via " + later.slice(0, -1).join(", ") : ""), time: f.stops[i][2], kind: "Departure" });
-    if (f.stops[i][1]) rows.push({ no: f.no, where: "Arriving from " + earlier[0] + (earlier.length > 1 ? " via " + earlier.slice(1).join(", ") : ""), time: f.stops[i][1], kind: "Arrival" });
+    if (f.stops[i][2]) rows.push({ no: f.no, where: (f.airline === "OU" ? "[One United] " : "") + later[later.length - 1] + (later.length > 1 ? " via " + later.slice(0, -1).join(", ") : ""), time: f.stops[i][2], kind: "Departure" });
+    if (f.stops[i][1]) rows.push({ no: f.no, where: (f.airline === "OU" ? "[One United] " : "") + "Arriving from " + earlier[0] + (earlier.length > 1 ? " via " + earlier.slice(1).join(", ") : ""), time: f.stops[i][1], kind: "Arrival" });
   }
   const { routes } = await scraggyData();
   const fia = routes.find((r) => r.place === "FIA");

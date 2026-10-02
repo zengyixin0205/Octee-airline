@@ -6,7 +6,7 @@ import { loadSession, saveSession, removeSession } from "./store.js";
 import { currentUser, updateUser } from "./auth.js";
 import { addMiles } from "./miles.js";
 import { allTripsInBrowser } from "./auth.js";
-import { openCalendar } from "./calendar.js";
+import { openRangeCalendar } from "./calendar.js";
 import {
   PLACES, OA_PLACES, placeName, placeShort, itinerariesOn, seatsLeft, itineraryMiles, describeItinerary, mins
 } from "./destinations.js";
@@ -34,7 +34,7 @@ let state = blank();
 /* ---------------- trip maths ---------------- */
 const routes = () => (SA ? SA.routes : []);
 const browserTrips = () => allTripsInBrowser();
-const fits = (it) => it.every((s) => s.airline !== "OA" || seatsLeft(s, browserTrips()) >= state.passengers);
+const fits = (it) => it.every((s) => s.airline === "SA" || seatsLeft(s, browserTrips()) >= state.passengers);
 const outIts = () => (state.departDate ? itinerariesOn(state.from, state.to, state.departDate, routes()).filter(fits) : []);
 const out = () => outIts()[state.outChoice] || null;
 function backIts() {
@@ -46,19 +46,19 @@ function backIts() {
 const back = () => backIts()[state.backChoice] || null;
 const allLegs = () => [...(out() || []), ...(state.tripType === "return" ? back() || [] : [])];
 const needsSA = () => allLegs().some((s) => s.airline === "SA") || !!(PLACES[state.to] && !PLACES[state.to].oa);
-const needsOA = () => { const legs = allLegs(); return !legs.length || legs.some((s) => s.airline === "OA"); };
+const needsOA = () => { const legs = allLegs(); return !legs.length || legs.some((s) => s.airline !== "SA"); };
 
 /* ---------------- steps ---------------- */
 const req = (v, msg) => (v === "" || v == null || v === false ? [msg] : []);
 const STEPS = {
   o1: { form: "oa", title: "1. Trip", validate: () => {
     const p = [];
-    if (state.from === state.to) p.push("From and To are the same place. You are already there. Probably.");
-    if (!state.departDate) p.push("Pick a departure date on the calendar.");
-    else if (!out()) p.push("Pick one of the flight options for your departure day.");
+    if (state.from === state.to) p.push("Your destination is where you already are. You are already there. Probably.");
+    if (!state.departDate) p.push("Pick your departure date on the calendar.");
+    else if (!out()) p.push("Pick one of the flights for your departure date.");
     if (state.tripType === "return") {
-      if (!state.returnDate) p.push("Pick a return date on the calendar.");
-      else if (!back()) p.push("Pick one of the flight options for your return day.");
+      if (!state.returnDate) p.push("Pick your arrival date (the day you fly back) on the calendar, or tick One-way.");
+      else if (!back()) p.push("Pick one of the flights for your arrival date.");
     }
     if (needsSA() && state.passengers !== 1) p.push("Scraggy Airlines books one passenger at a time, so trips with SA flights are for 1 passenger.");
     return p;
@@ -127,9 +127,10 @@ function legItem(s, k, it) {
     bits.push(el("li", { class: "change" }, `Change planes at ${placeName(s.from)} · ${wait} min`));
   }
   const seats = seatsLeft(s, browserTrips());
-  bits.push(el("li", { class: s.airline === "SA" ? "sa" : "" },
+  bits.push(el("li", { class: s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "" },
     el("strong", {}, s.no), ` ${placeShort(s.from)} ${s.dep} → ${placeShort(s.to)} ${s.arr}`,
     s.via.length ? ` · stops at ${s.via.map(placeShort).join(", ")} (stay on board)` : "",
+    s.airline === "OU" ? el("span", { class: "tag ou" }, "One United") : "",
     s.airline === "SA" ? el("span", { class: "tag sa" }, "Scraggy Airlines · SIA form") : el("span", { class: "tag" }, `${seats} seats left (mostly bags)`)));
   return bits;
 }
@@ -151,47 +152,69 @@ function dayInfoFor(fromP, toP, extra = {}) {
     const its = itinerariesOn(fromP, toP, iso, routes(), { notBefore }).filter(fits);
     if (!its.length) return { ok: false };
     const f = its[0];
-    return { ok: true, label: f.length === 1 ? `${f[0].no} · ${f[0].dep}` : `${f.length} flights`, full: `${its.length} option${its.length > 1 ? "s" : ""}, first ${f[0].no} at ${f[0].dep}` };
+    return { ok: true, short: f.length === 1 ? f[0].no : `${f.length} flights`, label: f.length === 1 ? `${f[0].no} · ${f[0].dep}` : `${f.length} flights`, full: `${its.length} option${its.length > 1 ? "s" : ""}, first ${f[0].no} at ${f[0].dep}` };
   };
 }
 
 /* ---------------- step renderers ---------------- */
 function stepTrip() {
-  const fromSel = el("select", { id: "from", onchange: (e) => update({ from: e.target.value, outChoice: 0, backChoice: 0, departDate: "", returnDate: "" }) },
+  const fromSel = el("select", { id: "from", onchange: (e) => update({ from: e.target.value, to: state.to === e.target.value ? (e.target.value === "FIA" ? "SIA" : "FIA") : state.to, outChoice: 0, backChoice: 0, departDate: "", returnDate: "" }) },
     OA_PLACES.map((c) => el("option", { value: c, selected: c === state.from }, placeName(c))));
   const toSel = el("select", { id: "to", onchange: (e) => update({ to: e.target.value, outChoice: 0, backChoice: 0, departDate: "", returnDate: "", passengers: PLACES[e.target.value].oa ? state.passengers : 1 }) },
-    Object.keys(PLACES).map((c) => el("option", { value: c, selected: c === state.to }, placeName(c) + (PLACES[c].oa ? "" : " — transfer via SIA (2 forms)"))));
+    Object.keys(PLACES).filter((c) => c !== state.from).map((c) => el("option", { value: c, selected: c === state.to }, placeName(c) + (PLACES[c].oa ? "" : " — transfer via SIA (2 forms)"))));
   const paxSel = el("select", { id: "passengers", disabled: needsSA(), onchange: (e) => update({ passengers: +e.target.value, names: state.names.slice(0, +e.target.value) }) },
     Array.from({ length: 9 }, (_, i) => el("option", { value: i + 1, selected: state.passengers === i + 1 }, String(i + 1))));
-  const departBtn = el("button", { type: "button", class: "date-btn", id: "depart-btn" }, state.departDate ? "Depart: " + niceDate(state.departDate) : "Depart: pick a date 📅");
-  departBtn.addEventListener("click", () => openCalendar({
-    title: `Depart: ${placeShort(state.from)} → ${placeShort(state.to)}`, selected: state.departDate || null, returnFocus: departBtn,
-    dayInfo: dayInfoFor(state.from, state.to),
-    onPick: (iso) => update({ departDate: iso, outChoice: 0, backChoice: 0, returnDate: state.returnDate && state.returnDate >= iso ? state.returnDate : "" })
-  }));
+  // One calendar for both dates (like an airline app): tap the departure day, then the arrival day, then Done.
+  const oneWay = state.tripType === "oneway";
+  const departInfo = dayInfoFor(state.from, state.to);
+  const arriveInfo = (iso, departIso) => {
+    const first = itinerariesOn(state.from, state.to, departIso, routes()).filter(fits)[departIso === state.departDate ? state.outChoice : 0]
+      || itinerariesOn(state.from, state.to, departIso, routes()).filter(fits)[0];
+    if (!first) return { ok: false };
+    return dayInfoFor(state.to, state.from, { min: departIso, sameDayDate: departIso, sameDayAfter: mins(first[first.length - 1].arr) + 90 })(iso);
+  };
+  const openCal = (mode, btn) => openRangeCalendar({
+    depart: state.departDate, arrive: state.returnDate, oneway: oneWay, mode, departInfo, arriveInfo, returnFocus: btn,
+    onDone: ({ depart, arrive }) => update({
+      departDate: depart, returnDate: oneWay ? "" : arrive,
+      outChoice: depart === state.departDate ? state.outChoice : 0,
+      backChoice: arrive === state.returnDate && depart === state.departDate ? state.backChoice : 0
+    })
+  });
+  const departBtn = el("button", { type: "button", class: "date-btn", id: "depart-btn" }, state.departDate ? niceDate(state.departDate) : "Pick a date 📅");
+  departBtn.setAttribute("aria-labelledby", "depart-label depart-btn");
+  departBtn.addEventListener("click", () => openCal("depart", departBtn));
   const o = out();
-  const returnBtn = el("button", { type: "button", class: "date-btn", id: "return-btn", disabled: !o }, state.returnDate ? "Return: " + niceDate(state.returnDate) : "Return: pick a date 📅");
-  returnBtn.addEventListener("click", () => openCalendar({
-    title: `Select your return: ${placeShort(state.to)} → ${placeShort(state.from)}`, selected: state.returnDate || null, rangeStart: state.departDate,
-    minDate: state.departDate || today(), returnFocus: returnBtn,
-    dayInfo: dayInfoFor(state.to, state.from, { min: state.departDate, sameDayDate: state.departDate, sameDayAfter: o ? mins(o[o.length - 1].arr) + 90 : null }),
-    onPick: (iso) => update({ returnDate: iso, backChoice: 0 })
-  }));
+  const returnBtn = el("button", { type: "button", class: "date-btn", id: "return-btn" }, state.returnDate ? niceDate(state.returnDate) : "Pick a date 📅");
+  returnBtn.setAttribute("aria-labelledby", "return-label return-btn");
+  returnBtn.addEventListener("click", () => openCal(state.departDate ? "arrive" : "depart", returnBtn));
   const summary = [];
-  if (o) summary.push(el("p", {}, el("strong", {}, "Depart: "), `${niceDate(state.departDate)} · ${o.map((s) => s.no).join(" + ")} · ${placeShort(o[0].from)} ${o[0].dep} → ${placeShort(o[o.length - 1].to)} ${o[o.length - 1].arr}`));
+  if (o) summary.push(el("p", {}, el("strong", {}, "Departure: "), `${niceDate(state.departDate)} · ${o.map((s) => s.no).join(" + ")} · ${placeShort(o[0].from)} ${o[0].dep} → ${placeShort(o[o.length - 1].to)} ${o[o.length - 1].arr}`));
   const b = back();
-  if (b) summary.push(el("p", {}, el("strong", {}, "Return: "), `${niceDate(state.returnDate)} · ${b.map((s) => s.no).join(" + ")} · ${placeShort(b[0].from)} ${b[0].dep} → ${placeShort(b[b.length - 1].to)} ${b[b.length - 1].arr}`));
+  if (b) summary.push(el("p", {}, el("strong", {}, "Arrival (flight back): "), `${niceDate(state.returnDate)} · ${b.map((s) => s.no).join(" + ")} · ${placeShort(b[0].from)} ${b[0].dep} → ${placeShort(b[b.length - 1].to)} ${b[b.length - 1].arr}`));
+  const oneway = state.tripType === "oneway";
   return el("fieldset", {}, el("legend", {}, "1. Trip"),
-    radios("tripType", [{ id: "return", name: "Return" }, { id: "oneway", name: "One-way" }], state.tripType, (v) => update({ tripType: v, returnDate: "", backChoice: 0 })),
+    el("p", { class: "sub", style: "margin-top:0" }, "Tell us three things: where you're going, the day you leave, and the day you fly back."),
+    el("div", { class: "row ask" },
+      el("div", { class: "field" }, el("label", { for: "to" }, "① Destination"), toSel,
+        el("p", { class: "hint" }, "Where are you going? (We may take you there.)")),
+      el("div", { class: "field" }, el("span", { class: "label", id: "depart-label" }, "② Departure date"), departBtn,
+        el("p", { class: "hint" }, "The day you leave. One calendar for both dates.")),
+      el("div", { class: "field" }, el("span", { class: "label", id: "return-label" }, "③ Arrival date"), oneway ? el("p", { class: "note", style: "margin:.5em 0" }, "One-way: no arrival date needed.") : returnBtn,
+        el("p", { class: "hint" }, oneway ? "" : "The day you fly back."))),
     el("div", { class: "row" },
-      el("div", { class: "field" }, el("label", { for: "from" }, "From"), fromSel),
-      el("div", { class: "field" }, el("label", { for: "to" }, "To"), toSel),
+      el("div", { class: "field" }, el("label", { for: "from" }, "Departing from"), fromSel),
       el("div", { class: "field" }, el("label", { for: "passengers" }, "Passengers"), paxSel,
-        needsSA() ? el("p", { class: "hint" }, "Scraggy Airlines books one passenger at a time.") : "")),
-    el("div", { class: "actions" }, departBtn, state.tripType === "return" ? returnBtn : ""),
-    state.departDate ? el("div", {}, el("h3", {}, "Flight options · ", niceDate(state.departDate)),
-      itineraryPicker("out", outIts(), state.outChoice, (i) => update({ outChoice: i, returnDate: "", backChoice: 0 }))) : "",
-    state.tripType === "return" && state.returnDate ? el("div", {}, el("h3", {}, "Return options · ", niceDate(state.returnDate)),
+        needsSA() ? el("p", { class: "hint" }, "Scraggy Airlines books one passenger at a time.") : ""),
+      el("div", { class: "field", style: "justify-content:center" },
+        check("oneway", "One-way only (I'm not flying back)", oneway, (v) => update({ tripType: v ? "oneway" : "return", returnDate: "", backChoice: 0 })))),
+    state.departDate ? el("div", {}, el("h3", {}, "Departure flights · ", niceDate(state.departDate)),
+      itineraryPicker("out", outIts(), state.outChoice, (i) => {
+        // keep the arrival date if the flight back still works with this departure flight
+        state.outChoice = i; state.backChoice = 0;
+        update({ returnDate: state.tripType === "return" && state.returnDate && backIts().length ? state.returnDate : "" });
+      })) : "",
+    state.tripType === "return" && state.returnDate ? el("div", {}, el("h3", {}, "Flights back · ", niceDate(state.returnDate)),
       itineraryPicker("back", backIts(), state.backChoice, (i) => update({ backChoice: i }))) : "",
     summary.length ? el("div", { class: "card" }, summary) : "",
     needsSA() ? el("p", { class: "msg info" }, "This trip includes Scraggy Airlines flights, so you'll also fill in the SIA form (Scraggy's own form) before confirming.") : "");
@@ -264,13 +287,13 @@ function stepReview() {
   confirm.addEventListener("click", doConfirm);
   const why = all.length ? `Finish ${[...new Set(all.map((x) => stepLabel(x.id)))].join(", ")} first.` : !u ? "Log in to confirm and earn Octmiles." : "";
   return el("fieldset", {}, el("legend", {}, "Review & confirm"),
-    o ? el("div", { class: "card" }, el("h3", {}, "Depart · ", niceDate(state.departDate)), itinView(o)) : "",
-    b ? el("div", { class: "card", style: "margin-top:10px" }, el("h3", {}, "Return · ", niceDate(state.returnDate)), itinView(b)) : "",
+    o ? el("div", { class: "card" }, el("h3", {}, "Departure · ", niceDate(state.departDate)), itinView(o)) : "",
+    b ? el("div", { class: "card", style: "margin-top:10px" }, el("h3", {}, "Arrival (flight back) · ", niceDate(state.returnDate)), itinView(b)) : "",
     el("dl", { class: "kv", style: "margin-top:12px" },
       el("dt", {}, "Passengers"), el("dd", {}, state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "—"),
       needsOA() ? [el("dt", {}, "Octee class"), el("dd", {}, OA_CLASSES.find((c) => c.id === state.travelClass)?.name || "—")] : "",
       needsSA() ? [el("dt", {}, "Scraggy class"), el("dd", {}, SA.data.CLASSES.find((c) => c.id === state.sa.travelClass)?.name || "—")] : "",
-      el("dt", {}, "Octmiles"), el("dd", {}, `+${miles.toLocaleString("en-GB")} (Octee flights only)`),
+      el("dt", {}, "Octmiles"), el("dd", {}, `+${miles.toLocaleString("en-GB")} (Octee flights; One United earns half; Scraggy none)`),
       el("dt", {}, "Payment"), el("dd", {}, "Paid in peanuts.")),
     all.length ? el("div", { class: "msg error missing" }, el("p", { style: "margin:0 0 4px" }, "Still missing:"),
       el("ul", {}, all.map((x) => el("li", {}, el("a", { href: "#", onclick: (e) => { e.preventDefault(); go(steps().indexOf(x.id)); } }, stepLabel(x.id)), ": ", x.p)))) : "",
@@ -349,7 +372,7 @@ function doConfirm() {
   if (all.length) { setMsg(msg, "Some steps are not finished yet.", "error"); render(); return; }
   if (!currentUser()) { setMsg(msg, "Log in to confirm.", "error"); return; }
   const legs = [...out().map((s) => ({ ...s, direction: "out" })), ...(state.tripType === "return" ? back().map((s) => ({ ...s, direction: "back" })) : [])];
-  if (legs.some((s) => s.airline === "OA" && seatsLeft(s, browserTrips()) < state.passengers)) { setMsg(msg, "Sorry, a flight just filled up (mostly with bags). Pick another option.", "error"); return; }
+  if (legs.some((s) => s.airline !== "SA" && seatsLeft(s, browserTrips()) < state.passengers)) { setMsg(msg, "Sorry, a flight just filled up (mostly with bags). Pick another option.", "error"); return; }
   try {
     const booking = updateUser((u) => {
       const todayLegs = (u.trips || []).filter((t) => t.createdAt.slice(0, 10) === today()).reduce((n, t) => n + t.legs.length, 0);
@@ -364,10 +387,10 @@ function doConfirm() {
         legs: legs.map((s) => ({
           airline: s.airline, no: s.no, date: s.date, from: s.from, to: s.to, dep: s.dep, arr: s.arr, via: s.via,
           fromStop: s.fromStop, toStop: s.toStop, direction: s.direction, passengers: state.passengers, gate: gateFor(s),
-          miles: s.airline === "OA" ? s.miles + (state.travelClass === "first" ? 50 : 0) : 0,
-          aircraft: s.airline === "OA" ? oaAircraft : saAircraft,
-          travelClass: s.airline === "OA" ? state.travelClass : state.sa.travelClass,
-          seat: s.airline === "OA" ? state.seatPref : state.sa.seat
+          miles: s.airline !== "SA" ? s.miles + (state.travelClass === "first" ? 50 : 0) : 0,
+          aircraft: s.airline !== "SA" ? oaAircraft : saAircraft,
+          travelClass: s.airline !== "SA" ? state.travelClass : state.sa.travelClass,
+          seat: s.airline !== "SA" ? state.seatPref : state.sa.seat
         })),
         details: { snack: state.snack, bags: state.bags, reason: state.reason, joelmobile: state.joelmobile, sa: needsSA() ? { ...state.sa } : null }
       };

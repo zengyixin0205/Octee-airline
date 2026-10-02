@@ -21,7 +21,7 @@ export const rate = (a, b) => RATES[[a, b].sort().join("-")] || 0;
 const ALL = [1, 2, 3, 4, 5, 6, 7];
 export const OA_FLIGHTS = [
   { no: "OA 58",  days: ALL,    stops: [["FIA", null, "07:30"], ["SIA", "09:20", null]] },
-  { no: "OA 100", days: [1, 4], stops: [["FIA", null, "08:10"], ["SIA", "10:00", "10:40"], ["LIA", "11:55", null]] },
+  { no: "OA 100", days: [1, 4], stops: [["FIA", null, "07:40"], ["SIA", "09:30", "10:10"], ["LIA", "11:25", null]] },
   { no: "OA 101", days: [2, 5], stops: [["LIA", null, "07:45"], ["SIA", "09:34", "10:15"], ["FIA", "12:05", null]] },
   { no: "OA 102", days: [3, 6], stops: [["FIA", null, "14:30"], ["SIA", "16:20", "17:00"], ["LIA", "18:15", null]] },
   { no: "OA 103", days: [4, 7], stops: [["LIA", null, "13:20"], ["SIA", "14:35", "15:10"], ["FIA", "17:00", null]] },
@@ -41,6 +41,28 @@ export const OA_FLIGHTS = [
   { no: "OA 117", days: [4],    stops: [["FIA", null, "10:00"], ["SCH", "11:50", "12:30"], ["SIA", "13:10", null]] },
   { no: "OA 118", days: [4],    stops: [["SIA", null, "15:00"], ["SCH", "15:40", "16:20"], ["FIA", "18:10", null]] }
 ];
+// ONE UNITED (OU) — "unitation is a dream, it's chaos." Another airline at FIA, serving mainly
+// Scraggy House and SIA. Its flights are timed to connect with Octee (OA) and Scraggy Airlines (SA).
+// Booked on the Octee form; earns half Octmiles.
+export const OU_FLIGHTS = [
+  { no: "OU 1", days: ALL,       stops: [["FIA", null, "06:45"], ["SIA", "08:35", null]] },
+  { no: "OU 2", days: ALL,       stops: [["SIA", null, "13:20"], ["FIA", "15:10", null]] },
+  { no: "OU 3", days: [1, 3, 5], stops: [["FIA", null, "06:30"], ["SCH", "08:20", "08:45"], ["SIA", "09:20", null]] },
+  { no: "OU 4", days: [1, 3, 5], stops: [["SIA", null, "13:45"], ["SCH", "14:20", "14:50"], ["FIA", "16:40", null]] },
+  { no: "OU 5", days: [4, 7],    stops: [["FIA", null, "17:50"], ["SCH", "19:40", null]] },
+  { no: "OU 6", days: [4, 7],    stops: [["SCH", null, "20:20"], ["FIA", "22:10", null]] },
+  { no: "OU 7", days: ALL,       stops: [["FIA", null, "16:30"], ["SIA", "18:20", null]] },
+  { no: "OU 8", days: ALL,       stops: [["SIA", null, "19:10"], ["FIA", "21:00", null]] }
+];
+export const AIRLINES = {
+  OA: { name: "Octee Airlines", milesFactor: 1 },
+  OU: { name: "One United", milesFactor: 0.5 },
+  SA: { name: "Scraggy Airlines", milesFactor: 0 }
+};
+// Every flight sold on the Octee form (Octee + One United)
+export const ALL_FLIGHTS = [...OA_FLIGHTS.map((f) => ({ ...f, airline: "OA" })), ...OU_FLIGHTS.map((f) => ({ ...f, airline: "OU" }))];
+export const isOcteeForm = (s) => s.airline !== "SA";
+
 export const DAY_NAMES = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const MIN_CONNECTION = 45;     // minutes, at any airport
 export const MAX_FLIGHTS = 3;         // = at most 2 changes
@@ -56,14 +78,15 @@ export const daysText = (days) => (days.length === 7 ? "Every day" : days.map((d
 export function segmentsOn(date, saRoutes = []) {
   const day = isoDay(date);
   const segs = [];
-  for (const f of OA_FLIGHTS) {
+  for (const f of ALL_FLIGHTS) {
     if (!f.days.includes(day)) continue;
     for (let i = 0; i < f.stops.length - 1; i++) {
       for (let j = i + 1; j < f.stops.length; j++) {
         let miles = 0;
         for (let k = i; k < j; k++) miles += rate(f.stops[k][0], f.stops[k + 1][0]);
+        miles = Math.round(miles * AIRLINES[f.airline].milesFactor);
         segs.push({
-          airline: "OA", no: f.no, date, from: f.stops[i][0], to: f.stops[j][0],
+          airline: f.airline, no: f.no, date, from: f.stops[i][0], to: f.stops[j][0],
           dep: f.stops[i][2], arr: f.stops[j][1], fromStop: i, toStop: j,
           via: f.stops.slice(i + 1, j).map((s) => s[0]), miles
         });
@@ -87,12 +110,13 @@ export function itinerariesOn(from, to, date, saRoutes = [], { notBefore = null 
     if (path.length >= MAX_FLIGHTS) return;
     for (const s of segs) {
       if (s.from !== place || visited.has(s.to)) continue;
+      if (s.via.some((v) => v === to || visited.has(v))) continue;   // don't pass through a place twice (or fly past the destination)
       const last = path[path.length - 1];
       if (!last && notBefore != null && mins(s.dep) < notBefore) continue;
       if (last && (s.no === last.no || mins(s.dep) < mins(last.arr) + MIN_CONNECTION)) continue;
       const next = [...path, s];
       if (s.to === to) out.push(next);
-      else walk(s.to, next, new Set([...visited, s.to]));
+      else walk(s.to, next, new Set([...visited, s.to, ...s.via]));
     }
   };
   walk(from, [], new Set([from]));
@@ -109,14 +133,13 @@ export function itinerariesOn(from, to, date, saRoutes = [], { notBefore = null 
 // per flight and date, plus the real bookings saved in this browser.
 function pseudo(str) { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return Math.abs(h); }
 export function seatsLeft(seg, browserTrips = []) {
-  if (seg.airline !== "OA") return null;
-  const f = OA_FLIGHTS.find((x) => x.no === seg.no);
+  if (seg.airline === "SA") return null;
   let worst = SEATS;
   for (let k = seg.fromStop; k < seg.toStop; k++) {
     const others = 40 + (pseudo(seg.no + seg.date + k) % 120);
     const mine = browserTrips
       .flatMap((t) => t.legs || [])
-      .filter((l) => l.airline === "OA" && l.no === seg.no && l.date === seg.date && l.fromStop <= k && l.toStop > k)
+      .filter((l) => l.airline === seg.airline && l.no === seg.no && l.date === seg.date && l.fromStop <= k && l.toStop > k)
       .reduce((n, l) => n + (l.passengers || 1), 0);
     worst = Math.min(worst, SEATS - others - mine);
   }
@@ -124,7 +147,7 @@ export function seatsLeft(seg, browserTrips = []) {
 }
 
 export const itineraryMiles = (it, travelClass) =>
-  it.filter((s) => s.airline === "OA").reduce((n, s) => n + s.miles + (travelClass === "first" ? 50 : 0), 0);
+  it.filter(isOcteeForm).reduce((n, s) => n + s.miles + (travelClass === "first" ? 50 : 0), 0);
 
 export function describeItinerary(it) {
   if (it.length === 1) return it[0].via.length ? `Direct (stops at ${it[0].via.map(placeShort).join(", ")}, stay on board)` : "Direct";

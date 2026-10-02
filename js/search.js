@@ -1,6 +1,6 @@
 // Destination search box (Home + Destinations).
 import { $, el, niceDate, today } from "./dom.js";
-import { PLACES, OA_PLACES, matchPlace, placeName, placeShort, itinerariesOn, nextDates, describeItinerary, OA_FLIGHTS, daysText, routeText } from "./destinations.js";
+import { PLACES, OA_PLACES, matchPlace, placeName, placeShort, itinerariesOn, nextDates, describeItinerary, ALL_FLIGHTS, daysText, routeText } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
 
 export function mountSearchBox(holder, { onSearch, from = "FIA", query = "" } = {}) {
@@ -39,9 +39,10 @@ export function mountSearchBox(holder, { onSearch, from = "FIA", query = "" } = 
   return { input, fromSel };
 }
 
-const legLine = (s) => el("li", { class: s.airline === "SA" ? "sa" : "" },
+const legLine = (s) => el("li", { class: s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "" },
   el("strong", {}, s.no), ` ${placeShort(s.from)} ${s.dep} → ${placeShort(s.to)} ${s.arr}`,
   s.via.length ? ` (stops at ${s.via.map(placeShort).join(", ")}; stay on board)` : "",
+  s.airline === "OU" ? el("span", { class: "tag ou" }, "One United") : "",
   s.airline === "SA" ? el("span", { class: "tag sa" }, `Scraggy Airlines · gate ${s.gate}`) : "");
 
 function itineraryList(it) {
@@ -93,8 +94,8 @@ export async function renderResults(box, query, from) {
     el("a", { class: "btn", href: `book.html?from=${from}&to=${to}&date=${upcoming[0].date}` }, hasSA ? "Book (2 forms)" : "Book this flight")));
   // OA-only places: show which days Octee flies there
   if (PLACES[to].oa && from === "FIA") {
-    const flights = OA_FLIGHTS.filter((f) => f.stops.some((s, i) => s[0] === "FIA" && f.stops.slice(i + 1).some((x) => x[0] === to)));
-    card.append(el("p", { class: "note" }, "Octee flights from FIA: ", flights.map((f) => `${f.no} (${daysText(f.days)}, ${routeText(f)})`).join(" · ")));
+    const flights = ALL_FLIGHTS.filter((f) => f.stops.some((s, i) => s[0] === "FIA" && f.stops.slice(i + 1).some((x) => x[0] === to)));
+    card.append(el("p", { class: "note" }, "Flights from FIA (OA = Octee, OU = One United): ", flights.map((f) => `${f.no} (${daysText(f.days)}, ${routeText(f)})`).join(" · ")));
   }
   box.append(card);
   if (to === "SCH") box.append(el("p", { class: "note" }, "Also possible any day: OA 58 to SIA, then SA101 to Scraggy House (if you enjoy airports)."));

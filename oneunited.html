@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One United — unitation is a dream, it's chaos</title>
+<meta name="description" content="One United (OU): another airline at FIA, serving Scraggy House and SIA, connecting with Octee and Scraggy Airlines.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/oneunited.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="ou-hero">
+  <h1 class="headline">ONE UNITED<span class="punch small" style="font-size:.4em">unitation is a dream, it's chaos.</span></h1>
+  <p class="sub" style="color:#ffe3c7">Another airline at Fuji International Airport. Flight code <strong>OU</strong>. Serves mainly Scraggy House and Scraggy International (SIA) from FIA.</p>
+  <a class="btn" href="book.html?from=FIA&amp;to=SCH">Book a One United flight</a>
+</section>
+
+<div class="grid">
+  <div class="card"><h3>One airline</h3><p>Technically. Several people are still arguing about it.</p></div>
+  <div class="card"><h3>United</h3><p>Our planes agree on a destination most days.</p><p class="foot">*Mondays excluded</p></div>
+  <div class="card"><h3>Connected</h3><p>OU flights connect with Octee (OA) and Scraggy Airlines (SA). On purpose, we think.</p></div>
+</div>
+
+<h2>One United timetable</h2>
+<div class="table-wrap"><table class="plain">
+  <thead><tr><th scope="col">Flight</th><th scope="col">Route</th><th scope="col">Days</th><th scope="col">Times</th></tr></thead>
+  <tbody id="ou-timetable"></tbody>
+</table></div>
+<p class="note">All One United flights start or end at FIA. They are booked on the normal Octee booking form and earn half Octmiles. <em>One United shares the miles. Unevenly.</em></p>
+
+<h2>Connecting with OU</h2>
+<p>One United can be one part of a longer trip: change planes to or from an Octee (OA) flight or a Scraggy Airlines (SA) flight, with at least 45 minutes in between.</p>
+<div id="ou-connections" class="grid" aria-live="polite"><p class="note">Looking for connections…</p></div>
+<div class="actions"><a class="btn secondary" href="destinations.html">Search all destinations</a></div>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>
