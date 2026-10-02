@@ -4,14 +4,13 @@
 import { $, el, setMsg, niceDate, today } from "./dom.js";
 import { loadSession, saveSession, removeSession } from "./store.js";
 import { currentUser, updateUser } from "./auth.js";
-import { addMiles } from "./miles.js";
+import { addMiles, spendTokens, tokensOf } from "./miles.js";
 import { allTripsInBrowser } from "./auth.js";
 import { openRangeCalendar } from "./calendar.js";
 import {
-  PLACES, OA_PLACES, placeName, placeShort, itinerariesOn, seatsLeft, itineraryMiles, describeItinerary, mins
-} from "./destinations.js";
+  PLACES, OA_PLACES, placeName, placeShort, itinerariesOn, seatsLeft, itineraryMiles, describeItinerary, mins, fiaGate } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
-import { OA_AIRCRAFT, OA_CLASSES, OA_SNACKS, OA_REASONS, SEATS, passCard } from "./booking-data.js";
+import { OA_AIRCRAFT, OA_CLASSES, OA_SNACKS, OA_REASONS, SEATS, passCard, classTokens } from "./booking-data.js";
 
 const DRAFT = "octee.booking.draft";
 const DAILY_LEG_LIMIT = 5;
@@ -64,7 +63,11 @@ const STEPS = {
     return p;
   } },
   o2: { form: "oa", title: "2. Aircraft", validate: () => req(state.aircraft, "Choose an aircraft (or let us pick the wrong one).") },
-  o3: { form: "oa", title: "3. Class", validate: () => req(state.travelClass, "Choose a class.") },
+  o3: { form: "oa", title: "3. Class", validate: () => {
+    if (!state.travelClass) return ["Choose a class."];
+    const u = currentUser(), cost = classTokens(state.travelClass);
+    return u && cost > tokensOf(u) ? [`That class costs ${cost} Octeetokens and you have ${tokensOf(u)}. Exchange Octmiles on the Octmiles page, or choose Octee Economy.`] : [];
+  } },
   o4: { form: "oa", title: "4. Passenger", validate: () => {
     const p = [];
     for (let i = 0; i < state.passengers; i++) {
@@ -224,7 +227,7 @@ function stepTrip() {
 const stepOA = {
   o2: () => el("fieldset", {}, el("legend", {}, "2. Aircraft"), radios("aircraft", OA_AIRCRAFT, state.aircraft, (v) => update({ aircraft: v }))),
   o3: () => el("fieldset", {}, el("legend", {}, "3. Class"),
-    radios("travelClass", OA_CLASSES.map((c) => ({ id: c.id, name: c.name + (c.bonus ? ` (+${c.bonus} Octmiles per flight)` : ""), blurb: c.joke })), state.travelClass, (v) => update({ travelClass: v }))),
+    radios("travelClass", OA_CLASSES.map((c) => ({ id: c.id, name: c.name + (c.tokens ? ` · ${c.tokens} Octeetokens` : " · free") + (c.bonus ? ` (+${c.bonus} Octmiles per flight)` : ""), blurb: c.joke })), state.travelClass, (v) => update({ travelClass: v }))),
   o4: () => {
     const u = currentUser();
     const names = Array.from({ length: state.passengers }, (_, i) => {
@@ -292,7 +295,7 @@ function stepReview() {
     b ? el("div", { class: "card", style: "margin-top:10px" }, el("h3", {}, "Arrival (flight back) · ", niceDate(state.returnDate)), itinView(b)) : "",
     el("dl", { class: "kv", style: "margin-top:12px" },
       el("dt", {}, "Passengers"), el("dd", {}, state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "—"),
-      needsOA() ? [el("dt", {}, "Octee class"), el("dd", {}, OA_CLASSES.find((c) => c.id === state.travelClass)?.name || "—")] : "",
+      needsOA() ? [el("dt", {}, "Octee class"), el("dd", {}, (OA_CLASSES.find((c) => c.id === state.travelClass)?.name || "—") + (classTokens(state.travelClass) ? ` · ${classTokens(state.travelClass)} Octeetokens` : ""))] : "",
       needsSA() ? [el("dt", {}, "Scraggy class"), el("dd", {}, SA.data.CLASSES.find((c) => c.id === state.sa.travelClass)?.name || "—")] : "",
       el("dt", {}, "Octmiles"), el("dd", {}, `+${miles.toLocaleString("en-GB")} (Octee flights; One United earns half; Scraggy none)`),
       el("dt", {}, "Payment"), el("dd", {}, "Paid in peanuts.")),
@@ -364,7 +367,7 @@ $("#btn-back").addEventListener("click", () => go(current - 1));
 
 /* ---------------- confirm ---------------- */
 const ref = (prefix) => prefix + "-" + String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-const gateFor = (s) => s.airline === "SA" ? s.gate : s.from + String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
+const gateFor = (s) => s.airline === "SA" ? s.gate : s.from === "FIA" ? fiaGate(s.airline) : s.from + String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
 
 function doConfirm() {
   triedConfirm = true;
@@ -378,6 +381,8 @@ function doConfirm() {
     const booking = updateUser((u) => {
       const todayLegs = (u.trips || []).filter((t) => t.createdAt.slice(0, 10) === today()).reduce((n, t) => n + t.legs.length, 0);
       if (todayLegs + legs.length > DAILY_LEG_LIMIT) throw new Error("Sorry, you have flown too much today. (Max 5 flights booked per day.)");
+      const classCost = legs.some((x) => x.airline !== "SA") ? classTokens(state.travelClass) : 0;
+      if (classCost) spendTokens(u, classCost, `${OA_CLASSES.find((c) => c.id === state.travelClass).name} for a booking`);
       const oaRef = ref("OCT"), saRef = legs.some((s) => s.airline === "SA") ? ref("SCRAG") : null;
       const pickAircraft = (list, v) => v === "surprise" ? list[Math.floor(Math.random() * list.length)].id : v;
       const oaAircraft = pickAircraft(OA_AIRCRAFT.slice(0, 4), state.aircraft);

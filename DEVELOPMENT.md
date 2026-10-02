@@ -328,7 +328,19 @@ Rows come from the weekly timetable (§2) for **today's** day of the week, so th
 
 ### 5.6 FIA Airport (`fia.html`)
 
-- **Airport map (detailed):** an inline SVG of the whole airport, top to bottom: runway 09/27 and taxiway, Mt Fuji, the apron with planes in livery colours at the 12 gates (some "delayed"), the departures concourse (gates FIA01–FIA12, slightly out of order), the terminal (check-in desks for OA / OU / SA, security & passports, Octee Lounge, One Peanut Bar, baggage claim, a very large Lost & Found, information, toilets), control tower, Mt Fuji viewing deck, drop-off road with the JOELMOBILE stop and its dotted route, car park, FIA Station and the FAG head office. "You are here" appears twice. It has a legend, a `<title>`/`<desc>`, and scrolls sideways on phones so the labels stay readable.
+- **FIA directory board** ("ONE OF OUR DIRECTORIES · 248 / 322", from the hand-drawn directory): outlined FIA mark, "the most reliable in the world", Mdm Wrong's quote ("The airport is so large and confusing that it has 322 directories!"), the line "We hope you don't become the 10,000th passenger to miss your flight within three days!", then a real table (Terminal / Airlines / Gates) and the FAG mark:
+
+  | Terminal | Airlines | Gates |
+  |---|---|---|
+  | 1 | Octee Airlines, Scraggy Airlines, Lupin Airlines | A8, A11–A16 (A/B), A17 (A), A19 (A/C), B1–B4 (A/B), B5 (A), C1 (B) |
+  | 2 | Riley Airlines, ONE UNITED ("unitation is a dream, it's chaos") | D140–D146 (A/B), E50–E52 (A/B) |
+  | 3 | Scraggy, for reservation | J121–J125 (A/B), J126–J128 (A/B) |
+  | 4 | Scraggy Airlines, Lupin Airlines, Wrong Airlines | G12 (B), G31 (A/B), G32 (B), G33 (A), G34–G35 (A/B), G36 (B), G37–G44 (A/B), G41 (B), G42 (A/B), G43 (B), G20 (B) |
+  | 5 | Scraggy Building + Scraggy's OWN illegal terminal + Scraggy illegal island | SC1–SC14 (A/B), SC15 (B), "Scraggy is intelligent 1" (A/B) |
+
+  The same data is in `js/destinations.js` as `FIA_TERMINALS`; `fiaGate(airline)` gives boarding passes a real gate (Octee from Terminal 1, One United from Terminal 2). The JOELMOBILE page uses these gate names too.
+- **Airport map** (follows the hand-drawn FIA airport map, top to bottom): one long building with **Terminal 2** (Riley Airlines, One United, other airlines; gates D140–D146, Fuji Mall, E50–E52) and **Terminal 3** (Scraggy, for reservation; J121–J128), each with an SBB train sign to the other terminals; **Terminal 1** (Octee, Scraggy, Lupin, cargo) with the A8 annex, gates A11–A19, the **ATC** box, then B1–B5 and C1; the **runway** in the middle (taxiways are deliberately not drawn); south of it **Scraggy's own illegal terminal** (gates "Scraggy is intelligent" 1 · 2) joined to **Terminal 5 / Scraggy Building** (SC11–SC15 on top, SC1–SC10 below), the **aircraft cleaning land** and **Scraggy illegal island**; at the bottom **Terminal 4** (Scraggy, Lupin, Wrong Airlines; G12, G31–G44, G20) and the **Mdm Wrong-Wrong building** (M1, M2). Every gate is drawn as a T-shaped stand with its number and sides (A/B). The map is **black and white only** (white shapes, black lines and text), like the pen drawing; no airline colours.
+- **Inside Terminal 1:** a second SVG plan, also **black and white only**, laid out to match the airport map: Airport Road, the JOELMOBILE stop and the SBB train on the north side; inside, west to east: check-in hall (Octee desks 1–8, Scraggy desks 9–12), information, toilets, the SBB station, Lupin Airlines check-in, then cargo at the east end; behind them security & passports, Octee Lounge, Peanut Bar, baggage claim and a very large Lost & Found; along the south side the concourse with Pier A (A11–A16, A17, A19), the ATC box, Pier B (B1–B5) and C1, each gate a T-shaped stand with a parked plane or "delayed"; a long walkway west to the annex and gate A8; the apron and the runway to the south. "You are here" appears twice. Both maps have a `<title>`/`<desc>` and scroll sideways on phones.
 - The old "official FIA taglines" poster grid was **removed** from this page. The taglines now live as the big page headings (and in the Home rotator).
 
 - **Header:** a full-width photo of **Mount Fuji** (`assets/img/fuji.jpg`, snow peak, town below, red pagoda on the right) as the background of the page header. A dark fade at the top keeps the white title, the tagline and the intro readable. The photo has a text description (`role="img"` + `aria-label`). On phones the header is taller so the words sit in the sky above the mountain.
@@ -565,6 +577,10 @@ Search order: OA direct match first, then partner (transfer) match, then FIA, th
 
 Every page starts with the same heading block (`.hero`): a small spaced-out label (`.eyebrow`, e.g. `BAGGAGE · MAYBE`), then the page's tagline as a **very big, tight, bold sans heading in two tones** — first line dark, punchline in deep orange — on a soft cream-to-orange wash. Sizes use `clamp()` and the text wraps, so **every word always fits** (no clipping) from phone to desktop. Long punchlines use `.punch.long` (smaller). The Baggage page adds a three-column strip under the heading (`.trio`: Carry-on / Checked / Lost & found). Home keeps its dark orange hero and FIA its Mount Fuji photo, with the same type style in white.
 
+The **In-Flight page** (`experience.html`) uses a cabin photo (`assets/img/cabin.jpg`, a first class suite at sunset) as its header background, the same way FIA uses Mount Fuji, with the line "Actual cabin may differ. Actual cabin will differ."
+
+The **Destinations page** uses `assets/img/destinations-bg.jpg` as its header background: the whole picture stays visible on the right (at the bottom on phones) and the heading, search box and results sit on a dark panel that fades into it.
+
 ## 6. Visual Design
 
 ### Logo
@@ -716,6 +732,28 @@ Clicking the Octee logo **8 times within 4 seconds** on any page opens a pop-up 
 - All user text (names, reviews) is set with `textContent`, never `innerHTML`.
 
 ---
+
+### Octeetokens (second currency)
+
+Octmiles are **earned**; Octeetokens are what you **pay with**. All in `js/miles.js`, stored on the account in the browser (`u.tokens`).
+
+- **Exchange:** 10 Octmiles = 1 Octeetoken (`TOKEN_RATE`), on the Octmiles page ("Octeetokens" section). One way only. Exchanging lowers spendable Octmiles but not lifetime Octmiles, so the tier never drops.
+- **What tokens pay for** (`TOKEN_PRICES`, `OA_CLASSES[].tokens`):
+  | Thing | Price |
+  |---|---|
+  | A JOELMOBILE ride (must be logged in; the first 3 rides a day still give 20 Octmiles back) | 5 Octeetokens |
+  | Octee Business, per booking (Economy is free) | 30 Octeetokens |
+  | Octee First, per booking | 60 Octeetokens |
+  | Upgrading an existing trip on My Trips | the difference (Economy → Business 30, Business → First 30) |
+  | One more code for today | 20 Octeetokens |
+- **Code limit:** each account can redeem **5 codes a day** (`CODES_PER_DAY`), counting listed codes and number-rule codes together. Only successful codes count. Each extra code slot bought with tokens is for that day only. The code box shows how many are left.
+- Booking: the class step shows each price and refuses a class the account cannot afford; tokens are taken at Confirm. Scraggy Airlines flights keep Scraggy's own classes and are not upgraded.
+- The header shows both balances; the Octmiles history table has an Octeetokens column.
+
+### Ready-made codes and the number rule
+
+- `data/codes.json` ships with three codes: `OCTEE500` (500 Octmiles), `JOEL` (1,000) and `OCTEE` (5,000). Codes ignore capitals and spaces; each account can use a code once.
+- **Number rule** (in `js/miles.js`, no file needed): any **5-digit number** whose **first digit is 1 or 2** and whose **last digit is odd** is worth its **first three digits** in Octmiles. Example: `23487` gives 234; `10001` gives 100; `12340` (even) and `31235` (starts with 3) give nothing. Each number works once per account. A code listed in `codes.json` always wins over the rule.
 
 ## 8. Tech Stack & Structure
 

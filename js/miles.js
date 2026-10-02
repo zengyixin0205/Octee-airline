@@ -1,6 +1,7 @@
 // Octmiles: tiers, rewards, history and the "Have a code?" box. All in this browser.
 import { currentUser, updateUser } from "./auth.js";
 import { codeHash, normalizeCode } from "./crypto.js";
+import { today } from "./dom.js";
 
 export const TIERS = [
   { name: "Economy Peanut", min: 0, perk: "One peanut." },
@@ -41,6 +42,42 @@ export function redeemReward(id) {
   });
 }
 
+// ----- Octeetokens -----
+// Octmiles are exchanged for Octeetokens (one way). Tokens pay for the JOELMOBILE,
+// class upgrades and one more code for today.
+export const TOKEN_RATE = 10;                 // 10 Octmiles = 1 Octeetoken
+export const CODES_PER_DAY = 5;               // codes one account can redeem per day
+export const TOKEN_PRICES = { joelmobile: 5, extraCode: 20 };
+export const tokensOf = (u) => (u && u.tokens) || 0;
+export const fmtTokens = (n) => `${Number(n || 0).toLocaleString("en-GB")} Octeetoken${Number(n) === 1 ? "" : "s"}`;
+
+// Use inside updateUser(): takes tokens off the account or throws a friendly error.
+export function spendTokens(u, n, text) {
+  if (tokensOf(u) < n) { const short = n - tokensOf(u); throw new Error(`You need ${short} more Octeetoken${short === 1 ? "" : "s"} (this costs ${n}). Exchange Octmiles on the Octmiles page.`); }
+  u.tokens = tokensOf(u) - n;
+  u.history.unshift({ at: new Date().toISOString(), text, amount: 0, tokens: -n });
+}
+export function exchangeMiles(tokens) {
+  tokens = Math.floor(Number(tokens));
+  if (!(tokens >= 1)) throw new Error("Choose at least 1 Octeetoken.");
+  return updateUser((u) => {
+    const cost = tokens * TOKEN_RATE;
+    if (u.octmiles < cost) throw new Error(`That costs ${cost.toLocaleString("en-GB")} Octmiles. You have ${u.octmiles.toLocaleString("en-GB")}.`);
+    u.octmiles -= cost;                         // lifetime stays the same, so the tier never drops
+    u.tokens = tokensOf(u) + tokens;
+    u.history.unshift({ at: new Date().toISOString(), text: "Exchanged Octmiles for Octeetokens", amount: -cost, tokens });
+    return tokens;
+  });
+}
+export const codesToday = (u) => ({ used: ((u && u.codeDays) || {})[today()] || 0, extra: ((u && u.codeExtra) || {})[today()] || 0 });
+export const codesLeft = (u) => { const c = codesToday(u); return Math.max(0, CODES_PER_DAY + c.extra - c.used); };
+export function buyExtraCode() {
+  return updateUser((u) => {
+    spendTokens(u, TOKEN_PRICES.extraCode, "One more code for today");
+    u.codeExtra = { [today()]: codesToday(u).extra + 1 };
+  });
+}
+
 // ----- Codes -----
 export const CODE_MESSAGES = {
   ok: (n) => `+${n.toLocaleString("en-GB")} Octmiles! Please don't spend them all on one peanut.`,
@@ -48,6 +85,7 @@ export const CODE_MESSAGES = {
   already: "You already used this code. Nice try.",
   expired: "This code has expired. Like your boarding pass.",
   grounded: "This code has been grounded.",
+  limit: `You have used all your codes for today (${CODES_PER_DAY} a day). Come back tomorrow, or get one more for ${TOKEN_PRICES.extraCode} Octeetokens on the Octmiles page.`,
   too_many: "Too many wrong codes. Please wait an hour and think about what you've done.",
   login: "Log in to use a code.",
   offline: "The code list is delayed. Please try again (or check you're online)."
@@ -68,10 +106,15 @@ export async function redeemCode(input) {
   if (!u) return { ok: false, message: CODE_MESSAGES.login };
   const hourAgo = Date.now() - 3600_000;
   if ((u.codeFails || []).filter((t) => t > hourAgo).length >= 10) return { ok: false, message: CODE_MESSAGES.too_many };
+  if (codesLeft(u) <= 0) return { ok: false, message: CODE_MESSAGES.limit };
   let codes;
   try { codes = await loadCodes(); } catch { return { ok: false, message: CODE_MESSAGES.offline }; }
   const hash = await codeHash(input);
-  const c = codes.find((x) => x.hash === hash);
+  let c = codes.find((x) => x.hash === hash);
+  // Number rule: any 5 digits that start with 1 or 2 and end in an odd digit
+  // are worth their first three digits (23487 -> 234 Octmiles). Listed codes win.
+  const digits = normalizeCode(input);
+  if (!c && /^[12]\d{3}[13579]$/.test(digits)) c = { octmiles: Number(digits.slice(0, 3)), active: true, expires: null };
   let problem = null;
   if (!normalizeCode(input) || !c) problem = "not_real";
   else if (c.active === false) problem = "grounded";
@@ -84,6 +127,7 @@ export async function redeemCode(input) {
   updateUser((x) => {
     x.codesUsed = x.codesUsed || {};
     x.codesUsed[hash] = new Date().toISOString();
+    x.codeDays = { [today()]: codesToday(x).used + 1 };   // only successful codes count towards the daily limit
     addMiles(x, c.octmiles, "Code " + normalizeCode(input));
   });
   return { ok: true, message: CODE_MESSAGES.ok(c.octmiles), amount: c.octmiles };

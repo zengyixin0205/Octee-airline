@@ -10,10 +10,12 @@ export const OA_AIRCRAFT = [
   { id: "surprise", name: "Surprise me", blurb: "We will pick the wrong one." }
 ];
 export const OA_CLASSES = [
-  { id: "economy", name: "Octee Economy", joke: "Same seat as everyone. Sit anyway.", bonus: 0 },
-  { id: "business", name: "Octee Business", joke: "Slightly further from the toilets.", bonus: 0 },
-  { id: "first", name: "Octee First", joke: "Economy with a curtain.", bonus: 50 }
+  { id: "economy", name: "Octee Economy", joke: "Same seat as everyone. Sit anyway.", bonus: 0, tokens: 0 },
+  { id: "business", name: "Octee Business", joke: "Slightly further from the toilets.", bonus: 0, tokens: 30 },
+  { id: "first", name: "Octee First", joke: "Economy with a curtain.", bonus: 50, tokens: 60 }
 ];
+// tokens = Octeetokens to pay for that class, per booking (Economy is free).
+export const classTokens = (id) => (OA_CLASSES.find((c) => c.id === id) || {}).tokens || 0;
 export const OA_SNACKS = ["One Peanut", "One Peanut (vegetarian)", "One Peanut (served warm)"];
 export const OA_REASONS = ["Business (unclear)", "Visiting Scraggy (long story)", "Escaping FIA", "Looking for my bag",
   "The JOELMOBILE dropped me here", "I was told this was a train"];

@@ -405,9 +405,61 @@ details.lost summary { cursor: pointer; font-weight: 700; color: var(--octee-ink
 .fia-map { padding: 14px; }
 .map-scroll { overflow-x: auto; border-radius: 10px; }
 .map-scroll svg { display: block; width: 100%; min-width: 860px; height: auto; }
-.swatch.route { background: repeating-linear-gradient(90deg, #c25500 0 4px, transparent 4px 9px); border: 0; }
+.swatch.route { background: repeating-linear-gradient(90deg, #111 0 4px, transparent 4px 9px); border: 0; }
 .swatch.air { background: #ffe2c2; height: 12px; }
 @media (max-width: 640px) {
   .hero.photo { min-height: 660px; background-position: 42% 100%; }
   .hero.photo.fuji { background-image: linear-gradient(180deg, rgba(30,16,6,.86) 0%, rgba(30,16,6,.7) 46%, rgba(30,16,6,0) 66%), url("../assets/img/fuji.jpg"); }
+}
+
+/* ---------- FIA directory board (from the hand-drawn directory 248 / 322) ---------- */
+.directory { background: #fff; border: 2px solid var(--octee-ink); border-radius: 10px; padding: clamp(16px, 3vw, 30px); margin: 0 0 28px; box-shadow: 6px 6px 0 rgba(43,26,14,.12); }
+.dir-head { display: grid; grid-template-columns: auto 1fr auto; gap: 14px 28px; align-items: start; }
+.fia-mark { font-family: var(--sans); font-weight: 900; font-size: clamp(3.4rem, 9vw, 6rem); line-height: .9; letter-spacing: .04em; margin: 0; color: #fff; -webkit-text-stroke: 4px var(--octee-ink); paint-order: stroke fill; }
+.dir-small { margin: 2px 0 0; font-size: .85rem; color: #4c4640; }
+.dir-small.spaced { letter-spacing: .3em; }
+.dir-title { text-align: center; }
+.dir-title h2 { font-family: var(--sans); font-weight: 800; letter-spacing: .08em; font-size: clamp(1.3rem, 3.4vw, 2.1rem); margin: 6px 0 2px; line-height: 1.15; }
+.dir-count { max-width: 250px; }
+.dir-num { font-family: var(--mono); font-weight: 700; font-size: clamp(1.4rem, 3vw, 2rem); margin: 0; }
+.dir-count blockquote { margin: 6px 0 0; font-size: .82rem; font-style: italic; color: #4c4640; }
+.dir-count cite { display: block; text-align: right; font-style: normal; }
+.dir-strap { margin: 16px 0 0; padding: 8px 0 10px; border-bottom: 2px solid var(--octee-ink); font-weight: 600; }
+.dir-scroll { overflow-x: auto; }
+.dir-table { width: 100%; min-width: 640px; border-collapse: collapse; }
+.dir-table th, .dir-table td { text-align: left; vertical-align: top; padding: 12px 10px; border-bottom: 1px solid #e4d5c4; }
+.dir-table thead th { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: #4c4640; }
+.dir-table tbody th { font-family: var(--sans); font-size: 2rem; font-weight: 800; line-height: 1; width: 3.2ch; }
+.dir-table td:last-child { width: 46%; }
+.tag.other { background: #e9e4f5; color: #2b1a0e; }
+.dir-quote { font-size: .82rem; font-style: italic; color: #4c4640; margin-left: 4px; }
+.g { display: inline-block; font-family: var(--mono); font-weight: 700; font-size: .88rem; background: var(--octee-cream); border: 1px solid #e4d5c4; border-radius: 4px; padding: 1px 7px; margin: 2px 4px 2px 0; }
+.g small { font-weight: 400; color: #5a4f45; }
+.dir-fag { display: flex; flex-direction: column; align-items: flex-end; margin: 14px 0 0; }
+.fag-outline { font-family: var(--sans); font-weight: 900; font-size: 2.2rem; line-height: 1; letter-spacing: .06em; color: #fff; -webkit-text-stroke: 2.5px var(--octee-ink); paint-order: stroke fill; }
+@media (max-width: 760px) { .dir-head { grid-template-columns: 1fr; } .dir-title { text-align: left; } .dir-count { max-width: none; } }
+.swatch.other { background: #e9e4f5; }
+.swatch.train { background: repeating-linear-gradient(90deg, #2b1a0e 0 6px, transparent 6px 10px); border: 0; height: 2px; }
+.swatch.taxi { background: #b9b2a8; height: 9px; border: 0; }
+
+/* In-Flight page: cabin photo header */
+.hero.photo.cabin { background-position: center 62%; background-image: linear-gradient(180deg, rgba(30,16,6,.78) 0%, rgba(30,16,6,.5) 40%, rgba(30,16,6,.08) 72%), url("../assets/img/cabin.jpg"); }
+@media (max-width: 640px) {
+  .hero.photo.cabin { min-height: 560px; background-position: 58% 100%; background-image: linear-gradient(180deg, rgba(30,16,6,.86) 0%, rgba(30,16,6,.66) 44%, rgba(30,16,6,0) 70%), url("../assets/img/cabin.jpg"); }
+}
+
+/* Destinations page: picture header. The whole picture stays visible on the right (bottom on phones);
+   the heading, search box and results sit on a dark panel that fades into it. */
+.hero.photo.dest { background-color: #2b1a0e; background-repeat: no-repeat; background-position: right top; background-size: auto 540px; min-height: 540px; align-items: stretch;
+  background-image: linear-gradient(90deg, #2b1a0e 0%, #2b1a0e calc(100% - 600px), rgba(43,26,14,0) calc(100% - 430px)), url("../assets/img/destinations-bg.jpg"); }
+.hero.photo.dest .photo-text { width: 100%; padding-bottom: 28px; text-shadow: none; }
+.hero.photo.dest .headline { font-size: clamp(2.1rem, 4.6vw, 3.5rem); max-width: 12ch; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+.hero.photo.dest #search { max-width: min(100%, 560px); }
+.hero.photo.dest #search, .hero.photo.dest #results { color: var(--octee-ink); }
+.hero.photo.dest #results:not(:empty) { margin-top: 104px !important; }
+@media (max-width: 900px) {
+  .hero.photo.dest { background-position: center bottom; background-size: 100% auto; min-height: 0; padding-bottom: 87%;
+    background-image: linear-gradient(180deg, #2b1a0e 0%, #2b1a0e calc(100% - 88vw), rgba(43,26,14,0) calc(100% - 76vw)), url("../assets/img/destinations-bg.jpg"); }
+  .hero.photo.dest #search { max-width: none; }
+  .hero.photo.dest #results:not(:empty) { margin-top: 16px !important; }
 }

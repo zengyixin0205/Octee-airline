@@ -1,8 +1,8 @@
-import { $, el, niceDate, fmtMiles } from "./dom.js";
-import { currentUser, requireLogin, logOut } from "./auth.js";
-import { tierFor } from "./miles.js";
+import { $, el, niceDate, fmtMiles, setMsg } from "./dom.js";
+import { currentUser, requireLogin, logOut, updateUser } from "./auth.js";
+import { tierFor, spendTokens, tokensOf } from "./miles.js";
 import { placeShort } from "./destinations.js";
-import { passCard } from "./booking-data.js";
+import { passCard, OA_CLASSES, classTokens } from "./booking-data.js";
 import { scraggyData } from "./scraggy.js";
 import { load, save } from "./store.js";
 
@@ -15,6 +15,7 @@ function render(SA) {
       el("dt", {}, "Username"), el("dd", {}, u.username),
       el("dt", {}, "Member since"), el("dd", {}, niceDate(u.createdAt.slice(0, 10))),
       el("dt", {}, "Octmiles"), el("dd", {}, fmtMiles(u.octmiles), " (", el("a", { href: "octmiles.html" }, "details"), ")"),
+      el("dt", {}, "Octeetokens"), el("dd", {}, fmtMiles(tokensOf(u)), " (", el("a", { href: "octmiles.html#tokens" }, "get more"), ")"),
       el("dt", {}, "Tier"), el("dd", {}, tierFor(u.lifetime).name)),
     el("p", { class: "note" }, "Your account lives in this browser only. Another device or browser won't know you. We won't either."));
   const trips = [...(u.trips || [])].reverse();
@@ -24,7 +25,34 @@ function render(SA) {
     el("summary", { style: "cursor:pointer" },
       el("strong", {}, `${placeShort(b.from)} → ${placeShort(b.to)}`), ` · ${niceDate(b.legs[0].date)} · ${b.legs.map((l) => l.no).join(", ")} · `,
       el("span", { class: "tag" }, b.ref), b.scraggyRef ? el("span", { class: "tag sa" }, b.scraggyRef) : ""),
+    upgradeBox(b, SA),
     b.legs.map((l) => passCard(b, l, SA)))));
+}
+
+// Pay Octeetokens to move a booking's Octee / One United flights up a class.
+function upgradeBox(b, SA) {
+  const mine = b.legs.filter((l) => l.airline !== "SA");
+  if (!mine.length) return "";
+  const now = mine[0].travelClass;
+  const better = OA_CLASSES.filter((c) => c.tokens > classTokens(now));
+  if (!better.length) return el("p", { class: "note" }, "Class: Octee First. There is nothing higher. We checked.");
+  const msg = el("p", { class: "msg", role: "status" });
+  return el("div", { class: "upgrade" },
+    el("p", { style: "margin:.6em 0 .3em" }, el("strong", {}, "Upgrade class"), ` (now ${OA_CLASSES.find((c) => c.id === now)?.name || "Octee Economy"}):`),
+    el("div", { class: "actions" }, better.map((c) => {
+      const cost = c.tokens - classTokens(now);
+      return el("button", { class: "btn small secondary", type: "button", onclick: () => {
+        try {
+          updateUser((u) => {
+            const trip = u.trips.find((t) => t.ref === b.ref && t.createdAt === b.createdAt);
+            if (!trip) throw new Error("We lost this booking. Sorry.");
+            spendTokens(u, cost, `Upgrade to ${c.name} (${b.ref})`);
+            trip.legs.forEach((l) => { if (l.airline !== "SA") l.travelClass = c.id; });
+          });
+          render(SA);
+        } catch (e) { setMsg(msg, e.message, "error"); }
+      } }, `${c.name} · ${cost} Octeetokens`);
+    })), msg);
 }
 
 let armed = false;

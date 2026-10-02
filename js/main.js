@@ -32,6 +32,7 @@ function renderAccount(box) {
   box.replaceChildren(
     el("span", {}, "Hi, ", el("a", { href: "account.html" }, u.username)),
     el("a", { class: "pill", href: "octmiles.html", title: "Your Octmiles" }, fmtMiles(u.octmiles) + " Octmiles"),
+    el("a", { class: "pill", href: "octmiles.html#tokens", title: "Your Octeetokens" }, fmtMiles(u.tokens || 0) + " Octeetokens"),
     el("span", { class: "pill gold" }, tier.name),
     el("a", { href: "#", onclick: async (e) => { e.preventDefault(); (await import("./code-box.js")).openCodeBox(); } }, "Have a code?"),
     el("button", { class: "btn small ghost", type: "button", onclick: () => { logOut(); location.href = "index.html"; } }, "Log out")

@@ -1,4 +1,8 @@
 {
-  "owner": null,
+  "owner": {
+    "name": "Octee",
+    "salt": "/01iMPFI6XGXu/tfuzUPXQ==",
+    "hash": "bEQd8DHaEraYPebvZcW/f+BaR8sHcGa1E7HN+dIJ5kY="
+  },
   "admins": []
 }

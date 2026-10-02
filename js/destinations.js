@@ -185,3 +185,21 @@ export function nextDates(from, to, saRoutes, startIso, count = 3, lookahead = 2
   }
   return res;
 }
+
+/* ---------------- FIA terminals and gates (from FIA directory 248 / 322) ---------------- */
+const span = (p, a, b, sides) => { const out = []; for (let n = a; n <= b; n++) for (const x of sides) out.push(p + n + x); return out; };
+export const FIA_TERMINALS = [
+  { no: 1, airlines: ["Octee Airlines", "Scraggy Airlines", "Lupin Airlines"],
+    gates: ["A8", ...span("A", 11, 16, "AB"), "A17A", "A19A", "A19C", ...span("B", 1, 4, "AB"), "B5A", "C1B"] },
+  { no: 2, airlines: ["Riley Airlines", "One United"], gates: [...span("D", 140, 146, "AB"), ...span("E", 50, 52, "AB")] },
+  { no: 3, airlines: ["Scraggy (for reservation)"], gates: span("J", 121, 128, "AB") },
+  { no: 4, airlines: ["Scraggy Airlines", "Lupin Airlines", "Wrong Airlines"],
+    gates: ["G12B", "G20B", "G31A", "G31B", "G32B", "G33A", ...span("G", 34, 35, "AB"), "G36B", ...span("G", 37, 44, "AB")] },
+  { no: 5, airlines: ["Scraggy Building", "Scraggy's own illegal terminal", "Scraggy illegal island"], gates: [...span("SC", 1, 14, "AB"), "SC15B"] }
+];
+// Octee (and Scraggy) leave FIA from Terminal 1, One United from Terminal 2.
+export function fiaGate(airline) {
+  const t = FIA_TERMINALS[airline === "OU" ? 1 : 0];
+  return t.gates[Math.floor(Math.random() * t.gates.length)];
+}
+export const fiaTerminalOf = (gate) => (FIA_TERMINALS.find((t) => t.gates.includes(gate)) || {}).no;
