@@ -198,8 +198,11 @@ export const FIA_TERMINALS = [
   { no: 5, airlines: ["Scraggy Building", "Scraggy's own illegal terminal", "Scraggy illegal island"], gates: [...span("SC", 1, 14, "AB"), "SC15B"] }
 ];
 // Octee (and Scraggy) leave FIA from Terminal 1, One United from Terminal 2.
-export function fiaGate(airline) {
+// With a flight number the gate is always the same one, so the booking and the gate sign agree.
+export function fiaGate(airline, no) {
   const t = FIA_TERMINALS[airline === "OU" ? 1 : 0];
-  return t.gates[Math.floor(Math.random() * t.gates.length)];
+  let h = 0;
+  for (const ch of String(no || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return t.gates[no ? h % t.gates.length : Math.floor(Math.random() * t.gates.length)];
 }
 export const fiaTerminalOf = (gate) => (FIA_TERMINALS.find((t) => t.gates.includes(gate)) || {}).no;

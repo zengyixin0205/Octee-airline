@@ -944,3 +944,31 @@ export const FIA_TAGLINES = [
 - [x] There is a way to and from MIA and Lujin's every day (via OU or OA + SA)
 - [x] Works on phones (no sideways scroll) and with reduced motion
 - [ ] Deployed to GitHub Pages
+
+## FIA gate sign, smaller maps, picture headers
+
+- `fia.html` has a "DEPARTURES · GATES" sign (rendered by `js/fia.js`) listing today's FIA departures with terminal and gate.
+- `fiaGate(airline, flightNo)` in `js/destinations.js` is deterministic per flight number, so the sign and the booking confirmation always show the same gate. Scraggy Airlines flights use the gate from the Scraggy data.
+- Both FIA maps are capped at 720px wide (`.fia-map` in `css/styles.css`).
+- Book a Flight uses `assets/img/book.jpg`, Flight Status uses `assets/img/status.jpg` as `.hero.photo` headers.
+
+## Maps in one row, background music
+
+- `fia.html`: the Airport map and Inside Terminal 1 sit side by side (`.map-row`, stacked on screens under 900px). Clicking a map opens it enlarged (`js/fia.js`).
+- `js/music.js` (loaded by `js/main.js`): a "♪ Music on/off" button bottom left of every page. Sound starts after the visitor's first click/tap/key press (browser rule); the choice is remembered in the browser (`octee.music`).
+- Default music is a made-up lounge tune generated live with Web Audio (no file, no copyright), with an airport "ding dong dung" every 16 bars. To use real music, add an MP3 at `assets/audio/music.mp3`; it is used automatically and loops. Only use music you have the rights to.
+
+## FIA guide text
+
+- `fia.html` now has a written guide above the maps: "How to get to your gate" (9 steps) and an info grid (check-in, security, passports, SBB train, food, lounge, lost and found, JOELMOBILE, gate changes). The facts match the maps (desk numbers, piers, A8 annex walk, SBB route, Terminal 5 across the runway).
+- The Airport map takes two thirds of the map row and Inside Terminal 1 one third (`.map-row` is `2fr 1fr`).
+
+## Music carries on between pages
+
+- `js/music.js` saves the MP3 position several times a second (`octee.music.state`) and the next page resumes from there, adding the time the page change took. The song plays to its end, then loops. A visitor returning after 60 seconds starts from the top. There is a short gap when a page changes, which a multi-page static site cannot avoid.
+- The MP3 is `assets/audio/music.mp3`. Seeking needs a server that supports HTTP range requests (GitHub Pages does; `python -m http.server` does not, so locally the song restarts on each page).
+
+## Music on entering the site
+
+- Browsers do not allow sound on a brand new visit until the visitor clicks. `js/music.js` first tries to autoplay; if the browser blocks it, the first page shows a "Welcome aboard Octee Airlines" screen with a "Board (sound on)" button (one click enters and starts the music) and a "No music, thanks" link (turns the music off). It shows once per browser session (`octee.music.splash`). Escape = no music.
+- Pages after the first normally play straight away (desktop Chrome allows it once the visitor has clicked on the site). On phones and Safari the music may wait for the first tap on each new page.

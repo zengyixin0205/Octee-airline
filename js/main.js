@@ -3,6 +3,7 @@ import { CONFIG } from "./config.js";
 import { $, el, fmtMiles } from "./dom.js";
 import { currentUser, logOut, syncEtched } from "./auth.js";
 import { tierFor } from "./miles.js";
+import "./music.js";
 
 const PAGES = [
   ["index.html", "Home"],

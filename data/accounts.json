@@ -47,6 +47,54 @@
       "codeExtra": {},
       "rides": [],
       "reviewBonus": false
+    },
+    {
+      "username": "Marcus",
+      "salt": "dvIVC56kPWxQCAlVvLl8mg==",
+      "hash": "Oqvmi11MF1csAgHmB75k2c/3e4xIt9FtbDxlm+La8/Q=",
+      "createdAt": "2026-10-03T12:00:00.000Z",
+      "etchedAt": "2026-10-03T12:00:00.000Z",
+      "octmiles": 100,
+      "lifetime": 100,
+      "tokens": 0,
+      "history": [
+        {
+          "at": "2026-10-03T12:00:00.000Z",
+          "text": "Welcome bonus. Please do not ask what they are worth.",
+          "amount": 100
+        }
+      ],
+      "trips": [],
+      "redemptions": [],
+      "codesUsed": {},
+      "codeDays": {},
+      "codeExtra": {},
+      "rides": [],
+      "reviewBonus": false
+    },
+    {
+      "username": "Lu Jin",
+      "salt": "vtFaEEuKqdTpjXG5usB2kw==",
+      "hash": "qetmY3AVApGnxaUaIaqpBjfh60QsgPpUejkpbOB0UAM=",
+      "createdAt": "2026-10-03T12:00:00.000Z",
+      "etchedAt": "2026-10-03T12:00:00.000Z",
+      "octmiles": 100,
+      "lifetime": 100,
+      "tokens": 0,
+      "history": [
+        {
+          "at": "2026-10-03T12:00:00.000Z",
+          "text": "Welcome bonus. Please do not ask what they are worth.",
+          "amount": 100
+        }
+      ],
+      "trips": [],
+      "redemptions": [],
+      "codesUsed": {},
+      "codeDays": {},
+      "codeExtra": {},
+      "rides": [],
+      "reviewBonus": false
     }
   ]
 }

@@ -406,7 +406,7 @@ $("#btn-back").addEventListener("click", () => go(current - 1));
 
 /* ---------------- confirm ---------------- */
 const ref = (prefix) => prefix + "-" + String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-const gateFor = (s) => s.airline === "SA" ? s.gate : s.from === "FIA" ? fiaGate(s.airline) : s.from + String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
+const gateFor = (s) => s.airline === "SA" ? s.gate : s.from === "FIA" ? fiaGate(s.airline, s.no) : s.from + String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
 
 // Scraggy Airlines flights earn Scraggymiles: Scraggy's own points for that route and class.
 const scraggyMilesFor = (s) => { try { return SA.data.legPoints(s.scraggyId, state.sa.travelClass) || 0; } catch { return 0; } };

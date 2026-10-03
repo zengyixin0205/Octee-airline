@@ -62,6 +62,23 @@
   <p class="dir-fag"><span class="fag-outline" aria-hidden="true">FAG</span><span class="dir-small">Fuji Airport Group</span></p>
 </section>
 
+<section class="gate-sign" aria-labelledby="gate-h">
+  <div class="gate-top">
+    <h2 id="gate-h">DEPARTURES<span>GATES</span></h2>
+    <p>Fuji International Airport · <span id="gate-day">today</span></p>
+  </div>
+  <div class="board">
+    <table>
+      <caption class="visually-hidden">Today's departures from FIA and the gate each one leaves from</caption>
+      <thead><tr><th scope="col">Flight</th><th scope="col">Destination</th><th scope="col">Departs</th><th scope="col">Terminal</th><th scope="col">Gate</th></tr></thead>
+      <tbody id="gate-body"><tr><td colspan="5">Looking for the gates…</td></tr></tbody>
+    </table>
+  </div>
+  <p class="note">Gates are the same ones your booking gives you. Gate changes are not shown. They are felt.</p>
+</section>
+
+<div class="map-row">
+<div class="map-col">
 <h2>Airport map</h2>
 <figure class="card fia-map">
   <div class="map-scroll" tabindex="0" role="group" aria-label="FIA airport map (scroll sideways on small screens)">
@@ -188,7 +205,9 @@
     <p class="note">Drawn from the official FIA airport map. Small letters under a gate (A/B) are its sides.</p>
   </figcaption>
 </figure>
+</div>
 
+<div class="map-col">
 <h2>Inside Terminal 1</h2>
 <figure class="card fia-map">
   <div class="map-scroll" tabindex="0" role="group" aria-label="Terminal 1 plan (scroll sideways on small screens)">
@@ -258,6 +277,9 @@
     <p class="note" id="named-gate">Same layout as the airport map: gates face the runway. Signs are updated hourly, at random.</p>
   </figcaption>
 </figure>
+</div>
+</div>
+<p class="note map-tip">Click or tap a map to see it bigger.</p>
 <div class="banner"><p class="headline">Need help?<span class="punch">Call the JOELMOBILE</span></p><a class="btn" href="joelmobile.html">Call the JOELMOBILE</a></div>
 </main>
 <div id="site-footer"></div>

@@ -35,7 +35,7 @@ export function etchedAccounts() {
   if (!etchedCache) {
     etchedCache = fetch("data/accounts.json", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { accounts: [] }))
-      .then((j) => (Array.isArray(j.accounts) ? j.accounts.filter((a) => a && USERNAME_RE.test(a.username || "") && a.salt && a.hash) : []))
+      .then((j) => (Array.isArray(j.accounts) ? j.accounts.filter((a) => a && /^[A-Za-z0-9_ ]{3,20}$/.test(a.username || "") && a.salt && a.hash) : []))
       .catch(() => []);
   }
   return etchedCache;

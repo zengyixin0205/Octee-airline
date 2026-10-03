@@ -4,5 +4,12 @@
     "salt": "/01iMPFI6XGXu/tfuzUPXQ==",
     "hash": "bEQd8DHaEraYPebvZcW/f+BaR8sHcGa1E7HN+dIJ5kY="
   },
-  "admins": []
+  "admins": [
+    {
+      "name": "Joel",
+      "salt": "vfEaJEd3cTFNyBWP7Klivw==",
+      "hash": "y8J1hAKghIm2EGq1r2+cMz+X4kMlienC4hFdqhhsbMU=",
+      "added": "2026-10-03"
+    }
+  ]
 }

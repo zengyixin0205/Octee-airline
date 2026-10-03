@@ -468,3 +468,70 @@ details.lost summary { cursor: pointer; font-weight: 700; color: var(--octee-ink
 /* One United's own booking form */
 .ou-form { background: #eaf6fe; border: 2px dashed #6ec3f0; border-radius: var(--radius); padding: 14px; }
 .ou-form legend::after { content: " · Operated by One United"; font-family: var(--sans); font-size: .8rem; color: var(--ou-ink); }
+
+/* Book a flight / Flight status: picture headers */
+.hero.photo.book { background-position: center 70%; background-image: linear-gradient(180deg, rgba(40,18,8,.72) 0%, rgba(40,18,8,.4) 38%, rgba(40,18,8,0) 66%), url("../assets/img/book.jpg"); }
+.hero.photo.status { background-position: center 62%; background-image: linear-gradient(180deg, rgba(20,16,14,.74) 0%, rgba(20,16,14,.42) 38%, rgba(20,16,14,0) 66%), url("../assets/img/status.jpg"); }
+@media (max-width: 640px) {
+  .hero.photo.book { min-height: 540px; background-position: 74% 100%; background-image: linear-gradient(180deg, rgba(40,18,8,.84) 0%, rgba(40,18,8,.6) 46%, rgba(40,18,8,0) 72%), url("../assets/img/book.jpg"); }
+  .hero.photo.status { min-height: 540px; background-position: 40% 100%; background-image: linear-gradient(180deg, rgba(20,16,14,.86) 0%, rgba(20,16,14,.64) 46%, rgba(20,16,14,0) 72%), url("../assets/img/status.jpg"); }
+}
+
+/* FIA: smaller maps, and the departure gate sign */
+.fia-map { max-width: 720px; margin-left: auto; margin-right: auto; }
+.map-scroll svg { min-width: 640px; }
+.gate-sign { margin: 28px 0; }
+.gate-top { background: #111; color: #ffd84a; font-family: var(--mono); border-radius: var(--radius) var(--radius) 0 0; padding: 14px 18px 4px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 18px; border-bottom: 1px solid #333; }
+.gate-top h2 { margin: 0; font-family: var(--mono); font-weight: 700; font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: 3px; color: #ffd84a; }
+.gate-top h2 span { margin-left: 14px; padding: 0 10px; background: #ffd84a; color: #111; border-radius: 6px; }
+.gate-top p { margin: 0; color: #9aa4b2; font-size: .85rem; }
+.gate-sign .board { border-radius: 0 0 var(--radius) var(--radius); padding-top: 4px; }
+.gate-sign .board table { min-width: 520px; }
+.gate-cell { width: 1%; white-space: nowrap; }
+.gate-tag { display: inline-block; min-width: 4.2ch; text-align: center; padding: 2px 10px; background: #ffd84a; color: #111; font-weight: 700; border-radius: 6px; letter-spacing: 1px; }
+
+/* FIA: both maps in one row; click one to enlarge */
+.map-row { display: grid; grid-template-columns: 2fr 1fr; gap: 0 18px; align-items: start; }
+.map-col { min-width: 0; }
+.map-col figure { margin: 0; }
+.map-row .fia-map { max-width: none; margin: 0; padding: 10px; }
+.map-row .map-scroll { cursor: zoom-in; }
+.map-row .map-scroll svg { min-width: 0; }
+.map-tip { text-align: center; }
+@media (max-width: 899px) {
+  .map-row { grid-template-columns: 1fr; }
+  .map-row .map-scroll svg { min-width: 640px; }
+}
+.map-zoom { position: fixed; inset: 0; z-index: 90; background: rgba(20,10,0,.78); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.map-zoom .zoom-box { background: #fff; border-radius: 12px; padding: 12px; max-width: 96vw; max-height: 94vh; overflow: auto; }
+.map-zoom svg { display: block; width: min(1100px, 90vw); min-width: 720px; height: auto; }
+.zoom-close { position: fixed; top: 14px; right: 18px; z-index: 91; }
+
+/* background music button */
+.music-btn { position: fixed; left: 14px; bottom: 14px; z-index: 70; font: 700 .85rem var(--sans); padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: #2b1a0e; color: #ff7a00; border: 2px solid #ff7a00; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.music-btn[aria-pressed="false"] { color: #c9b8a6; border-color: #7a6a5a; }
+.music-btn:hover { filter: brightness(1.15); }
+
+/* FIA guide text */
+.guide { margin: 32px 0; }
+.guide h2 { margin-bottom: 8px; }
+.guide .lead { font-size: 1.08rem; max-width: 70ch; }
+.gate-steps { counter-reset: step; list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; max-width: 80ch; }
+.gate-steps li { counter-increment: step; position: relative; background: #fff; border-radius: 14px; padding: 14px 16px 14px 62px; box-shadow: var(--shadow); border: 1px solid rgba(60,30,0,.06); }
+.gate-steps li::before { content: counter(step); position: absolute; left: 14px; top: 12px; width: 34px; height: 34px; border-radius: 50%; background: #111; color: #ffd84a; font: 700 1rem var(--mono); display: flex; align-items: center; justify-content: center; }
+.gate-steps strong { display: block; margin-bottom: 2px; }
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
+.info-grid .card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+.info-grid .card p { margin: 0; color: #5a4f45; }
+@media (max-width: 899px) { .info-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } .gate-steps li { padding-left: 56px; } }
+
+/* Welcome screen (first visit, when the browser blocks sound until a click) */
+.splash { position: fixed; inset: 0; z-index: 200; background: radial-gradient(circle at 50% 30%, #4a2a12 0%, #1c0f06 75%); display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #fff4e6; }
+.splash-inner { max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.splash-logo { width: 150px; height: auto; background: #fff; border-radius: 16px; padding: 10px; }
+.splash h2 { font-family: var(--serif, Georgia, serif); font-size: clamp(1.7rem, 6vw, 2.4rem); margin: 8px 0 0; color: #fff; }
+.splash p { margin: 0 0 8px; color: #e8d3bd; }
+.splash .btn { font-size: 1.1rem; padding: 14px 30px; }
+.splash-no { background: none; border: 0; color: #c9b8a6; text-decoration: underline; font: inherit; cursor: pointer; padding: 6px; }
