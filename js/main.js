@@ -10,6 +10,7 @@ const PAGES = [
   ["destinations.html", "Destinations"],
   ["book.html", "Book a Flight"],
   ["status.html", "Flight Status"],
+  ["checkin.html", "Check-in"],
   ["baggage.html", "Baggage", "wonky"],
   ["experience.html", "In-Flight"],
   ["fia.html", "FIA Airport"],
@@ -23,10 +24,12 @@ const PAGES = [
 
 const here = () => location.pathname.split("/").pop() || "index.html";
 
+const joelBtn = () => el("button", { class: "btn small jai-open", type: "button", title: "Ask JoelAI about the airport", onclick: async () => (await import("./joelai-ui.js")).openJoelAI() }, "Ask JoelAI");
+
 function renderAccount(box) {
   const u = currentUser();
   if (!u) {
-    box.replaceChildren(el("a", { class: "btn small", href: "login.html?next=" + encodeURIComponent(here()) }, "Log in / Sign up"));
+    box.replaceChildren(joelBtn(), el("a", { class: "btn small", href: "login.html?next=" + encodeURIComponent(here()) }, "Log in / Sign up"));
     return;
   }
   const tier = tierFor(u.lifetime);
@@ -36,6 +39,7 @@ function renderAccount(box) {
     el("a", { class: "pill", href: "octmiles.html#tokens", title: "Your Octeetokens" }, fmtMiles(u.tokens || 0) + " Octeetokens"),
     el("span", { class: "pill gold" }, tier.name),
     el("a", { href: "#", onclick: async (e) => { e.preventDefault(); (await import("./code-box.js")).openCodeBox(); } }, "Have a code?"),
+    joelBtn(),
     el("button", { class: "btn small ghost", type: "button", onclick: () => { logOut(); location.href = "index.html"; } }, "Log out")
   );
 }
@@ -123,13 +127,21 @@ function buildFooter() {
     el("div", { class: "inner" },
       el("p", {}, "Octee Airlines, a member of FAG (Fuji Airport Group). Operating from FIA (Fuji International Airport)."),
       el("p", { class: "foot" }, "Scraggy Airlines (SA) is part of Octee Airlines, based at Scraggy International Airport (SIA). One United (OU) is a partner airline. Accounts and Octmiles are kept in your browser."),
-      el("p", {}, el("a", { href: "status.html" }, "Flight Status"), " · ", el("a", { href: "reviews.html" }, "Reviews"), " · ", el("a", { href: "contact.html" }, "Contact"))
+      el("p", {}, el("a", { href: "status.html" }, "Flight Status"), " · ", el("a", { href: "reviews.html" }, "Reviews"), " · ", el("a", { href: "contact.html" }, "Contact"), " · ", el("a", { href: "complaint.html" }, "Complaints"))
     )));
 }
 
 buildHeader();
 buildClock();
 buildFooter();
+
+// A banner on every page when Octee has sent you an apology (flights get late; see apology.js).
+import("./apology.js").then((m) => {
+  m.showBanner();
+  window.addEventListener("octee:apology", m.showBanner);
+  window.addEventListener("octee:account", m.showBanner);
+  window.addEventListener("storage", m.showBanner);
+}).catch(() => {});
 
 // If the code holds a newer copy of the logged-in account, use it.
 syncEtched().catch(() => {});

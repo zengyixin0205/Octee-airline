@@ -1,6 +1,7 @@
 // Octee booking options + the boarding pass card (shared by book.html and account.html).
 import { el, niceDate } from "./dom.js";
 import { placeName, placeShort } from "./destinations.js";
+import { legUrl, isCheckedIn, seatsOf } from "./tripkit.js";
 
 export const OA_AIRCRAFT = [
   { id: "airbus-777", name: "Airbus 777", blurb: "Has wings. Both of them, mostly." },
@@ -47,9 +48,12 @@ export function passCard(b, l, SA) {
         el("dt", {}, "Arrives"), el("dd", {}, l.arr + (l.via?.length ? ` (via ${l.via.map(placeShort).join(", ")}, stay on board)` : "")),
         el("dt", {}, "Aircraft"), el("dd", {}, air || "—"),
         el("dt", {}, ou ? "Unitation" : "Class"), el("dd", {}, cls || "—"),
-        el("dt", {}, "Seat"), el("dd", {}, (ou && OU_SEATS.find((x) => x[0] === l.seat)?.[1]) || l.seat || "Somewhere"),
+        el("dt", {}, "Seat"), el("dd", {}, isCheckedIn(l) ? seatsOf(l).join(", ") + " (checked in)" : ((ou && OU_SEATS.find((x) => x[0] === l.seat)?.[1]) || l.seat || "Somewhere") + " (pick your exact seat at check-in)"),
         el("dt", {}, "Gate"), el("dd", {}, l.gate),
         el("dt", {}, sa ? "Scraggymiles" : "Octmiles"), el("dd", {}, sa ? (l.scraggymiles ? "+" + l.scraggymiles + " (1 Scraggymile = 2 Octmiles)" : "Scraggy Points are collected with Scraggy Airlines.") : "+" + l.miles + (ou ? " (One United shares the miles. Unevenly.)" : ""))),
-      !sa && l.from === "FIA" ? el("p", {}, el("a", { href: "joelmobile.html" }, `Call the JOELMOBILE to gate ${l.gate}`)) : ""));
+      !sa && l.from === "FIA" ? el("p", {}, el("a", { href: "joelmobile.html" }, `Call the JOELMOBILE to gate ${l.gate}`)) : "",
+      el("div", { class: "actions pass-actions" },
+        isCheckedIn(l) ? el("a", { class: "btn small", href: legUrl("pass.html", b, b.legs.indexOf(l)) }, "Boarding pass") : el("a", { class: "btn small", href: legUrl("checkin.html", b, b.legs.indexOf(l)) }, "Check in and pick a seat"),
+        el("a", { class: "btn small secondary", href: legUrl("track.html", b, b.legs.indexOf(l)) }, "Track flight"))));
 }
 

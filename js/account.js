@@ -4,6 +4,8 @@ import { tierFor, spendTokens, tokensOf, scraggyOf, sharedScraggy } from "./mile
 import { placeShort } from "./destinations.js";
 import { passCard, OA_CLASSES, classTokens } from "./booking-data.js";
 import { scraggyData } from "./scraggy.js";
+import { boardingPass } from "./boardingpass.js";
+import { isCheckedIn, legUrl } from "./tripkit.js";
 import { load, save } from "./store.js";
 
 if (requireLogin()) { render(null); scraggyData().then(render); }
@@ -29,9 +31,13 @@ function render(SA) {
   box.replaceChildren(...trips.map((b) => el("details", { class: "card", style: "margin-bottom:12px" },
     el("summary", { style: "cursor:pointer" },
       el("strong", {}, `${placeShort(b.from)} → ${placeShort(b.to)}`), ` · ${niceDate(b.legs[0].date)} · ${b.legs.map((l) => l.no).join(", ")} · `,
-      el("span", { class: "tag" }, b.ref), b.scraggyRef ? el("span", { class: "tag sa" }, b.scraggyRef) : ""),
+      el("span", { class: "tag" }, b.ref), b.scraggyRef ? el("span", { class: "tag sa" }, b.scraggyRef) : "",
+      el("span", { class: "tag " + (b.legs.every(isCheckedIn) ? "" : "red") }, b.legs.every(isCheckedIn) ? "Checked in" : `Checked in ${b.legs.filter(isCheckedIn).length}/${b.legs.length}`)),
     upgradeBox(b, SA),
-    b.legs.map((l) => passCard(b, l, SA)))));
+    b.legs.map((l) => passCard(b, l, SA)),
+    b.legs.some(isCheckedIn) ? el("h3", { class: "bp-h" }, "Boarding passes") : "",
+    b.legs.map((l, i) => isCheckedIn(l) ? [b.names.map((_, p) => boardingPass(b, l, i, p, SA, { compact: true })), el("p", { class: "actions" }, el("a", { class: "btn small", href: legUrl("pass.html", b, i) }, `Print ${l.no}`))] : "")
+  )));
 }
 
 // Pay Octeetokens to move a booking's Octee / One United flights up a class.

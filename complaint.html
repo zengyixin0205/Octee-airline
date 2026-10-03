@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Complaint Desk — Octee Airlines</title>
+<meta name="description" content="Complain to Octee Airlines. You will get a ticket number.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/complaint.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+  <p class="eyebrow">Complaints · Desk 404</p>
+  <h1 class="headline">COMPLAINT DESK<span class="punch long">your complaint is important to us</span></h1>
+  <p class="sub">Tell us what went wrong. You will get a ticket number and an automatic reply. The reply will not help.</p>
+</section>
+<div class="split">
+  <form id="complaint-form" class="card" novalidate>
+    <div class="row">
+      <div class="field"><label for="cp-name">Your name</label><input type="text" id="cp-name" maxlength="40" autocomplete="off"></div>
+      <div class="field"><label for="cp-flight">About which flight?</label><select id="cp-flight"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="cp-cat">What went wrong?</label><select id="cp-cat"></select></div>
+      <div class="field"><label for="cp-mad">How upset are you? <output id="cp-mad-out">5</output> / 10</label><input type="range" id="cp-mad" min="1" max="10" value="5"></div>
+    </div>
+    <div class="field"><label for="cp-text">Your complaint</label><textarea id="cp-text" maxlength="800" rows="5"></textarea></div>
+    <div class="actions"><button class="btn" type="submit">File my complaint</button></div>
+    <p id="cp-msg" class="msg" role="status" aria-live="polite"></p>
+    <p class="hint">Complaints are saved in this browser only. Nobody else can read them. Neither can we.</p>
+  </form>
+  <section id="cp-reply" aria-live="polite"></section>
+</div>
+<h2>Your tickets</h2>
+<div id="cp-list"></div>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. Like our engines, it may or may not be working.</p></noscript>
+</body>
+</html>
