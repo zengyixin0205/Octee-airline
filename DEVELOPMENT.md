@@ -1102,3 +1102,11 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## Five more games (Entertainment)
 
 - **Security Line** (15 items, a rule such as "Metal must be STOPPED" that changes every 5 items; 12 right = peanut), **Delay Trivia** (6 questions about the site; 5 right), **Find the Bag** (find your OA tag in a growing grid in 60 s, wrong bag costs 3 s; 6 found), **Boarding Call** (reaction test, 5 tries, early tap counts 999 ms; average under 450 ms), **Runway Landing** (canvas; hold to slow the sink rate below 2.4 and land on the runway; streak of 3). Same reward rule as the others (one peanut per game per day), bests in `octee.games.best`.
+
+## Whack-a-Joel
+
+- Tab "Whack-a-Joel" in Entertainment (`whack()` in `js/entertainment.js`): 30 seconds, 3 x 3 cupboards. Joel pops up (saying sorry) for about 1 to 1.5 seconds; a peanut sometimes pops up instead (hit it for -2). Aim the hammer with the mouse, touch or arrow keys; **Space** (or the HIT button) swings, and it only scores if the crosshair is over the cupboard holding Joel when you press. Spawn rate speeds up. 12 Joels = peanut (one per day); best in `octee.games.best`.
+
+## Destination search file renamed
+
+- The Home/Destinations "Where to?" box now lives in `js/destsearch.js` (imported as `./destsearch.js?v=2` by `home.js` and `destinations-page.js`). `js/search.js` is only a re-export. This was done because a browser that had cached the wrong `search.js` (see the earlier mix-up with the site search page, which is `js/sitesearch.js`) could break the home page. A new file name plus `?v=` makes every browser fetch the right one. Bump the `?v=` when this file changes.
