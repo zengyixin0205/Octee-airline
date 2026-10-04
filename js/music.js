@@ -15,6 +15,9 @@ const btn = document.createElement("button");
 btn.type = "button";
 btn.className = "music-btn";
 document.body.append(btn);
+const radio = document.createElement("a");              // link to Octee Radio, beside the music button
+radio.className = "music-btn radio-link"; radio.href = "radio.html"; radio.textContent = "\u{1F4FB} Radio";
+document.body.append(radio);
 
 let on = load(PREF, "on") !== "off";
 let engine = null;                      // { start(), stop() }
@@ -26,24 +29,47 @@ const paint = () => {
   btn.title = on ? "Turn the background music off" : "Turn the background music on";
 };
 
-/* ---------- own MP3, if there is one ---------- */
-// The song plays right to the end, then starts again. Because every page is a new page load, the position
-// is saved several times a second and picked up by the next page, adding the time the page change took,
-// so the music carries on instead of starting over. A visitor who comes back after a minute starts from the top.
+/* ---------- own MP3s, if there are any ---------- */
+// Songs are assets/audio/music.mp3, music2.mp3, music3.mp3 ... (as many as exist, up to 20). They play in
+// that order: when one ends the next one starts, and after the last one the list starts again from music.mp3.
+// With only music.mp3 that one song just repeats.
+// Every page is a new page load, so the song number and position are saved several times a second and the
+// next page picks up from there, adding the time the page change took, so the music carries on instead of
+// starting over. A visitor who comes back after a minute starts from the top of the list.
+const STATE = "octee.music.state";     // { i, pos, at, playing }
 const SPLASH_SEEN = "octee.music.splash";
-const STATE = "octee.music.state";     // { pos, at, playing }
+async function findSongs() {
+  const found = [];
+  for (let n = 1; n <= 20; n++) {
+    const url = `assets/audio/music${n === 1 ? "" : n}.mp3`;
+    try {
+      const r = await fetch(url, { method: "HEAD", cache: "no-store" });
+      if (!r.ok) break;
+    } catch { break; }
+    found.push(url);
+  }
+  return found;
+}
 async function fileEngine() {
-  try {
-    const r = await fetch("assets/audio/music.mp3", { method: "HEAD", cache: "no-store" });
-    if (!r.ok) return null;
-  } catch { return null; }
-  const a = new Audio("assets/audio/music.mp3");
-  a.loop = true; a.volume = FILE_VOLUME; a.preload = "auto";
+  const songs = await findSongs();
+  if (!songs.length) return null;
   const st = load(STATE, null);
   const gap = st ? (Date.now() - st.at) / 1000 : Infinity;
-  const resume = st && st.playing && gap < 60 ? st.pos + gap : 0;
-  if (resume) a.addEventListener("loadedmetadata", () => { if (a.duration) a.currentTime = resume % a.duration; }, { once: true });
-  const keep = () => save(STATE, { pos: a.currentTime, at: Date.now(), playing: !a.paused });
+  const back = st && st.playing && gap < 60;
+  let i = back && st.i < songs.length ? st.i : 0;
+  let resume = back && st.i < songs.length ? st.pos + gap : 0;
+  const a = new Audio(songs[i]);
+  a.volume = FILE_VOLUME; a.preload = "auto";
+  const seek = () => {
+    if (!resume) return;
+    if (a.duration && resume < a.duration) a.currentTime = resume;
+    else if (a.duration && songs.length > 1) { i = (i + 1) % songs.length; a.src = songs[i]; }   // the song ended during the page change
+    resume = 0;
+  };
+  a.addEventListener("loadedmetadata", seek);
+  a.addEventListener("ended", () => { i = (i + 1) % songs.length; a.src = songs[i]; a.play().catch(() => {}); });
+  if (songs.length === 1) a.loop = true;
+  const keep = () => save(STATE, { i, pos: a.currentTime, at: Date.now(), playing: !a.paused });
   setInterval(() => { if (!a.paused) keep(); }, 400);
   addEventListener("pagehide", keep);
   a.addEventListener("pause", keep);
@@ -160,7 +186,7 @@ function splash() {
 // Browsers only allow sound after the visitor has clicked, tapped or pressed a key on this site, so try to
 // start straight away (works on pages after the first) and, if that is blocked, start on the first interaction.
 function firstGesture() {
-  if (on) { if (!started) begin(); else if (engine) engine.start(); }
+  if (on && !radioOn) { if (!started) begin(); else if (engine) engine.start(); }
 }
 ["pointerdown", "keydown", "touchstart"].forEach((e) => addEventListener(e, firstGesture, { capture: true, passive: true }));
 
@@ -173,5 +199,12 @@ btn.addEventListener("click", async (ev) => {
   else if (engine) engine.stop();
 });
 
+// Octee Radio asks the site music to step aside while it plays
+let radioOn = false;
+addEventListener("octee:radio", (e) => {
+  radioOn = !!e.detail.playing;
+  if (!engine) return;
+  if (radioOn) engine.stop(); else if (on) engine.start();
+});
 paint();
 if (on) begin();

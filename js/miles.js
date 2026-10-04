@@ -49,7 +49,7 @@ export function redeemReward(id) {
 // class upgrades and one more code for today.
 export const TOKEN_RATE = 10;                 // 10 Octmiles = 1 Octeetoken
 export const CODES_PER_DAY = 5;               // codes one account can redeem per day
-export const TOKEN_PRICES = { joelmobile: 5, extraCode: 20 };
+export const TOKEN_PRICES = { joelmobile: 5, extraCode: 20, spin: 10 };
 export const tokensOf = (u) => (u && u.tokens) || 0;
 export const fmtTokens = (n) => `${Number(n || 0).toLocaleString("en-GB")} Octeetoken${Number(n) === 1 ? "" : "s"}`;
 

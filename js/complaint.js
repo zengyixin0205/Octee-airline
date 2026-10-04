@@ -4,6 +4,7 @@ import { currentUser } from "./auth.js";
 import { placeShort } from "./destinations.js";
 import { hash } from "./tripkit.js";
 import { load, save } from "./store.js";
+import { addPeanuts } from "./peanuts.js";
 
 const KEY = "octee.complaints";
 const MAX_SAVED = 20;
@@ -47,7 +48,8 @@ function reply(c) {
     el("p", {}, "Thank you for contacting Octee Airlines. Your complaint is important to us. ", el("strong", {}, "It is at the front of the queue."), " The queue has one complaint in it. It has been one complaint since Tuesday."),
     el("p", {}, cat[2]),
     el("p", {}, upset),
-    el("p", { class: "mail-comp" }, el("strong", {}, "Compensation: "), `${c.peanuts} peanut${c.peanuts === 1 ? "" : "s"}, paid in peanuts. They will be delivered by the JOELMOBILE. Arrival is not guaranteed, and neither are the peanuts.`),
+    el("p", { class: "mail-comp" }, el("strong", {}, "Compensation: "), `${c.peanuts} peanut${c.peanuts === 1 ? "" : "s"}, paid in peanuts. They will be delivered by the JOELMOBILE. Arrival is not guaranteed, and neither are the peanuts.`,
+      c.paid ? " (Update: they have arrived in your Peanut Wallet. Joel is as surprised as you.)" : user ? "" : " (Log in and your peanuts would have a wallet to land in.)"),
     el("p", {}, el("strong", {}, "Your ticket number is "), el("span", { class: "tag" }, c.ticket), " Please quote it in every future complaint, and please do not lose it. We lose everything else."),
     el("p", { class: "note" }, "Octee Customer Care. Please do not reply to this message. Replying moves you to the back of the queue, which does not exist."));
 }
@@ -85,8 +87,9 @@ form.addEventListener("submit", (e) => {
     ticket: "COMP-" + String(hash(`${name}|${text}|${at}`) % 90000 + 10000), at, owner, name, text,
     flight: $("#cp-flight").value, cat: $("#cp-cat").value, mad: madNum, peanuts: Math.max(1, Math.round(madNum / 2)) + (text.length > 200 ? 1 : 0)
   };
+  c.paid = addPeanuts(`Compensation for complaint ${c.ticket}`, c.peanuts);
   save(KEY, [c, ...all()].slice(0, MAX_SAVED));
-  setMsg(msg, `Complaint filed. Ticket ${c.ticket}.`, "ok");
+  setMsg(msg, `Complaint filed. Ticket ${c.ticket}.${c.paid ? ` +${c.peanuts} peanut${c.peanuts === 1 ? "" : "s"} in your wallet.` : ""}`, "ok");
   replyBox.replaceChildren(reply(c));
   $("#cp-text").value = "";
   drawList();

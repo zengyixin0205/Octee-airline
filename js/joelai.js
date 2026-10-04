@@ -6,11 +6,11 @@ import { TIERS, tierFor, nextTier, REWARDS, TOKEN_RATE, TOKEN_PRICES } from "./m
 import { currentUser } from "./auth.js";
 import { scraggyData } from "./scraggy.js";
 import { CONFIG } from "./config.js";
-import { isCheckedIn, seatsOf } from "./tripkit.js";
+import { isCheckedIn, seatsOf, legUrl } from "./tripkit.js";
 import { niceDate, today } from "./dom.js";
 
 export const GREETING = "Hi, I'm JoelAI. I'm a joel! Ask me about gates, flights, security, the train, bags, Octmiles or anything else at FIA. I am a rulebook with confidence, not a real AI, so I am only right about things we wrote down.";
-export const CHIPS = ["How do I get to my gate?", "Where is security?", "Flights to MIA", "When does OA 58 leave?", "Where is gate A12?", "How do I earn Octmiles?", "Tell me a joke"];
+export const CHIPS = ["How do I check in?", "How do I change my password?", "How do I get to my gate?", "Where is security?", "Flights to MIA", "When does OA 58 leave?", "Where is gate A12?", "How do I earn Octmiles?", "Tell me a joke"];
 
 const A = (text, links = []) => ({ text, links });
 const pickBy = (arr, seed) => arr[Math.abs([...String(seed)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % arr.length];
@@ -104,6 +104,51 @@ function myTrip(kind) {
   return A(`Your next flight is ${l.no}, ${placeShort(l.from)} to ${placeShort(l.to)}, on ${niceDate(l.date)}, leaving ${l.dep} from gate ${l.gate}. ${done ? "You are checked in." : "You are not checked in yet."} It will be delayed.`, [["My trips", "account.html"], ["Check-in", "checkin.html"]]);
 }
 
+// Step-by-step guides with links. If you are logged in with a flight coming up, the links go straight to that flight.
+function nextLeg() {
+  const u = currentUser();
+  if (!u) return null;
+  const legs = (u.trips || []).flatMap((b) => b.legs.map((l, i) => ({ b, l, i }))).filter(({ l }) => l.date >= today()).sort((a, b) => a.l.date.localeCompare(b.l.date) || a.l.dep.localeCompare(b.l.dep));
+  return legs[0] || null;
+}
+const steps = (...lines) => lines.map((t, k) => `${k + 1}. ${t}`).join("\n");
+function guide(q) {
+  const u = currentUser(), nx = nextLeg();
+  const direct = (page, label) => (nx ? [[`${label} (${nx.l.no})`, legUrl(page, nx.b, nx.i)]] : []);
+  if (/(how|where|when|can i|want to|need to).{0,30}check.?in\b|online check.?in|check me in|check in online/.test(q) && !/desk|counter|status|am i checked|checked in/.test(q)) {
+    const state = !u ? "Log in first, then you can check in." : !nx ? "You have no upcoming flight to check in for yet. Book one first." : isCheckedIn(nx.l) ? `You are already checked in for ${nx.l.no}, seat ${seatsOf(nx.l).join(", ")}.` : `Your next flight is ${nx.l.no} on ${niceDate(nx.l.date)}. The first link below goes straight to its check-in.`;
+    return A("How to check in online:\n" + steps(
+      "Log in (Log in / Sign up, top right).",
+      "Open Check-in in the menu, or press Check in on your flight in My Trips.",
+      "Choose the flight. Each passenger gets a seat.",
+      "Pick a seat on the seat map. You can only sit in your own class's cabin. Seats marked ~ are unavailable (spiritually).",
+      "Press Check in to confirm.",
+      "Your boarding pass appears. Print it, or screenshot it. The barcode does not scan.") + "\n" + state,
+      [...direct("checkin.html", "Check in for my flight"), ["Check-in page", "checkin.html"], ["My trips", "account.html"], ...(!u ? [["Log in", "login.html?next=checkin.html"]] : [])]);
+  }
+  if (/(how|where).{0,30}(boarding pass|print)|get my boarding pass/.test(q))
+    return A("How to get your boarding pass:\n" + steps("Check in online first (ask me how).", "Open My Trips or the Check-in page.", "Press Boarding pass on the flight.", "Press Print. The print view hides everything but the pass.") + "\nIt says BOARDING CLOSES IN -3 MINUTES. That is normal.", [...direct("pass.html", "Boarding pass"), ["My trips", "account.html"]]);
+  if (/(how|where).{0,30}(change|reset|update|forgot|new).{0,12}password|change (my )?password|forgot (my )?password/.test(q))
+    return A("How to change your password:\n" + steps("Log in.", "Open your Account page (press your name at the top).", "Find Change your password under your details.", "Type your current password, then the new one twice (8 characters or more).", "Press Change password.") + "\nIf you forgot your current password, we cannot help. We cannot see it. Nobody can. It is a hash.", [["My account", "account.html#password-box"], ...(!u ? [["Log in", "login.html?next=account.html"]] : [])]);
+  if (/(how|where).{0,30}(book|buy).{0,12}(flight|ticket|trip)|how do i book/.test(q))
+    return A("How to book a flight:\n" + steps("Log in (you need an account).", "Press Book a Flight.", "Pick where from, where to and the dates.", "Choose a route. Some use more than one airline.", "Fill in the form for each airline. Names must match your passport, or a peanut.", "Confirm. Nothing is charged. You can book up to 5 flights a day.") + "\nAfter about 9 seconds we will be sorry about it.", [["Book a flight", "book.html"], ["Destinations", "destinations.html"]]);
+  if (/(how|where).{0,30}(redeem|enter|use|type).{0,12}code|how do i use a code/.test(q))
+    return A("How to use a code:\n" + steps("Log in.", "Press Have a code? at the top of any page.", "Type the code and press Redeem.") + "\nYou can redeem 5 a day. Extra codes cost Octeetokens. We do not know any codes, and we have been told not to look.", [["Octmiles", "octmiles.html"]]);
+  if (/(how|where).{0,30}(track|follow).{0,12}(flight|plane)|how do i track/.test(q))
+    return A("How to track your flight:\n" + steps("Log in.", "Open Track my flight (Flight Status page, or My Trips).", "Pick the flight. The status updates every few seconds. It does not get better.", "When it is late (it will be), you can get a delay certificate, read our apology, or share the picture.") , [...direct("track.html", "Track"), ["Flight tracker", "track.html"]]);
+  if (/(how|where).{0,30}(delay certificate|certificate)|get a certificate/.test(q))
+    return A("How to get a delay certificate:\n" + steps("Open the tracker for your flight.", "Wait until it is late. It takes a few seconds, sometimes less than a millisecond.", "Press Get my delay certificate.", "Print it. It is signed by a peanut.") , [...direct("certificate.html", "Delay certificate"), ["Flight tracker", "track.html"]]);
+  if (/(how|where).{0,30}(complain|make a complaint|file a complaint)|how do i complain/.test(q))
+    return A("How to complain:\n" + steps("Open the Complaint Desk (footer, or the Contact page).", "Say what is wrong, pick a category and slide how upset you are.", "Press the button. You get a ticket number and an automatic reply. It is at the front of the queue.", "Your peanuts arrive in your Peanut Wallet.") , [["Complaint Desk", "complaint.html"], ["Peanut Wallet", "peanuts.html"]]);
+  if (/(how|where).{0,30}(upgrade|first class|business class)|how do i upgrade/.test(q))
+    return A("Two ways to upgrade:\n" + steps("On your Account page, upgrade a trip with Octeetokens (Business 30, First 60).", "Or spin the Seat Upgrade Lottery (10 Octeetokens a spin, about 1 in 16 is First).") + "\nOne of these works. The other one is a wheel.", [["My trips", "account.html"], ["Upgrade Lottery", "upgrade.html"]]);
+  if (/(how|where).{0,30}(get|earn|spend).{0,10}(octeetokens?|tokens)|get more tokens/.test(q))
+    return A("How to get Octeetokens:\n" + steps("Log in.", "Open Octmiles, then Octeetokens.", "Exchange Octmiles for tokens (10 Octmiles = 1 Octeetoken).") + "\nYou earn Octmiles by flying, reviewing and using codes.", [["Octeetokens", "octmiles.html#tokens"], ["Octmiles", "octmiles.html"]]);
+  if (/how do i start|what can i do|what should i do|where do i start|get started|how does this (site|work)/.test(q))
+    return { ...A("Here is what I can walk you through. Pick one, or just ask.\n" + steps("Check in and get a boarding pass", "Book a flight", "Track a flight and get a delay certificate", "Change your password", "Use a code, get Octeetokens, upgrade", "Complain (and get peanuts)")), chips: ["How do I check in?", "How do I book a flight?", "How do I track my flight?", "How do I change my password?", "How do I use a code?", "How do I complain?"] };
+  return null;
+}
+
 const KB = [
   [/\b(security|scanner|x ?ray|search)\b/, "Security is the long strip across the middle of Terminal 1, between check-in and the piers. Shoes off, hopes off. Laptops in their own tray. Peanuts may stay in your pocket, they are our currency.", [["FIA guide", "fia.html"]]],
   [/\b(passport|immigration|visa|border)\b/, "Passport control is right next to security in Terminal 1. Show your passport and say your name clearly. A fake name is fine.", [["FIA guide", "fia.html"]]],
@@ -111,6 +156,27 @@ const KB = [
   [/\b(online check ?in|check ?in online|seat map|pick (a )?seat|choose (a )?seat)\b/, "Online check-in is open now. Pick your seat on the map, get your boarding pass and print it. Some seats are unavailable spiritually.", [["Check in", "checkin.html"]]],
   [/\b(boarding pass|print)\b/, "After you check in online, your boarding pass is on the Check-in page and in My Trips. It has a barcode that does not scan.", [["Check-in", "checkin.html"], ["My trips", "account.html"]]],
   [/\b(track|tracker|where is my (plane|flight))\b/, "The flight tracker follows your booked flight. It gets worse every few seconds. You can get a delay certificate from it too.", [["Track my flight", "track.html"]]],
+  [/\b(peanuts?|wallet)\b/, "Peanuts are what we pay compensation in. Complaints pay up to 6, apologies pay 1. Spend them in the Peanut Shop or on a JOELMOBILE ride (3 peanuts).", [["Peanut Wallet", "peanuts.html"], ["Complaint Desk", "complaint.html"]]],
+  [/\b(lost and found|lost property|i lost|lost my|found my)\b/, "Lost and Found is at Desk 14. Desk 14 moves. The website knows where it is. You can claim items there, or report something lost.", [["Lost and Found", "lostfound.html"]]],
+  [/\b(share|screenshot|brag)\b/, "Open the tracker and press Share my trip. It draws a picture with your route, how late you are, your seat and your booking number.", [["Track my flight", "track.html"]]],
+  [/\b(lottery|spin|wheel|free upgrade)\b/, "The Seat Upgrade Lottery costs 10 Octeetokens a spin. About 1 in 16 is First Class. Most of it is sorry.", [["Upgrade Lottery", "upgrade.html"]]],
+  [/\b(news|newspaper|magazine|horoscope|crossword)\b/, "The Octee Times is our in-flight magazine: news, a horoscope that is always about delays, and a crossword.", [["The Octee Times", "news.html"]]],
+  [/\b(meal|menu|dinner|lunch|breakfast|in.?flight food|pre.?order)\b/, "You can pre-order your in-flight meal. Every dish on the menu is a peanut. It only has different names. Order for each passenger on the Meal Pre-order page.", [["Meal Pre-order", "meal.html"]]],
+  [/\b(magazine|sudoku|puzzle|article|crossword)\b/, "The in-flight magazine has six articles, four adverts and a sudoku. The sudoku has no solution. The Octee Times has a crossword that does.", [["Magazine", "magazine.html"], ["The Octee Times", "news.html"]]],
+  [/\b(insur(e|ance)|policy|cover(age)?)\b/, "Octee Insurance insures anything against everything except what actually happens. Every claim is rejected, with reasons.", [["Octee Insurance", "insurance.html"]]],
+  [/\b(credit ?card|card number|apply)\b/, "The Octee Credit Card is always approved and every purchase is declined. Its number is made of peanuts. Never type a real card number on this site.", [["Credit card", "creditcard.html"]]],
+  [/\b(cockpit|pilot|dials?|do not)\b/, "The Cockpit has six dials and twelve buttons that make announcements. One of them says Do not. Please do not.", [["The Cockpit", "cockpit.html"]]],
+  [/\b(wi-?fi|internet|wireless|speed test)\b/, "Octee Wi-Fi connects you to OcteeGuest, loads forever, and the speed test is negative. It does not touch your real network.", [["Octee Wi-Fi", "wifi.html"]]],
+  [/\b(auction|bid|bidding|lost property)\b/, "The Lost Property Auction sells unclaimed bags for peanuts. Each lot closes after 40 seconds, Joel always bids, and you cannot open a bag you win.", [["Auction", "auction.html"], ["Lost and Found", "lostfound.html"]]],
+  [/\b(turbulence|shake|shaking|coffee)\b/, "The Turbulence button (bottom right of every page) shakes the site for 9 seconds, plays a cabin announcement and counts the coffees spilled.", [["Home", "index.html"]]],
+  [/\b(duty ?free|shop|souvenirs?|scissors|perfume)\b/, "Octee Duty Free sells things you cannot take on board, for peanuts. You get a receipt. You do not get the item.", [["Duty Free", "dutyfree.html"], ["Peanut Wallet", "peanuts.html"]]],
+  [/\b(print|printable|safety card|seat pocket)\b/, "The safety card is a printable A4 sheet with the same six cards as the demo. Fold it along the dotted line.", [["Safety card", "safetycard.html"], ["Safety demo", "safety.html"]]],
+  [/\b(safety|seat ?belt|life ?jacket|oxygen|brace|quiz|demonstration)\b/, "The safety demonstration has six cards and a quiz. The seatbelt has no buckle, the life jacket is a peanut shell, and passing the quiz (4 of 5) earns 1 peanut a day.", [["Safety demo", "safety.html"], ["Peanut Wallet", "peanuts.html"]]],
+  [/\b(radio|station|delay fm|tracklist|playlist|songs?)\b/, "Octee Radio has four stations: Delay FM (announcements), Joel's Sorry Station, Peanut Classics and Lounge FM. Press play. Sound only starts when you press the button.", [["Octee Radio", "radio.html"]]],
+  [/\b(bingo)\b/, "Delay Bingo is a 5 by 5 card of things that happen on your tracker. Tick them as they happen. Five in a row wins a certificate, signed by the peanut, and 3 peanuts.", [["Delay Bingo", "bingo.html"], ["Track my flight", "track.html"]]],
+  [/\b(cupboard|joel'?s cupboard)\b/, "There is no cupboard. If there were a cupboard, you would have to wait for Joel to run out of sorry first. I have said too much.", []],
+  [/\b(bag tracker|track (my )?(bag|luggage|suitcase)|where is my (bag|luggage|suitcase))\b/, "Type your bag tag number into the Bag Tracker. It shows where your bag is, and it follows the bag round the airport and round carousel 7. It does not always go forwards.", [["Bag Tracker", "bagtrack.html"], ["Baggage rules", "baggage.html"]]],
+  [/\b(bag game|baggage game|conveyor|conveyer|push the bags)\b/, "The Baggage Game: bags ride a T-shaped belt. Press PUSH when one is in the middle and it goes down to the plane. Too early, too late or a miss, and it goes to Lost. Load 5 bags for a peanut.", [["The Baggage Game", "baggame.html"]]],
   [/\b(delay certificate|certificate)\b/, "Open the tracker once your flight has a delay (it will) and press Get my delay certificate. It is signed by a peanut.", [["Track my flight", "track.html"]]],
   [/\b(complain|complaint|refund|compensation|compensate|angry|unhappy)\b/, "Our Complaint Desk gives you a ticket number and an automatic reply. Your complaint will be at the front of the queue. Compensation is paid in peanuts.", [["Complaint Desk", "complaint.html"]]],
   [/\b(lost|bag|baggage|luggage|suitcase|missing)\b/, "Bags: the lost and found is the biggest room in Terminal 1, next to the baggage claim (which may be open). Labels, weights and bag tags are on the Baggage page. Keep your bag tag number safe. We will not be.", [["Baggage", "baggage.html"]]],
@@ -134,7 +200,7 @@ const KB = [
   [/\b(directory|directories|map|lost myself|where am i)\b/, "FIA has 322 directories. You are probably at number 248. The airport map and the directory are on the FIA page.", [["FIA page", "fia.html"]]],
   [/\b(gate|my gate|find my gate|get to (my )?gate)\b/, "Your gate is on the departures sign and in your booking. Octee and Scraggy leave from Terminal 1, One United from Terminal 2. Go through security, pick Pier A (A11 to A19) or Pier B (B1 to B5), and follow the gate letter. A8 is a 9 minute walk along the annex. Ask me about a gate by name, like \"gate B3\".", [["How to get to your gate", "fia.html"], ["Departure gates", "fia.html"]]],
   [/\b(wifi|wi ?fi|internet|charge|charging|plug|socket)\b/, "There is Wi-Fi. It is called \"Octee Free\". It is the password. The password is also Octee Free. It does not work.", []],
-  [/\b(weather|rain|sunny|storm)\b/, "Cloudy, with a chance of delays. The chance is 100%.", []],
+  [/\b(weather|rain|sunny|storm|fog|runways?)\b/, "Cloudy, with a chance of delays. The chance is 100%. The live board has the details.", [["Runway status", "runway.html"]]],
   [/\b(wheelchair|accessib|disabled|mobility)\b/, "Call the JOELMOBILE for door-to-gate help. It is the main way to get around FIA. Please also ask any staff member at a desk. A person should be there.", [["JOELMOBILE", "joelmobile.html"]]],
   [/\b(allerg|nut free|peanut allerg)\b/, "Our snacks are peanuts, so please talk to a doctor about allergies, and not to Joel. Joel is not a doctor. Joel is a joel.", []],
   [/\b(pet|dog|cat|animal)\b/, "We do not allow pets on the plane. We have a peanut. It does not like being called a pet.", []],
@@ -149,6 +215,10 @@ export async function answer(question) {
   const raw = String(question || "").trim();
   if (!raw) return A("You did not ask anything. That is the best question we get.");
   const q = raw.toLowerCase();
+
+  // step-by-step guides first ("how do I check in?", "how do I change my password?")
+  const g = guide(q);
+  if (g) return g;
 
   // keep some things secret
   if (/control ?tower|\badmins?\b|\bowner\b|fag panel|\bhack|\bcheat|\bexploit|\bpasswords?\b|\bsecrets?\b/.test(q))

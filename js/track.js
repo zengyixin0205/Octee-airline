@@ -8,6 +8,7 @@ import { STAGES, LAST, NOTES, isLate } from "./delays.js";
 import { sendApology } from "./apology.js";
 import { load, save } from "./store.js";
 import { mins } from "./destinations.js";
+import { fiaWeather } from "./weather.js";
 
 const root = $("#track");
 const TICK_MS = 7000;
@@ -65,6 +66,7 @@ function tracker({ b, l, i }) {
   const countEl = el("p", { class: "tk-count", "aria-hidden": "true" });
   const countLabel = el("p", { class: "tk-count-label" });
   const estEl = el("dd", {});
+  const wxEl = el("dd", {});
   const plane = el("div", { class: "tk-plane", "aria-hidden": "true" });
   plane.innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
   const bar = el("div", { class: "tk-bar", role: "img", "aria-label": "How far along the plane is. It moves backwards sometimes." }, el("div", { class: "tk-line" }), plane);
@@ -81,6 +83,7 @@ function tracker({ b, l, i }) {
     const est = sched + delay() * 60000;
     const m0 = mins(l.dep) + delay();
     estEl.textContent = delay() ? `${hhmm(m0)}${m0 >= 1440 ? " (tomorrow, maybe)" : ""} (+${fmtDelay(delay())})` : `${l.dep} (no change yet)`;
+    wxEl.replaceChildren(fiaWeather().sky + " · ", el("a", { href: "runway.html" }, "runway status"));
     certBtn.hidden = !isLate(st.stage);
     apologyBtn.hidden = !isLate(st.stage);
     if (isLate(st.stage)) sendApology(b, i, l, st.stage);
@@ -114,10 +117,13 @@ function tracker({ b, l, i }) {
         el("dt", {}, "Scheduled"), el("dd", {}, l.dep),
         el("dt", {}, "New estimate"), estEl,
         el("dt", {}, "Gate"), el("dd", {}, l.gate + " (until it changes)"),
+        el("dt", {}, "Weather at FIA"), wxEl,
         el("dt", {}, "Check-in"), el("dd", {}, isCheckedIn(l) ? "Done · seat " + l.seats.join(", ") : "Not yet")),
       el("div", { class: "actions" },
         isCheckedIn(l) ? el("a", { class: "btn small", href: legUrl("pass.html", b, i) }, "Boarding pass") : el("a", { class: "btn small", href: legUrl("checkin.html", b, i) }, "Check in"),
-        certBtn, apologyBtn,
+        certBtn, apologyBtn, el("a", { class: "btn small ghost", href: legUrl("share.html", b, i) }, "Share my trip"),
+        el("a", { class: "btn small ghost", href: legUrl("bingo.html", b, i) }, "Delay bingo"),
+        el("a", { class: "btn small ghost", href: legUrl("meal.html", b, i) }, "Pre-order a meal"),
         el("a", { class: "btn small ghost", href: "track.html" }, "Another flight"),
         el("a", { class: "btn small ghost", href: "status.html" }, "Flight status board"))),
     el("h2", {}, "Updates"), logEl,

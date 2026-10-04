@@ -2,6 +2,7 @@
 import { $, el, setMsg, pick, reducedMotion, today } from "./dom.js";
 import { currentUser, updateUser } from "./auth.js";
 import { addMiles, spendTokens, tokensOf, TOKEN_PRICES } from "./miles.js";
+import { spendPeanuts, peanutsOf, JOELMOBILE_PEANUTS } from "./peanuts.js";
 
 const RESULTS = [
   "The JOELMOBILE is on its way. It is currently going the other way.",
@@ -35,11 +36,13 @@ if (reducedMotion()) status.textContent = "JOELMOBILE location: parked. Joel is 
 else { drive(); setInterval(drive, 2600); }
 
 const msg = $("#ride-msg");
+const payPeanuts = el("input", { type: "checkbox", id: "pay-peanuts", name: "peanuts" });
+form.querySelector(".actions").before(el("div", { class: "field" }, el("label", { for: "pay-peanuts", style: "display:flex;gap:8px;align-items:center;font-weight:600" }, payPeanuts, `Pay in peanuts instead (${JOELMOBILE_PEANUTS} 🥜)`)));
 const syncHint = () => {
   const u = currentUser();
   const n = u ? (u.rides || []).filter((r) => r.day === today()).length : 0;
   $("#ride-hint").textContent = u
-    ? `Fare: ${TOKEN_PRICES.joelmobile} Octeetokens a ride. You have ${tokensOf(u)}. You've been helped ${n} of 3 times today (20 Octmiles back each).`
+    ? `Fare: ${TOKEN_PRICES.joelmobile} Octeetokens a ride. You have ${tokensOf(u)} (or ${peanutsOf(u)} peanuts, if you pay in peanuts). You've been helped ${n} of 3 times today (20 Octmiles back each).`
     : `Fare: ${TOKEN_PRICES.joelmobile} Octeetokens a ride. Log in to pay Joel.`;
 };
 syncHint();
@@ -49,7 +52,7 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   // Joel is paid first, in Octeetokens
   if (!currentUser()) { setMsg(msg, `Log in to pay the JOELMOBILE (${TOKEN_PRICES.joelmobile} Octeetokens).`, "error"); return; }
-  try { updateUser((x) => spendTokens(x, TOKEN_PRICES.joelmobile, "JOELMOBILE fare")); }
+  try { updateUser((x) => payPeanuts.checked ? spendPeanuts(x, JOELMOBILE_PEANUTS, "JOELMOBILE fare (paid in peanuts)") : spendTokens(x, TOKEN_PRICES.joelmobile, "JOELMOBILE fare")); }
   catch (err) { setMsg(msg, "Joel does not drive for free. " + err.message, "error"); return; }
   syncHint();
   setMsg(msg, "Fare paid. Locating the JOELMOBILE…", "info");

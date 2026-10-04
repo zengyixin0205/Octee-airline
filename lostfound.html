@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost and Found — Octee Airlines</title>
+<meta name="description" content="Things found at FIA. Claim yours. Joel may already have.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/lostfound.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+<p class="eyebrow">Lost and Found · Desk 14 (it moved)</p>
+<h1 class="headline">LOST AND FOUND<span class="punch long">found, then lost again</span></h1>
+<p class="lead">Everything here was found at FIA. Most of it is not ours. Tell us what your item looks like and it might be yours.</p>
+</section>
+<div class="field" style="max-width:420px"><label for="lf-search">Search the items</label><input id="lf-search" type="search" placeholder="shoe, peanut, tuba…" autocomplete="off"></div>
+<div id="lf-list" class="lf-grid"></div>
+<h2>Lost something that is not here?</h2>
+<form id="lf-form" class="card" style="max-width:560px">
+<div class="field"><label for="lf-what">What did you lose?</label><input id="lf-what" maxlength="60" placeholder="e.g. my left glove" required></div>
+<div class="field"><label for="lf-where">Where, roughly?</label><input id="lf-where" maxlength="60" placeholder="e.g. Terminal 1, near a peanut"></div>
+<div class="actions"><button class="btn" type="submit">Report it lost</button></div>
+<p id="lf-msg" class="msg" role="status" aria-live="polite"></p>
+</form>
+<div id="lf-mine"></div>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Octee needs JavaScript to fly. We lost the rest.</p></noscript>
+</body>
+</html>
