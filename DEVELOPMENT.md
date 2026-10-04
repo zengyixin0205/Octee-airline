@@ -1079,3 +1079,17 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## All Pages hub
 
 - `allpages.html` (`js/allpages.js`): a hub listing every extra page as its own card, in four groups. It is in the main menu ("All Pages") and the footer "More:" row. When a new page is added, add it to `GROUPS` here too.
+
+## Menus and Search
+
+- The main menu now has drop-down groups (Peanuts and Money, Airport, On Board, Reading, built from `GROUPS` in `js/main.js`), so every extra page is its own menu entry. The All Pages hub is no longer linked (`allpages.html` is left unlinked). Add a new page to `GROUPS`.
+- **Search** (`search.html`, `js/search.js`; "Search" in the menu): the index lists every page with keywords; a query returns a page with **no** keyword match (picked by hashing the query, so it is stable), says how many matching pages were removed, and offers a "Did you mean" that you did not. `?q=` links work.
+
+## 404 page
+
+- `404.html` + `js/notfound.js`: the missing page's name is used as a search ("Results for X: 4 results found, 0 pages found"). The four results ("X (page not found)", "X: the sequel", "Where is X?", "Did you mean Xs?") are links to other pages that do not exist (`found-<slug>.html?q=...`), so clicking one lands on the 404 again with a new search. The search box on the 404 works the same way. Note: GitHub Pages serves 404.html for any path, so deep paths (`/a/b`) lose the relative CSS and JS; single-level missing pages work.
+
+## Duty Free purchases and the Departures board
+
+- **Duty Free** now has a "Pay with" selector: peanuts (price as listed) or Octeetokens (3 x the peanut price, `TOKEN_X`). Buy buttons say what is missing ("You need 4 more..."), guests are told to log in/sign up. Purchases go to "Your purchases" (`user.dutyfree`) with a **Use it** button per item; goods still may not be taken on board.
+- **Departures board** (`departures.html`, `js/departures.js`; "Departures" in the menu): a split-flap board built from today's FIA departures (same data as Flight Status, up to 14 rows plus OA 404 to NOT FOUND). Every status is DELAYED. Letters flip through random characters before settling; the status flips again every ~9 s; Full screen button, optional tick sound (off by default, needs a click), "Flip again". Reduced motion: no flipping.
