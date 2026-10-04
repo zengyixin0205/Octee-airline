@@ -1,5 +1,6 @@
 import { $, el, niceDate, fmtMiles, setMsg } from "./dom.js";
-import { currentUser, requireLogin, logOut, updateUser, etchedInfo } from "./auth.js";
+import { currentUser, requireLogin, logOut, updateUser, etchedInfo, changePassword, MESSAGES } from "./auth.js";
+import { CONFIG } from "./config.js";
 import { tierFor, spendTokens, tokensOf, scraggyOf, sharedScraggy } from "./miles.js";
 import { placeShort } from "./destinations.js";
 import { passCard, OA_CLASSES, classTokens } from "./booking-data.js";
@@ -7,8 +8,52 @@ import { scraggyData } from "./scraggy.js";
 import { boardingPass } from "./boardingpass.js";
 import { isCheckedIn, legUrl } from "./tripkit.js";
 import { load, save } from "./store.js";
+import { makeBackup } from "./backup.js";
 
-if (requireLogin()) { render(null); scraggyData().then(render); }
+if (requireLogin()) { render(null); scraggyData().then(render); passwordCard(); backupCard(); }
+
+// Change password. Etched accounts: the new password works in this browser only (other devices use the file).
+function passwordCard() {
+  const u = currentUser();
+  const field = (id, label, auto) => el("div", { class: "field" }, el("label", { for: id }, label), el("input", { id, type: "password", autocomplete: auto, required: true }));
+  const msg = el("p", { class: "msg", role: "status", "aria-live": "polite" });
+  const note = el("p", { class: "note" }, `At least ${CONFIG.PASSWORD_MIN} characters. We will not remember it for you. We barely remember anything.`);
+  const form = el("form", {},
+    field("pw-current", "Current password", "current-password"), field("pw-new", "New password", "new-password"), field("pw-confirm", "New password again", "new-password"),
+    el("div", { class: "actions" }, el("button", { class: "btn small", type: "submit" }, "Change password")), note, msg);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await changePassword($("#pw-current").value, $("#pw-new").value, $("#pw-confirm").value);
+      form.reset();
+      setMsg(msg, "Password changed. Please do not write it on your hand. (Ours is on a peanut.)", "ok");
+    } catch (err) { setMsg(msg, MESSAGES[err.code] || "Something went wrong. Blame Joel.", "error"); }
+  });
+  $("#password-box").replaceChildren(el("h2", { style: "margin-top:0" }, "Change your password"), form);
+  etchedInfo(u.username).then((info) => { if (info) note.textContent += " This account is etched in the code, so the new password works in this browser only. On other devices the old password still works until the airline saves your account again."; });
+}
+
+// Backup code: restores this account in any browser (Log in > Backup code).
+function backupCard() {
+  const msg = el("p", { class: "msg", role: "status", "aria-live": "polite" });
+  const box = el("textarea", { readonly: true, rows: "6", spellcheck: "false", "aria-label": "Your backup code", style: "font-family:var(--mono,monospace);width:100%;display:none" });
+  const make = el("button", { class: "btn small", type: "button" }, "Make my backup code");
+  const copy = el("button", { class: "btn small ghost", type: "button", style: "display:none" }, "Copy");
+  const dl = el("button", { class: "btn small ghost", type: "button", style: "display:none" }, "Download as .txt");
+  make.addEventListener("click", async () => {
+    const u = currentUser(); if (!u) return;
+    box.value = await makeBackup(u);
+    box.style.display = copy.style.display = dl.style.display = "";
+    make.textContent = "Make it again (after earning more)";
+    setMsg(msg, `Code made ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}. It holds everything up to now, so make a new one after you earn more.`, "ok");
+  });
+  copy.addEventListener("click", async () => { box.select(); try { await navigator.clipboard.writeText(box.value); setMsg(msg, "Copied. Keep it somewhere private.", "ok"); } catch { setMsg(msg, "Press Ctrl+C (or Cmd+C) to copy the selected code.", "info"); } });
+  dl.addEventListener("click", () => { const a = el("a", { href: URL.createObjectURL(new Blob([box.value + "\n"], { type: "text/plain" })), download: `octee-backup-${currentUser().username}.txt` }); document.body.append(a); a.click(); a.remove(); });
+  $("#backup-box").replaceChildren(el("h2", { style: "margin-top:0" }, "Backup code"),
+    el("p", {}, "A text code that brings this account back in any browser: incognito, a new phone, a friend's laptop. Paste it on the ", el("a", { href: "login.html#restore" }, "Log in page, Backup code tab"), "."),
+    el("p", { class: "note" }, "It contains your whole account (miles, tokens, peanuts, trips and password hash), so treat it like a password: anyone with it can open your account. It is a long block, not a short word, because there is no server to keep the account for you."),
+    el("div", { class: "actions" }, make, copy, dl), box, msg);
+}
 
 function render(SA) {
   const u = currentUser();

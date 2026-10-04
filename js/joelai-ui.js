@@ -1,7 +1,7 @@
 // The JoelAI chat box on the JOELMOBILE page.
 import { $, el, reducedMotion } from "./dom.js";
 import { loadSession, saveSession, removeSession } from "./store.js";
-import { answer, GREETING, CHIPS } from "./joelai.js";
+import { converse, GREETING, CHIPS, resetState } from "./joelbrain.js";
 
 const KEY = "octee.joelai";
 const page = $("#joelai");
@@ -30,8 +30,8 @@ export function mountJoelAI(box, idSuffix = "q") {
   let busy = false;
 
   const bubble = (m) => el("div", { class: "jai-msg " + m.who },
-    el("span", { class: "jai-who" }, m.who === "bot" ? "JoelAI" : "You"),
-    el("p", {}, m.text),
+    el("span", { class: "jai-who" }, m.who === "bot" ? "JoelAI" : "You", m.mood && m.mood !== "calm" ? el("span", { class: "jai-mood" }, "feeling " + m.mood) : ""),
+    ...String(m.text).split("\n\n").map((t) => el("p", {}, t)),
     m.links?.length ? el("p", { class: "jai-links" }, m.links.map(([label, href]) => el("a", { class: "tag", href }, label))) : "");
   const draw = () => { log.replaceChildren(...history.map(bubble)); log.scrollTop = log.scrollHeight; };
   const drawChips = (list = CHIPS) => chips.replaceChildren(...list.map((c) => el("button", { type: "button", class: "jai-chip", onclick: () => ask(c) }, c)));
@@ -44,8 +44,11 @@ export function mountJoelAI(box, idSuffix = "q") {
     const typing = el("div", { class: "jai-msg bot typing" }, el("span", { class: "jai-who" }, "JoelAI"), el("p", {}, "Joel is thinking… (he is not)"));
     draw(); log.append(typing); log.scrollTop = log.scrollHeight;
     input.value = "";
-    const [res] = await Promise.all([answer(text).catch(() => ({ text: "Something went wrong. Please blame Joel.", links: [] })), new Promise((r) => setTimeout(r, reducedMotion() ? 0 : 450 + Math.random() * 550))]);
-    history.push({ who: "bot", text: res.text, links: res.links });
+    const t0 = performance.now();
+    const [res] = await Promise.all([converse(text).catch(() => ({ text: "Something went wrong. Please blame Joel.", links: [] })), 0]);
+    const wait = reducedMotion() ? 0 : Math.min(2200, 400 + res.text.length * 3);
+    await new Promise((r) => setTimeout(r, Math.max(0, wait - (performance.now() - t0))));
+    history.push({ who: "bot", text: res.text, links: res.links, mood: res.mood });
     history = history.slice(-40);
     saveSession(KEY, history);
     draw();
@@ -60,6 +63,6 @@ export function mountJoelAI(box, idSuffix = "q") {
     log, chips,
     el("form", { class: "jai-form", onsubmit: (e) => { e.preventDefault(); ask(input.value); } },
       el("label", { class: "visually-hidden", for: "jai-" + idSuffix }, "Your question for JoelAI"), input, send),
-    el("p", { class: "note" }, el("button", { class: "linklike", type: "button", onclick: () => { removeSession(KEY); history = [{ who: "bot", text: GREETING, links: [] }]; drawChips(); draw(); } }, "Start again")));
+    el("p", { class: "note" }, el("button", { class: "linklike", type: "button", onclick: () => { removeSession(KEY); resetState(); history = [{ who: "bot", text: GREETING, links: [] }]; drawChips(); draw(); } }, "Start again")));
   draw(); drawChips();
 }

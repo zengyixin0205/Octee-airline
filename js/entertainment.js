@@ -1,18 +1,10 @@
 // Entertainment: airport and airplane games to play while delayed. Best scores stay in this browser; good scores earn a peanut (once per game per day).
-import { $, el, reducedMotion, today } from "./dom.js";
-import { currentUser, updateUser } from "./auth.js";
-import { addPeanuts } from "./peanuts.js";
-import { load, save } from "./store.js";
+import { $, el, reducedMotion } from "./dom.js";
+import { best, setBest, reward } from "./gamekit.js";
+import { mountWhack } from "./whack.js";
+import { mountHangman } from "./hangman.js";
 
 const root = $("#app");
-const BEST = "octee.games.best";
-const best = (id) => load(BEST, {})[id];
-const setBest = (id, v, higher = true) => { const b = load(BEST, {}); if (b[id] === undefined || (higher ? v > b[id] : v < b[id])) { b[id] = v; save(BEST, b); return true; } return false; };
-function reward(id, text) {
-  const u = currentUser(); if (!u) return "Log in to earn peanuts for this.";
-  if ((u.gameDay || {})[id] === today()) return "You already earned today's peanut for this game.";
-  updateUser((x) => { x.gameDay = { ...(x.gameDay || {}), [id]: today() }; }); addPeanuts(text, 1); return "+1 peanut in your wallet.";
-}
 let stop = null;                                     // stops the running game when you switch
 const cleanup = () => { if (stop) { stop(); stop = null; } };
 
@@ -170,7 +162,8 @@ function landing(box) {
   stop = () => { cancelAnimationFrame(raf); removeEventListener("pointerup", up); };
 }
 
-const GAMES = [["plane", "Paper Plane", "Flap through the control towers.", plane], ["clicker", "Delay Clicker", "Add delay. Buy more delay.", clicker], ["match", "Suitcase Match", "Find the six pairs.", match], ["waiting", "The Waiting Game", "Do nothing. Win.", waiting], ["security", "Security Line", "Stop or pass 15 items. The rule keeps changing.", security], ["trivia", "Delay Trivia", "Six questions about us. Every answer is delayed.", trivia], ["findbag", "Find the Bag", "Spot your tag before time runs out.", findbag], ["boarding", "Boarding Call", "Tap the instant boarding starts.", boarding], ["landing", "Runway Landing", "Hold to slow down. Land gently.", landing]];
+
+const GAMES = [["plane", "Paper Plane", "Flap through the control towers.", plane], ["clicker", "Delay Clicker", "Add delay. Buy more delay.", clicker], ["match", "Suitcase Match", "Find the six pairs.", match], ["waiting", "The Waiting Game", "Do nothing. Win.", waiting], ["security", "Security Line", "Stop or pass 15 items. The rule keeps changing.", security], ["trivia", "Delay Trivia", "Six questions about us. Every answer is delayed.", trivia], ["findbag", "Find the Bag", "Spot your tag before time runs out.", findbag], ["boarding", "Boarding Call", "Tap the instant boarding starts.", boarding], ["landing", "Runway Landing", "Hold to slow down. Land gently.", landing], ["whack", "Whack-a-Joel", "Aim the hammer. Press Space to whack Joel.", (box) => { stop = mountWhack(box); }], ["hangman", "Hangman: Destination Edition", "Guess the airport. The answer is always FIA.", (box) => { stop = mountHangman(box); }]];
 const OTHERS = [["baggame.html", "The Baggage Game", "Push bags to the plane."], ["bingo.html", "Delay Bingo", "Five in a row."], ["safety.html", "Safety Quiz", "Pass for a peanut."], ["news.html", "The Octee Times crossword", "A crossword with an answer."], ["magazine.html", "Magazine Sudoku", "A sudoku without one."], ["cockpit.html", "The Cockpit", "Press the buttons."], ["radio.html", "Octee Radio", "Listen while you wait."], ["departures.html", "Departures Board", "Watch everything be delayed."]];
 const tabs = el("div", { class: "radio-tabs", role: "tablist", "aria-label": "Games" }), stage = el("div", { class: "card" });
 function show(id) {

@@ -956,7 +956,7 @@ export const FIA_TAGLINES = [
 
 - `fia.html`: the Airport map and Inside Terminal 1 sit side by side (`.map-row`, stacked on screens under 900px). Clicking a map opens it enlarged (`js/fia.js`).
 - `js/music.js` (loaded by `js/main.js`): a "♪ Music on/off" button bottom left of every page. Sound starts after the visitor's first click/tap/key press (browser rule); the choice is remembered in the browser (`octee.music`).
-- Default music is a made-up lounge tune generated live with Web Audio (no file, no copyright), with an airport "ding dong dung" every 16 bars. To use real music, add an MP3 at `assets/audio/music.mp3`; it is used automatically and loops. Only use music you have the rights to.
+- The music is made up live with Web Audio (no audio files, no copyright; see "Music, no files" below).
 
 ## FIA guide text
 
@@ -1110,3 +1110,24 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## Destination search file renamed
 
 - The Home/Destinations "Where to?" box now lives in `js/destsearch.js` (imported as `./destsearch.js?v=2` by `home.js` and `destinations-page.js`). `js/search.js` is only a re-export. This was done because a browser that had cached the wrong `search.js` (see the earlier mix-up with the site search page, which is `js/sitesearch.js`) could break the home page. A new file name plus `?v=` makes every browser fetch the right one. Bump the `?v=` when this file changes.
+
+## Music, no files (copyright) and Whack-a-Joel page
+
+- The copyrighted MP3s (`assets/audio/music.mp3`, `music2.mp3`) were deleted and `js/music.js` no longer looks for audio files (older notes above that mention MP3 support are out of date). It generates two original tunes with Web Audio: **Tune A** (122 bpm, E major, groove with soft kick and hats, chord pad, arpeggio and a seeded pentatonic lead; 16 bars) and **Tune B** (63 bpm, B-flat minor, slow pad and sparse lead; 8 bars), alternating forever, with the airport "ding dong dung" chime at each change. Tempo and key were chosen to feel like the removed tracks (estimated from them); the melodies are not copied. Old commits still contain the MP3s in git history.
+- **Whack-a-Joel** now has its own page (`whackajoel.html`, `js/whackpage.js`, menu item "Whack-a-Joel") and is still a tab in Entertainment. The game lives in `js/whack.js` (`mountWhack(box)` returns a stop function); shared best-score and peanut helpers moved to `js/gamekit.js`.
+
+
+## JoelAI v2 and Hangman: Destination Edition
+
+- `js/joelbrain.js` is the pipeline (`converse()`): tidy typos/shorthand, split up to 3 questions, resolve follow-ups ("when does it leave?") from `octee.joelai.state` (sessionStorage), refuse secrets first (checked on the raw text too), then specific detectors (flights, gates, terminals, places, trips) go to the original rulebook in `js/joelai.js`, then the long topics in `js/joelkb.js`, then the rulebook again, then a fuzzy "Did you mean" list. Mood (calm, nervous, proud, sorry, warm) shows near the name and adds an aside every 4th turn.
+- `js/joelkb.js` holds ~40 long, personalised topics (`{id, keys, re, sample, reply(ctx)}`), riddles, facts, stories and jokes. Add a topic here and give it a `sample` question so it shows in suggestions. Topics in `PRIORITY` (joelbrain.js) beat the specific detectors.
+- It is still a rulebook, not a real AI. Anything with password/code/admin/owner/hack/secret goes straight to `joelai.js`, which refuses.
+- Test: import `/js/joelbrain.js` in a page and call `converse()` for each sample question; check answers are non-empty and secrets are refused.
+- `js/hangman.js` is the Hangman game (answer always FIA, 6 wrong guesses, win pays a peanut a day via `reward("hangman")`, best streak in `octee.games.best`). It is tab 11 in `js/entertainment.js`.
+
+
+## Account backup code
+
+- `js/backup.js`: `makeBackup(user)` writes `OCTEE1.<deflate-raw base64url>.<checksum>` (falls back to `OCTEE0` uncompressed if CompressionStream is missing); `restoreBackup(code)` validates, writes the account into `octee.users`, and logs in. History is trimmed to the last 30 entries.
+- Account page: "Backup code" card (make, copy, download). Login page: "Backup code" tab (`login.html#restore`).
+- The code contains the password hash, so it is as sensitive as a password. It is a snapshot: make a new one after earning more.

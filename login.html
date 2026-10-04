@@ -23,6 +23,7 @@
 <div class="tabs" role="tablist" aria-label="Log in or sign up">
   <button type="button" role="tab" id="tab-login" aria-selected="true" aria-controls="form-login">Log in</button>
   <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form-signup">Sign up</button>
+  <button type="button" role="tab" id="tab-restore" aria-selected="false" aria-controls="form-restore">Backup code</button>
 </div>
 <form id="form-login" class="card" role="tabpanel" aria-labelledby="tab-login">
   <div class="field"><label for="li-user">Username</label><input type="text" id="li-user" name="username" autocomplete="username"></div>
@@ -39,6 +40,12 @@
   <div class="field"><label for="su-confirm">Confirm password</label><input type="password" id="su-confirm" name="confirm" autocomplete="new-password"></div>
   <div class="actions"><button class="btn" type="submit">Sign up (+100 Octmiles)</button></div>
   <p id="msg-signup" class="msg" role="status" aria-live="polite"></p>
+</form>
+<form id="form-restore" class="card" role="tabpanel" aria-labelledby="tab-restore" hidden>
+  <div class="field"><label for="rs-code">Account backup code</label><textarea id="rs-code" name="code" rows="6" spellcheck="false" autocomplete="off" placeholder="OCTEE1.…" style="font-family:var(--mono,monospace);width:100%"></textarea>
+    <p class="hint">Made on your Account page (Backup code). Paste all of it. It brings back your miles, tokens, peanuts and trips in this browser, even in incognito.</p></div>
+  <div class="actions"><button class="btn" type="submit">Restore my account</button></div>
+  <p id="msg-restore" class="msg" role="status" aria-live="polite"></p>
 </form>
 <p class="msg info">New accounts are saved in this browser only. Accounts the airline has etched into the code can log in on any device. Don't reuse an important password.</p>
 </main>

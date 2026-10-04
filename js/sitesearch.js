@@ -39,6 +39,9 @@ const PAGES = [
   ["insurance.html", "Octee Insurance", "insurance insure policy claim cover protection", "Covers everything except what happens."],
   ["departures.html", "Departures Board", "departures board flip delayed flights all delayed full screen", "A flip board where every flight is delayed."],
   ["entertainment.html", "Entertainment", "entertainment games play game bored delayed fun plane clicker memory waiting", "Airport games for when you are delayed."],
+  ["account.html", "Backup code", "backup code restore account incognito another device miles", "Restore your account in any browser."],
+  ["entertainment.html", "Hangman: Destination Edition", "hangman guess airport fia letters game", "Guess the airport. The answer is always FIA."],
+  ["whackajoel.html", "Whack-a-Joel", "whack joel hammer cupboard game sorry mole", "Hit Joel with a hammer when he pops up."],
   ["apology.html", "Our Apology", "apology sorry apologise letter", "A long, sincere apology."],
   ["login.html", "Log in / Sign up", "login log in sign up account register password", "Log in. Or sign up and be welcomed."]
 ];
