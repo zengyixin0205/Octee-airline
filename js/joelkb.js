@@ -11,7 +11,7 @@ const P = (...paras) => paras.filter(Boolean).join("\n\n");
 const L = (...pairs) => pairs;                    // links: L(["Label", "page.html"], ...)
 export const pickRand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function nextLeg(u) {
+export function nextLeg(u) {
   if (!u) return null;
   const legs = (u.trips || []).flatMap((b) => b.legs.map((l) => ({ b, l }))).filter(({ l }) => l.date >= today()).sort((a, b) => a.l.date.localeCompare(b.l.date) || a.l.dep.localeCompare(b.l.dep));
   return legs[0] ? legs[0].l : null;
@@ -60,7 +60,7 @@ export const KB = [
     re: /\b(bored|boring|entertain|what games|games (are|do you)|any games|something (fun|to do)|what (can|should) i (do|play)|pass the time|kill time)\b|games? (to|i can)/,
     reply: ({ u }) => ({ text: P(
       "You are in the right airport. Here is the menu, shortest first:",
-      "1) Whack-a-Joel: 30 seconds, a hammer, and Joel saying sorry. 2) Boarding Call: a reaction game, about 20 seconds. 3) Paper Plane, Suitcase Match, Security Line, Delay Trivia, Find the Bag and Runway Landing: each about a minute. 4) Delay Clicker and The Waiting Game: as long as you like. 5) Delay Bingo, the crossword in The Octee Times, and the sudoku in the In-Flight Magazine (it has no solution, but you will not find that out for a while).",
+      "1) Whack-a-Joel: 30 seconds, a hammer, and Joel saying sorry. 2) Boarding Call: a reaction game, about 20 seconds. 3) Paper Plane, Suitcase Match, Security Line, Delay Trivia, Find the Bag, Runway Landing, Hangman (the answer is FIA) and Lost Joel (find him in the hall): each about a minute. 4) Delay Clicker and The Waiting Game: as long as you like. 5) Delay Bingo, the crossword in The Octee Times, and the sudoku in the In-Flight Magazine (it has no solution, but you will not find that out for a while).",
       u ? "Every game pays 1 peanut per day for a good score, so a bored afternoon is worth about 10 peanuts." : "Log in first and the games pay peanuts. Without it you just have fun, which is much less valuable."),
       links: L(["Whack-a-Joel", "whackajoel.html"], ["Entertainment", "entertainment.html"], ["The Octee Times", "news.html"], ["Magazine", "magazine.html"]),
       chips: ["Tell me a joke", "Tell me a riddle", "Tell me a story"] }) },
@@ -211,9 +211,10 @@ export const KB = [
     } },
   { id: "meta", keys: ["how", "work", "ai", "real", "bot", "built", "smart", "chatgpt", "claude", "brain"], sample: "How do you work?",
     re: /how do you work|are you (smart|clever|stupid|dumb|chatgpt|claude|gpt|alive|real)|what('s| is) your (brain|code|name|job|purpose)|can you (think|learn|remember)|do you (think|remember|have feelings)/,
-    reply: () => ({ text: P("I am a rulebook with confidence. A person wrote down what I know about the airport and what Joel feels, and I match your words against it, remember the last few things you said (flights, gates, places), and answer the most likely part. I do not think, learn or look anything up online, and I am not a real AI. When I do not understand I will say so and offer you the closest things I do know.",
-      "What I will not do: tell you passwords, codes, admin things or the control tower (there is no control tower). What I can do: gates, flights, places, check-in, your trips, miles and peanuts, and everything on these pages."),
-      links: [], chips: ["What can you do?", "Tell me a joke"] }) },
+    reply: () => ({ text: P("I am a rulebook with confidence. A person wrote down what I know about the airport and what Joel feels, and I match your words against it, remember the last few things you said (flights, gates, places), and answer the most likely part. I do not think or learn, and I am not a real AI.",
+      "For questions outside FIA I have a small shelf of real-world facts (capitals, times in other cities, distances, units, flying facts), and if that is empty I may look the question up on Wikipedia and tell you I did. Say \"stop looking things up online\" to turn that off.",
+      "What I will not do: tell you passwords, codes, admin things or the control tower (there is no control tower)."),
+      links: [], chips: ["What can you do?", "Tell me a joke", "Stop looking things up online"] }) },
   { id: "feelings", keys: ["feel", "sad", "happy", "love", "hate", "friend", "lonely", "cry", "ok"], sample: "How are you?",
     re: /how are you|are you (ok|okay|sad|happy|crying|tired)|do you (like|love|hate)|how('s| is) it going|you ok\b|what('s| is) up\b/,
     reply: ({ mood, state }) => {
@@ -233,7 +234,7 @@ export const KB = [
       links: L(["Search", "search.html"], ["Destinations", "destinations.html"]), chips: [] }) },
   { id: "privacy", keys: ["privacy", "data", "safe", "secure", "cookies", "tracking"], sample: "Is my data safe?",
     re: /\b(privacy|my data|cookies|tracking|secure|is it safe)\b/,
-    reply: () => ({ text: P("There is no server, so nobody at Octee can see your data: it stays in your own browser (accounts, trips, peanuts, scores). Passwords are never stored, only a salted hash. That also means clearing your browser data deletes your account unless it was etched into the site. This is a parody site. Please do not type anything real that you would not want a joke to know."),
+    reply: () => ({ text: P("There is no server, so nobody at Octee can see your data: it stays in your own browser (accounts, trips, peanuts, scores). Passwords are never stored, only a salted hash. That also means clearing your browser data deletes your account unless it was etched into the site. One exception: if you ask a general question I have no rule for, JoelAI may send that question text to Wikipedia to look it up (it tells you when it does, and \"stop looking things up online\" turns it off). This is a parody site. Please do not type anything real that you would not want a joke to know."),
       links: L(["My account", "account.html"]), chips: ["Why are my miles missing in incognito?"] }) },
   { id: "runway", keys: ["runway", "weather", "wind", "rain", "visibility", "conditions"], sample: "What is the weather at FIA?",
     re: /\b(weather|runway|wind|rain|visibility|fog|storm)\b/,
@@ -255,7 +256,7 @@ export const KB = [
     re: /what can you (do|help|tell)|what do you know|what (should|can) i ask|help me|\bhelp\b/,
     reply: ({ u }) => ({ text: P(
       "I know the airport (gates, terminals, security, the train), the timetable (try \"OA 58\" or \"flights to MIA\"), your trips and check-in, and Octmiles, tokens, tiers and peanuts. I also know every page on this site: games, Duty Free, the auction, insurance, the radio, the safety demo and more.",
-      "I can also take a few questions at once (\"how do I check in and where is gate A12?\"), remember what we just talked about (\"when does it leave?\"), tell you a joke, a riddle, a fun fact or a story, and make you a plan.",
+      "Outside FIA: capitals, the time in other cities, distances between airports, unit conversions, sums, days until Christmas, facts about flying and space, and (if online lookup is on) anything on Wikipedia. I can also play (knock knock, would you rather, a quiz), write an excuse, an announcement, an apology or a haiku, flip a coin, do sums, and remember your name (say \"my name is Bo\"). I can take a few questions at once (\"how do I check in and where is gate A12?\"), remember what we just talked about (\"when does it leave?\"), tell you a joke, a riddle, a fun fact or a story, and make you a plan.",
       u ? `You are logged in as ${u.username}, so I can look at your next flight and your balance.` : "Log in and I can also look at your next flight and your balance."),
       links: [], chips: ["Plan a trip for me", "Tell me a riddle", "What can I play while delayed?"] }) }
 ];

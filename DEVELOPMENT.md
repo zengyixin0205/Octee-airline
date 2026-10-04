@@ -1131,3 +1131,30 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 - `js/backup.js`: `makeBackup(user)` writes `OCTEE1.<deflate-raw base64url>.<checksum>` (falls back to `OCTEE0` uncompressed if CompressionStream is missing); `restoreBackup(code)` validates, writes the account into `octee.users`, and logs in. History is trimmed to the last 30 entries.
 - Account page: "Backup code" card (make, copy, download). Login page: "Backup code" tab (`login.html#restore`).
 - The code contains the password hash, so it is as sensitive as a password. It is a snapshot: make a new one after earning more.
+
+
+## Lost Joel
+
+- `js/lostjoel.js` (tab 12 on Entertainment): five rounds (50, 80, 120, 170, 230 people), 25 s each. Joel is the only spanner emoji; later rounds add look-alike workers. Wrong clicks cost 2 s and say warmer/colder; Hint costs 5 s and shows a ring. 3 found pays a peanut a day (`reward("lostjoel")`).
+
+## JoelAI: playful side (`js/joelfun.js`)
+
+- Remembers a name ("my name is Bo", saved in `octee.joelai.name`; "forget my name" clears it). Generators: excuse, announcement, apology letter, haiku. Games with a pending state in `octee.joelai.state`: knock knock, would you rather, quiz (3 of 7 questions, stored as indices, never regexes, because sessionStorage is JSON). Also coin, dice, random number, "tea or coffee" choices, sums, countdown to your next flight, and small talk.
+- `tidy()` only fixes a typo to a known word when the first letter matches (otherwise "night" became "right").
+
+## JoelAI: site guide (`js/joelguide.js`, `js/siteindex.js`)
+
+- `js/siteindex.js` now holds the page list (moved out of `sitesearch.js`; both Octee Search and JoelAI import it). Add new pages there.
+- JoelAI can find a page ("take me to the auction"), knows which page it was opened from ("what is this page?", set by `setPage()` in the UI), lists games and pages, says where Joel is right now (by hour), picks a page for "surprise me", and has "tell me more" (`MORE` table keyed by topic id). Greetings follow the time of day.
+- Chat window: words appear a few at a time (skipped with reduced motion), and "Save this chat" downloads a .txt.
+
+## JoelAI outside FIA (`js/joelworld.js`, `js/joelweb.js`)
+
+- `joelworld.js` is an offline real-world shelf: capitals (~75 countries), time in ~50 cities (via `Intl`, so it is real), distance and flight time between them (great-circle, 850 km/h + 30 min), airport codes (real cities only; none of the fictional FIA/SIA/LIA/MIA), unit conversions, sums/percentages, days until Christmas/New Year, and ~45 facts about space, nature and flying. Add facts to `FACTS` as `[regex, answer]`.
+- `joelweb.js` is the ONLY thing in JoelAI that uses the network: for general questions with no rule (shape "who/what/where/why ..." with no site words, or a bare short topic), it asks the Wikipedia search API (`origin=*`, 6 s timeout) and shows the first 3 sentences with a link, labelled as online. Never sent: anything with my/mine/I am/I have, long digit strings, keyboard mash, and anything the secrets rule refuses (that check runs first). Visitors can say "stop looking things up online" (saved in `octee.joelai.online`). If you want it off for everyone, make `onlineOn()` return false.
+- Order in `joelbrain.one()`: secrets > pending games > settings > guide/fun/world > priority topics > specific detectors > general-question lookup > topics > base rulebook > bare-topic lookup > "did you mean".
+- Tested with the Wikipedia API mocked (the cloud sandbox cannot reach it). Check one real question after publishing.
+
+## Floating JoelAI button
+
+- `js/joelfab.js` (loaded by `main.js`) adds a round "J" button, bottom right above Turbulence, that opens the JoelAI pop-up on every page except `joelmobile.html` (chat is built in) and `pass.html`. Phones show only the "J". A speech bubble appears once per browser session after 5 s (`octee.fab.tip`). Hidden in print.

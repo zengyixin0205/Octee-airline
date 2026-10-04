@@ -3,6 +3,7 @@ import { $, el, reducedMotion } from "./dom.js";
 import { best, setBest, reward } from "./gamekit.js";
 import { mountWhack } from "./whack.js";
 import { mountHangman } from "./hangman.js";
+import { mountLostJoel } from "./lostjoel.js";
 
 const root = $("#app");
 let stop = null;                                     // stops the running game when you switch
@@ -163,7 +164,7 @@ function landing(box) {
 }
 
 
-const GAMES = [["plane", "Paper Plane", "Flap through the control towers.", plane], ["clicker", "Delay Clicker", "Add delay. Buy more delay.", clicker], ["match", "Suitcase Match", "Find the six pairs.", match], ["waiting", "The Waiting Game", "Do nothing. Win.", waiting], ["security", "Security Line", "Stop or pass 15 items. The rule keeps changing.", security], ["trivia", "Delay Trivia", "Six questions about us. Every answer is delayed.", trivia], ["findbag", "Find the Bag", "Spot your tag before time runs out.", findbag], ["boarding", "Boarding Call", "Tap the instant boarding starts.", boarding], ["landing", "Runway Landing", "Hold to slow down. Land gently.", landing], ["whack", "Whack-a-Joel", "Aim the hammer. Press Space to whack Joel.", (box) => { stop = mountWhack(box); }], ["hangman", "Hangman: Destination Edition", "Guess the airport. The answer is always FIA.", (box) => { stop = mountHangman(box); }]];
+const GAMES = [["plane", "Paper Plane", "Flap through the control towers.", plane], ["clicker", "Delay Clicker", "Add delay. Buy more delay.", clicker], ["match", "Suitcase Match", "Find the six pairs.", match], ["waiting", "The Waiting Game", "Do nothing. Win.", waiting], ["security", "Security Line", "Stop or pass 15 items. The rule keeps changing.", security], ["trivia", "Delay Trivia", "Six questions about us. Every answer is delayed.", trivia], ["findbag", "Find the Bag", "Spot your tag before time runs out.", findbag], ["boarding", "Boarding Call", "Tap the instant boarding starts.", boarding], ["landing", "Runway Landing", "Hold to slow down. Land gently.", landing], ["whack", "Whack-a-Joel", "Aim the hammer. Press Space to whack Joel.", (box) => { stop = mountWhack(box); }], ["hangman", "Hangman: Destination Edition", "Guess the airport. The answer is always FIA.", (box) => { stop = mountHangman(box); }], ["lostjoel", "Lost Joel", "Find Joel in the departures hall before time runs out.", (box) => { stop = mountLostJoel(box); }]];
 const OTHERS = [["baggame.html", "The Baggage Game", "Push bags to the plane."], ["bingo.html", "Delay Bingo", "Five in a row."], ["safety.html", "Safety Quiz", "Pass for a peanut."], ["news.html", "The Octee Times crossword", "A crossword with an answer."], ["magazine.html", "Magazine Sudoku", "A sudoku without one."], ["cockpit.html", "The Cockpit", "Press the buttons."], ["radio.html", "Octee Radio", "Listen while you wait."], ["departures.html", "Departures Board", "Watch everything be delayed."]];
 const tabs = el("div", { class: "radio-tabs", role: "tablist", "aria-label": "Games" }), stage = el("div", { class: "card" });
 function show(id) {

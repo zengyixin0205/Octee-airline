@@ -938,3 +938,24 @@ body.turbulent main, body.turbulent .site-header, body.turbulent .site-footer { 
 .jai-msg p{white-space:pre-line}
 .jai-mood{display:block;font-size:.78rem;opacity:.75;margin:0}
 .jai-msg.typing p{font-style:italic;opacity:.7}
+
+/* Lost Joel */
+.lj-hall{border:2px solid var(--ink,#2b1a0e);border-radius:12px;overflow:hidden;background:linear-gradient(#e9dcc6,#f6ecd9);margin:8px 0}
+.lj-board{background:#111;color:#ffb000;font:700 12px/1 ui-monospace,Menlo,monospace;padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.lj-field{position:relative;height:min(62vh,430px);min-height:300px;cursor:crosshair;background-image:linear-gradient(90deg,rgba(0,0,0,.05) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.05) 1px,transparent 1px);background-size:44px 44px;touch-action:manipulation}
+.lj-p{position:absolute;transform:translate(-50%,-50%);line-height:1;user-select:none}
+.lj-found{outline:3px solid #2e8b57;border-radius:50%;background:#fff8}
+.lj-ring{position:absolute;width:34%;aspect-ratio:1;border:3px dashed #b3261e;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+.lj-sorry{position:absolute;transform:translate(-50%,-190%);background:#fff;border:2px solid var(--ink,#2b1a0e);border-radius:10px;padding:2px 8px;font:700 12px sans-serif;white-space:nowrap;pointer-events:none}
+
+/* Floating JoelAI button */
+.joel-fab-wrap { position: fixed; right: 14px; bottom: 62px; z-index: 69; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; }
+.joel-fab-wrap > * { pointer-events: auto; }
+.joel-fab { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font: 700 .9rem var(--sans); color: #2b1a0e; background: #ff7a00; border: 2px solid #2b1a0e; border-radius: 999px; padding: 6px 14px 6px 6px; box-shadow: 0 3px 0 #2b1a0e; }
+.joel-fab:hover { filter: brightness(1.08); }
+.joel-fab:active { transform: translateY(2px); box-shadow: 0 1px 0 #2b1a0e; }
+.joel-fab-j { width: 30px; height: 30px; border-radius: 50%; background: #2b1a0e; color: #ff7a00; display: grid; place-items: center; font: 800 1rem var(--serif, serif); }
+.joel-fab-tip { max-width: 220px; background: #fff; color: #2b1a0e; border: 2px solid #2b1a0e; border-radius: 12px; padding: 8px 12px; font: 600 .82rem/1.3 var(--sans); box-shadow: 0 3px 0 rgba(43,26,14,.25); }
+@media (prefers-reduced-motion: no-preference) { .joel-fab-tip { animation: jf-pop .35s ease-out; } @keyframes jf-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } } }
+@media (max-width: 520px) { .joel-fab-t { display: none; } .joel-fab { padding: 6px; } .joel-fab-wrap { bottom: 64px; } }
+@media print { .joel-fab-wrap { display: none !important; } }

@@ -4,16 +4,22 @@
 // buttons and, when lost, a "did you mean?" list.
 import { answer as baseAnswer, GREETING as BASE_GREETING, CHIPS as BASE_CHIPS } from "./joelai.js";
 import { KB, SMALL, RIDDLES, FACTS, story, pickRand } from "./joelkb.js";
+import { fun, handlePending, savedName } from "./joelfun.js";
+import { guideFun, timeGreeting } from "./joelguide.js";
+import { world } from "./joelworld.js";
+import { webLookup, settingsReply, subject, onlineOn } from "./joelweb.js";
+import { PAGES } from "./siteindex.js";
 import { currentUser } from "./auth.js";
 import { loadSession, saveSession, removeSession } from "./store.js";
 
 export const GREETING = "Hi, I'm JoelAI. I'm a joel! I can answer several questions at once, remember what we just talked about, plan your day, and tell you stories, riddles and jokes. I am a rulebook with confidence, not a real AI, so I am only right about things we wrote down.";
-export const CHIPS = ["Plan a trip for me", "My flight is delayed. What do I do?", "How do I check in?", "Where is gate A12 and when does OA 58 leave?", "What can I play while delayed?", "Tell me a riddle", "What can you do?"];
+export const CHIPS = ["Plan a trip for me", "My flight is delayed. What do I do?", "How do I check in?", "Where is gate A12 and when does OA 58 leave?", "What can I play while delayed?", "Tell me a riddle", "Quiz me", "What can you do?"];
 
 const STATE_KEY = "octee.joelai.state";
 const fresh = () => ({ turns: 0, mood: "calm", moodLeft: 0, last: {}, pending: null, seen: [] });
 export const getState = () => ({ ...fresh(), ...(loadSession(STATE_KEY, null) || {}) });
 export const resetState = () => removeSession(STATE_KEY);
+export function setPage(file) { const st = getState(); st.page = file; saveSession(STATE_KEY, st); }
 
 /* ---------- 1. tidy ---------- */
 const SHORT = { u: "you", ur: "your", r: "are", pls: "please", plz: "please", wat: "what", wut: "what", whats: "what is", "what's": "what is", wheres: "where is", "where's": "where is", hows: "how is", "how's": "how is", dont: "do not", "don't": "do not", cant: "can not", "can't": "can not", wont: "will not", im: "i am", "i'm": "i am", ive: "i have", thx: "thanks", ty: "thanks", gonna: "going to", wanna: "want to", gimme: "give me", ok: "okay", abt: "about", bc: "because", b4: "before", cuz: "because", tmrw: "tomorrow", flite: "flight", flght: "flight", fligt: "flight", lugage: "luggage", luggege: "luggage", bagage: "baggage", chek: "check", checkin: "check in", "check-in": "check in", boaring: "boarding", boardin: "boarding", terminl: "terminal", delyed: "delayed", delaed: "delayed", dealyed: "delayed", cancled: "cancelled", resturant: "restaurant", wifi: "wi-fi", whifi: "wi-fi", octmile: "octmiles", octemiles: "octmiles", octeemiles: "octmiles", peanutz: "peanuts", peanut: "peanut" };
@@ -30,7 +36,7 @@ for (const t of KB) for (const k of t.keys) VOCAB.add(k);
 ["apology", "apologies", "complaint", "baggage", "luggage", "boarding", "passport", "departures", "destination", "destinations", "upgrade", "tracker", "terminal", "certificate", "insurance", "magazine", "crossword", "cupboard", "password", "passwords", "secret", "secrets", "admin", "owner", "hack", "cheat", "exploit", "control", "tower", "airport", "runway", "gate", "check", "booking", "ticket", "seatbelt", "lottery", "hangman", "sorry", "delay"].forEach((w) => VOCAB.add(w));
 const VLIST = [...VOCAB].filter((w) => w.length >= 5);
 export function tidy(raw) {
-  let s = " " + String(raw || "").toLowerCase().replace(/[^\w\s'?!.,;:\-]/g, " ") + " ";
+  let s = " " + String(raw || "").toLowerCase().replace(/[^\w\s'?!.,;:\-+*\/=()]/g, " ") + " ";
   s = s.replace(/\b(oa|ou|sa)[\s\-]?(\d{1,3})\b/g, "$1 $2").replace(/\b(oa|ou|sa) (\d{1,3})\b/g, "$1$2");
   const words = s.split(/(\s+)/).map((w) => {
     const bare = w.replace(/^[^\w']+|[^\w']+$/g, "");
@@ -38,7 +44,7 @@ export function tidy(raw) {
     const tail = w.slice(w.indexOf(bare) + bare.length), head = w.slice(0, w.indexOf(bare));
     if (SHORT[bare]) return head + SHORT[bare] + tail;
     if (bare.length >= 5 && !VOCAB.has(bare) && !/\d/.test(bare)) {
-      const hits = VLIST.filter((v) => lev(bare, v) === 1);
+      const hits = VLIST.filter((v) => v[0] === bare[0] && lev(bare, v) === 1 && bare !== v + "s" && v !== bare + "s");
       if (hits.length === 1) return head + hits[0] + tail;
     }
     return w;
@@ -100,6 +106,20 @@ const ME = (u) => (u ? u.username : "");
 /* ---------- 5. pick ---------- */
 const SECRET = /control ?tower|\badmins?\b|\bowner\b|fag panel|\bhack|\bcheat|\bexploit|\bpasswords?\b|\bsecrets?\b|\bcodes?\b/;
 const SPECIFIC = /\b(oa|ou|sa)\s?\d{1,3}\b|\bgate\s*[a-z]{1,2}\s?\d|\b(sc|[a-gjm])\d{1,3}[abc]?\b|\bterminal\s*\d\b|\bt[1-5]\b|(today|tonight|now).{0,25}(flights?|departures?|leaving)|(flights?|departures?).{0,20}today|what is leaving|\b(flights?|fly|go|get|travel|going) (to|from) |my (next )?(flight|trip|booking|seat)\b|checked in|check in status|my (octmiles|miles|points|balance|tier|status|tokens)|how many (octmiles|miles|tokens)|how (do|can|should) i (check in|change|reset|book|get a boarding pass|print)|boarding pass/;
+const SITEWORDS = new Set(["flight", "flights", "gate", "gates", "terminal", "terminals", "airport", "airline", "airlines", "octee", "fia", "joel", "joelai", "peanut", "peanuts", "miles", "octmiles", "tokens", "plane", "planes", "check", "bag", "bags", "luggage", "seat", "seats", "delay", "delayed", "boarding", "ticket", "tickets", "booking", "scraggy", "united", "apology", "apologies", "cupboard", "hangman", "whack", "auction", "insurance", "wifi", "wi-fi", "radio", "cockpit", "pilot", "runway", "departures", "account", "password", "login", "tier", "tiers", "joelmobile", "sia", "lia", "mia", "oa", "ou", "sa", "sorry", "complaint", "complain", "duty", "free", "magazine", "times", "safety", "turbulence", "upgrade", "lottery", "bingo", "entertainment", "game", "games", "page", "site", "website", "you", "your", "security", "train", "sbb", "toilet", "toilets", "lounge", "shops", "shop", "restaurant", "food", "pier", "annex", "customs", "passport", "immigration", "arrivals", "taxi", "parking", "trolley", "leaves", "leave", "leaving", "today", "tonight", "tomorrow", "hello", "hi", "thanks", "bye", "joke", "riddle", "story", "quiz", "name", "me", "i", "we", "us", "my", "it", "this", "that", "yes", "no", "ok", "okay", "please", "help", "love", "hate", "great", "good", "bad", "made", "made"]);
+for (const t of KB) for (const k of t.keys) SITEWORDS.add(k);
+for (const p of PAGES) for (const w of (p[1] + " " + p[2]).toLowerCase().split(/[^a-z0-9]+/)) if (w.length > 2) SITEWORDS.add(w);
+const GENERAL_LEAD = /^(?:please )?(?:can you |could you |do you know )?(?:who (?:is|was|were|are|invented|discovered|wrote|painted)|what (?:is|was|are|were)|what'?s|where (?:is|was|are)|when (?:is|was|did|were)|why (?:is|was|are|do|does|did)|how (?:does|do|did|is|was|are|many|much|old|tall|big|far)|tell me about|explain|define|describe)\b/;
+function looksTopic(q) {   // a bare topic like "photosynthesis" or "albert einstein": short, no pronouns, nothing from the site
+  if (!onlineOn()) return false;
+  const words = q.split(/[^a-z0-9']+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 4 && !words.some((w) => SITEWORDS.has(w) || /^(who|what|how|why|when|where|can|do|does|is|are|will|should)$/.test(w));
+}
+function looksGeneral(q) {
+  if (!onlineOn() || !GENERAL_LEAD.test(q)) return false;
+  const words = subject(q).split(/[^a-z0-9']+/).filter(Boolean);
+  return words.length > 0 && !words.some((w) => SITEWORDS.has(w));
+}
 const PRIORITY = new Set(["delayed", "account", "lostbag", "peanuts", "miles", "share", "bored", "hangman"]);
 const isFallback = (r) => r.chips && r.chips.length === 4 && r.chips[0] === BASE_CHIPS[0];
 
@@ -124,14 +144,19 @@ async function one(q, state, u) {
   remember(state, q);
 
   if (state.pending?.riddle) return riddleAnswer(q, state);
+  if (state.pending?.kind) { const pr = handlePending(q, state); if (pr) return pr; }
 
+  if (/\b(airport|iata|icao) codes?\b/.test(q)) { const w = world(q, state, u); if (w) return w; }
   // secrets, passwords, codes: always the original rulebook, which refuses or guides
   if (SECRET.test(q)) { return await baseAnswer(q); }
 
   // yes / okay after an offer
-  if (/^(yes|yeah|yep|sure|okay|ok|please|go on|more|tell me more|go ahead)\b[.!]?$/.test(q) && state.offer) {
+  if (/^(yes|yeah|yep|sure|okay|ok|please|go ahead)\b[.!]?$/.test(q) && state.offer) {
     const o = state.offer; state.offer = null; return await one(o, state, u);
   }
+
+  { const st = settingsReply(q); if (st) return st; }
+  { const g = guideFun(q, state, u) || fun(q, state, u) || world(q, state, u); if (g) return g; }
 
   if (/\b(riddle|puzzle me|brain ?teaser)\b/.test(q)) {
     const r = RIDDLES[state.turns % RIDDLES.length]; state.pending = { riddle: r };
@@ -141,12 +166,13 @@ async function one(q, state, u) {
   if (/\b(story|tale|bedtime)\b/.test(q)) return { text: story(), links: [], chips: ["Tell me another story", "Tell me a riddle"] };
   if (/\b(joke|funny|make me laugh|another joke)\b/.test(q)) return { text: pickRand(SMALL.joke), links: [], chips: ["Tell me another joke", "Tell me a fun fact"] };
   if (/^(hi|hello|hey|hiya|yo|good (morning|afternoon|evening)|sup)\b/.test(q)) {
-    const n = ME(u); const l = u ? "I can see you are logged in" : "You are not logged in, which is fine";
-    return { text: `Hello${n ? ", " + n : ""}! I'm a joel. ${l}. What would you like to know? I can take several questions at once.`, links: [], chips: ["Plan a trip for me", "What can you do?", "Tell me a joke"] };
+    const n = savedName() || ME(u); const l = u ? "I can see you are logged in" : "You are not logged in, which is fine";
+    return { text: `${timeGreeting()}${n ? ", " + n : ""}! I'm a joel. ${l}. What would you like to know? I can take several questions at once.`, links: [], chips: ["Plan a trip for me", "What can you do?", "Tell me a joke"] };
   }
 
   for (const t of KB) if (PRIORITY.has(t.id) && t.re.test(q)) { const r = t.reply({ u, mood: state.mood, state, q }); state.last.topic = t.id; state.last.topicText = q; return r; }
-  if (SPECIFIC.test(q)) { return await baseAnswer(q); }
+  if (SPECIFIC.test(q)) { const sr = await baseAnswer(q); if (!isFallback(sr)) return sr; }
+  if (looksGeneral(q)) { state.webTried = true; const web = await webLookup(state.orig || q); if (web?.text) return web; if (web?.failed) state.webFailed = true; }
 
   for (const t of KB) if (t.re.test(q)) {
     const r = t.reply({ u, mood: state.mood, state, q });
@@ -156,7 +182,9 @@ async function one(q, state, u) {
 
   const r = await baseAnswer(q);
   if (!isFallback(r)) return r;
+  if (!state.webTried && (looksTopic(q) || looksGeneral(q))) { const web = await webLookup(state.orig || q); if (web?.text) return web; if (web?.failed) state.webFailed = true; }
   const s = suggestions(q);
+  if (state.webFailed) { state.webFailed = false; return { text: "I tried to look that up online, but the internet was delayed (it is allowed to be). It is not in the handbook either. Try again in a moment, or pick one of the closest things I know.", links: [], chips: s.length ? s : BASE_CHIPS.slice(0, 4) }; }
   if (s.length) return { text: "I did not quite get that, and I will not pretend. The closest things I know about are below. Pick one, or put it another way.", links: [], chips: s };
   return { text: r.text, links: [], chips: BASE_CHIPS.slice(0, 4) };
 }
@@ -167,11 +195,12 @@ export async function converse(raw) {
   const u = (() => { try { return currentUser(); } catch { return null; } })();
   const original = String(raw || "").trim();
   if (!original) return { text: "You did not ask anything. That is the best question we get.", links: [], chips: CHIPS.slice(0, 4), mood: state.mood };
-  state.turns++;
+  state.turns++; state.webFailed = false; state.webTried = false;
   const t = tidy(original);
   // secrets are checked on the raw text as well, so a typo can never get around the refusal
   const secret = SECRET.test(original.toLowerCase()) || SECRET.test(t);
   const parts = secret ? [SECRET.test(original.toLowerCase()) ? original.toLowerCase() : t] : split(t);
+  state.orig = parts.length === 1 && !secret ? original.toLowerCase().replace(/\s+/g, " ").trim() : null;
   const results = [];
   for (const p of parts) results.push(await one(p, state, u));
   const mood = moodFrom(t, state);

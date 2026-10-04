@@ -159,6 +159,7 @@ buildFooter();
 
 // A banner on every page when Octee has sent you an apology (flights get late; see apology.js).
 import("./turbulence.js");
+import("./joelfab.js");
 import("./apology.js").then((m) => {
   m.showBanner();
   m.watchFlights();
