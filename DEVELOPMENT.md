@@ -1075,3 +1075,7 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 - **Magazine** (`magazine.html`, `js/magazine.js`): six fake articles, four adverts linking to site pages, and a 9 x 9 sudoku that cannot be solved on purpose: the first row holds 1 to 9 except one square, and a 2 is placed in that square's column, so it has no candidate (checked with a solver; no given clashes with another). "Check my puzzle" says which square is impossible. A missing "Page 4" closes the issue.
 - **Insurance** (`insurance.html`, `js/insurance.js`): insure an item (value in peanuts, nothing is charged) against ticked silly perils; the policy lists exclusions ("anything that actually happens"). Every claim is rejected with a rotating reason. Policies (max 20) are stored per account or "guest" in `octee.insurance`. No real policy or card details are requested.
 - Both are in the footer "More:" row and JoelAI answers about them.
+
+## All Pages hub
+
+- `allpages.html` (`js/allpages.js`): a hub listing every extra page as its own card, in four groups. It is in the main menu ("All Pages") and the footer "More:" row. When a new page is added, add it to `GROUPS` here too.

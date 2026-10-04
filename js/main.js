@@ -20,6 +20,7 @@ const PAGES = [
   ["cupboard.html", "Joel's Cupboard"],
   ["oneunited.html", "One United"],
   ["reviews.html", "Reviews"],
+  ["allpages.html", "All Pages"],
   ["octmiles.html", "Octmiles"],
   ["about.html", "About"],
   ["contact.html", "Contact"]
@@ -132,7 +133,7 @@ function buildFooter() {
       el("p", {}, "Octee Airlines, a member of FAG (Fuji Airport Group). Operating from FIA (Fuji International Airport)."),
       el("p", { class: "foot" }, "Scraggy Airlines (SA) is part of Octee Airlines, based at Scraggy International Airport (SIA). One United (OU) is a partner airline. Accounts and Octmiles are kept in your browser."),
       el("p", {}, el("a", { href: "status.html" }, "Flight Status"), " · ", el("a", { href: "reviews.html" }, "Reviews"), " · ", el("a", { href: "contact.html" }, "Contact"), " · ", el("a", { href: "complaint.html" }, "Complaints")),
-      el("p", {}, "More: ", [["peanuts.html", "Peanut Wallet"], ["lostfound.html", "Lost and Found"], ["upgrade.html", "Upgrade Lottery"], ["news.html", "The Octee Times"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["safety.html", "Safety Demo"], ["radio.html", "Octee Radio"], ["dutyfree.html", "Duty Free"], ["safetycard.html", "Safety Card"], ["auction.html", "Lost Property Auction"], ["creditcard.html", "Octee Credit Card"], ["cockpit.html", "The Cockpit"], ["wifi.html", "Octee Wi-Fi"], ["magazine.html", "In-Flight Magazine"], ["insurance.html", "Octee Insurance"]].flatMap(([h, t], k) => [k ? " · " : "", el("a", { href: h }, t)]))
+      el("p", {}, "More: ", [["peanuts.html", "Peanut Wallet"], ["lostfound.html", "Lost and Found"], ["upgrade.html", "Upgrade Lottery"], ["news.html", "The Octee Times"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["safety.html", "Safety Demo"], ["radio.html", "Octee Radio"], ["dutyfree.html", "Duty Free"], ["safetycard.html", "Safety Card"], ["auction.html", "Lost Property Auction"], ["creditcard.html", "Octee Credit Card"], ["cockpit.html", "The Cockpit"], ["wifi.html", "Octee Wi-Fi"], ["magazine.html", "In-Flight Magazine"], ["insurance.html", "Octee Insurance"], ["allpages.html", "All Pages"]].flatMap(([h, t], k) => [k ? " · " : "", el("a", { href: h }, t)]))
     )));
 }
 
