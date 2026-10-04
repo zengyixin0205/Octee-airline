@@ -1083,7 +1083,7 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## Menus and Search
 
 - The main menu now has drop-down groups (Peanuts and Money, Airport, On Board, Reading, built from `GROUPS` in `js/main.js`), so every extra page is its own menu entry. The All Pages hub is no longer linked (`allpages.html` is left unlinked). Add a new page to `GROUPS`.
-- **Search** (`search.html`, `js/search.js`; "Search" in the menu): the index lists every page with keywords; a query returns a page with **no** keyword match (picked by hashing the query, so it is stable), says how many matching pages were removed, and offers a "Did you mean" that you did not. `?q=` links work.
+- **Search** (`search.html`, `js/sitesearch.js`; "Search" in the menu): the index lists every page with keywords; a query returns a page with **no** keyword match (picked by hashing the query, so it is stable), says how many matching pages were removed, and offers a "Did you mean" that you did not. `?q=` links work.
 
 ## 404 page
 
@@ -1093,3 +1093,8 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 
 - **Duty Free** now has a "Pay with" selector: peanuts (price as listed) or Octeetokens (3 x the peanut price, `TOKEN_X`). Buy buttons say what is missing ("You need 4 more..."), guests are told to log in/sign up. Purchases go to "Your purchases" (`user.dutyfree`) with a **Use it** button per item; goods still may not be taken on board.
 - **Departures board** (`departures.html`, `js/departures.js`; "Departures" in the menu): a split-flap board built from today's FIA departures (same data as Flight Status, up to 14 rows plus OA 404 to NOT FOUND). Every status is DELAYED. Letters flip through random characters before settling; the status flips again every ~9 s; Full screen button, optional tick sound (off by default, needs a click), "Flip again". Reduced motion: no flipping.
+
+## Entertainment and the header search bar
+
+- **Header search bar:** a search form in the header of every page (`main.js`, `.nav-search`) that opens `search.html?q=...`. The "Search" menu item is still there.
+- **Entertainment** (`entertainment.html`, `js/entertainment.js`; in the menu): "You are delayed" banner, four games in tabs: **Paper Plane** (canvas flappy game, 5 towers = peanut), **Delay Clicker** (idle clicker, 5 s of delay = peanut), **Suitcase Match** (6 pairs, 14 moves or fewer = peanut), **The Waiting Game** (do nothing, 30 s = peanut). Best scores in `octee.games.best`; one peanut per game per day (`user.gameDay`). Below the games: links to the other games and pages (Baggage Game, Bingo, Safety quiz, crossword, sudoku, Cockpit, Radio, Departures).

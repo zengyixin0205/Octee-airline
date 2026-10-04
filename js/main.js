@@ -20,6 +20,7 @@ const PAGES = [
   ["oneunited.html", "One United"],
   ["reviews.html", "Reviews"],
   ["departures.html", "Departures"],
+  ["entertainment.html", "Entertainment"],
   ["search.html", "Search"],
   ["octmiles.html", "Octmiles"],
   ["about.html", "About"],
@@ -74,9 +75,12 @@ function buildHeader() {
     el("img", { src: "assets/img/octee-logo.svg", alt: "Octee Airlines", width: "200", height: "100" }));
   wireSecretLogo(logo);
   const account = el("div", { class: "account-box", id: "account-box" });
+  const search = el("form", { class: "nav-search", role: "search", action: "search.html", method: "get" },
+    el("input", { type: "search", name: "q", placeholder: "Search Octee Airlines", "aria-label": "Search Octee Airlines", maxlength: "60" }),
+    el("button", { type: "submit", class: "btn small" }, "Search"));
   holder.replaceWith(el("header", { class: "site-header" },
     el("a", { class: "skip", href: "#main" }, "Skip to content"),
-    el("div", { class: "header-inner" }, logo, toggle, account, nav)));
+    el("div", { class: "header-inner" }, logo, toggle, search, account, nav)));
   renderAccount(account);
   window.addEventListener("octee:account", () => renderAccount(account));
   window.addEventListener("storage", () => renderAccount(account));
@@ -144,7 +148,7 @@ function buildFooter() {
       el("p", {}, "Octee Airlines, a member of FAG (Fuji Airport Group). Operating from FIA (Fuji International Airport)."),
       el("p", { class: "foot" }, "Scraggy Airlines (SA) is part of Octee Airlines, based at Scraggy International Airport (SIA). One United (OU) is a partner airline. Accounts and Octmiles are kept in your browser."),
       el("p", {}, el("a", { href: "status.html" }, "Flight Status"), " · ", el("a", { href: "reviews.html" }, "Reviews"), " · ", el("a", { href: "contact.html" }, "Contact"), " · ", el("a", { href: "complaint.html" }, "Complaints")),
-      el("p", {}, "More: ", [["peanuts.html", "Peanut Wallet"], ["lostfound.html", "Lost and Found"], ["upgrade.html", "Upgrade Lottery"], ["news.html", "The Octee Times"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["safety.html", "Safety Demo"], ["radio.html", "Octee Radio"], ["dutyfree.html", "Duty Free"], ["safetycard.html", "Safety Card"], ["departures.html", "Departures Board"], ["search.html", "Search"], ["auction.html", "Lost Property Auction"], ["creditcard.html", "Octee Credit Card"], ["cockpit.html", "The Cockpit"], ["wifi.html", "Octee Wi-Fi"], ["magazine.html", "In-Flight Magazine"], ["insurance.html", "Octee Insurance"]].flatMap(([h, t], k) => [k ? " · " : "", el("a", { href: h }, t)]))
+      el("p", {}, "More: ", [["peanuts.html", "Peanut Wallet"], ["lostfound.html", "Lost and Found"], ["upgrade.html", "Upgrade Lottery"], ["news.html", "The Octee Times"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["safety.html", "Safety Demo"], ["radio.html", "Octee Radio"], ["dutyfree.html", "Duty Free"], ["safetycard.html", "Safety Card"], ["entertainment.html", "Entertainment"], ["departures.html", "Departures Board"], ["search.html", "Search"], ["auction.html", "Lost Property Auction"], ["creditcard.html", "Octee Credit Card"], ["cockpit.html", "The Cockpit"], ["wifi.html", "Octee Wi-Fi"], ["magazine.html", "In-Flight Magazine"], ["insurance.html", "Octee Insurance"]].flatMap(([h, t], k) => [k ? " · " : "", el("a", { href: h }, t)]))
     )));
 }
 

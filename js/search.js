@@ -1,69 +1,107 @@
-// Octee Search: always returns a page that does NOT match what you typed (and says so).
-import { $, el } from "./dom.js";
+// Destination search box (Home + Destinations).
+import { $, el, niceDate, today } from "./dom.js";
+import { PLACES, OA_PLACES, matchPlace, placeName, placeShort, itinerariesOn, nextDates, describeItinerary, ALL_FLIGHTS, daysText, routeText } from "./destinations.js";
+import { scraggyData } from "./scraggy.js";
 
-const PAGES = [
-  ["index.html", "Home", "welcome main start front", "The front page. You were already here, in a way."],
-  ["destinations.html", "Destinations", "destination places where travel city country fly to", "Places we fly to, and places we mean to."],
-  ["book.html", "Book a Flight", "book buy ticket reserve flight fare price", "Book a flight, and be sorry later."],
-  ["status.html", "Flight Status", "status flight delayed time arrival departure board", "The status of every flight. It is the same status."],
-  ["checkin.html", "Check-in", "check in checkin seat boarding pass online", "Check in for a flight you have not taken."],
-  ["baggage.html", "Baggage", "baggage bag luggage suitcase allowance weight", "Rules for bags, one of which is a wonky link."],
-  ["bagtrack.html", "Bag Tracker", "bag tracker tag luggage lost wander", "Watch a bag wander around the airport."],
-  ["experience.html", "In-Flight", "in flight inflight cabin seat service onboard", "What happens in the air. Mostly waiting."],
-  ["fia.html", "FIA Airport", "airport fia terminal gate map", "The airport. It has a runway somewhere."],
-  ["joelmobile.html", "JOELMOBILE", "joelmobile car ride taxi transport joel drive", "Joel will drive you there. Joel has questions."],
-  ["cupboard.html", "Joel's Cupboard", "cupboard joel sandwich closet", "Where Joel lives when he runs out of sorry."],
-  ["oneunited.html", "One United", "united partner alliance merger", "A partnership nobody has explained."],
-  ["reviews.html", "Reviews", "reviews rating stars feedback customer", "Five stars. Mostly from us."],
-  ["octmiles.html", "Octmiles", "miles points loyalty frequent flyer octmiles tokens", "Points that you earn and cannot use."],
-  ["about.html", "About", "about us company history team who", "About us. We are sorry about us."],
-  ["contact.html", "Contact", "contact phone email help support reach", "Contact us. We will contact you back. Eventually."],
-  ["complaint.html", "Complaint Desk", "complain complaint desk refund compensation anger", "Complain, and get peanuts."],
-  ["peanuts.html", "Peanut Wallet", "peanut wallet shop currency money", "Your peanuts and the shop that takes them."],
-  ["lostfound.html", "Lost and Found", "lost found missing item claim lost property", "Report or claim lost things."],
-  ["upgrade.html", "Upgrade Lottery", "upgrade lottery spin wheel seat class", "Spin for an upgrade that is not better."],
-  ["news.html", "The Octee Times", "news newspaper crossword horoscope story times", "News, horoscope, crossword."],
-  ["runway.html", "FIA Runway Status", "runway weather wind rain conditions status", "Runway conditions and sorrow."],
-  ["meal.html", "Meal Pre-order", "meal food dish dinner hungry order peanut", "Pre-order a peanut meal."],
-  ["bingo.html", "Delay Bingo", "bingo delay card game certificate", "Bingo, on your own delay."],
-  ["baggame.html", "The Baggage Game", "game baggage conveyor belt push play", "A game with a T-shaped belt."],
-  ["safety.html", "Safety Demo", "safety demo quiz seatbelt life jacket oxygen brace", "Six cards and a quiz. No buckle."],
-  ["safetycard.html", "Safety Card", "safety card print printable seat pocket", "A printable card for your seat pocket."],
-  ["radio.html", "Octee Radio", "radio music songs station listen fm announcement", "Delay FM and other stations."],
-  ["dutyfree.html", "Duty Free", "duty free shop buy souvenir perfume", "Things you cannot take on board."],
-  ["auction.html", "Lost Property Auction", "auction bid bags lost property winning", "Bid on bags you cannot open."],
-  ["creditcard.html", "Octee Credit Card", "credit card payment apply purchase bank", "Always approved, always declined."],
-  ["cockpit.html", "The Cockpit", "cockpit pilot dials buttons captain controls", "Dials, buttons and one marked Do not."],
-  ["wifi.html", "Octee Wi-Fi", "wifi wi-fi internet network speed test connect", "Connects. Loads. Negative speed."],
-  ["magazine.html", "In-Flight Magazine", "magazine articles sudoku puzzle adverts read", "Articles and a sudoku with no solution."],
-  ["insurance.html", "Octee Insurance", "insurance insure policy claim cover protection", "Covers everything except what happens."],
-  ["departures.html", "Departures Board", "departures board flip delayed flights all delayed full screen", "A flip board where every flight is delayed."],
-  ["apology.html", "Our Apology", "apology sorry apologise letter", "A long, sincere apology."],
-  ["login.html", "Log in / Sign up", "login log in sign up account register password", "Log in. Or sign up and be welcomed."]
-];
-const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
-const words = (q) => q.toLowerCase().split(/[^a-z0-9']+/).filter((w) => w.length > 1);
-const hits = (p, ws) => ws.filter((w) => (p[1] + " " + p[2]).toLowerCase().includes(w)).length;
-
-const root = $("#app");
-const input = el("input", { type: "search", id: "q", placeholder: "Search Octee Airlines", "aria-label": "Search Octee Airlines", maxlength: "60" });
-const out = el("div", { id: "results", role: "status", "aria-live": "polite" });
-const form = el("form", { class: "card", role: "search" }, el("div", { class: "actions" }, input, el("button", { class: "btn", type: "submit" }, "Search")));
-root.replaceChildren(form, out, el("p", { class: "note" }, "Octee Search never shows pages that match. Matching pages are for people who know what they want."));
-
-function search(q) {
-  const ws = words(q);
-  const nonMatches = PAGES.filter((p) => hits(p, ws) === 0);
-  const matches = PAGES.filter((p) => hits(p, ws) > 0);
-  const pool = nonMatches.length ? nonMatches : PAGES;
-  const found = pool[hash(q.toLowerCase().trim() || String(Date.now())) % pool.length];
-  const next = pool[(pool.indexOf(found) + 7) % pool.length];
-  const hidden = matches.length;
-  out.replaceChildren(
-    el("p", { class: "note" }, q ? `Results for "${q}": 1 (${hidden} other ${hidden === 1 ? "page" : "pages"} matched and ${hidden === 1 ? "was" : "were"} removed for your safety)` : "Results for nothing: 1"),
-    el("a", { class: "card", href: found[0], style: "display:block;text-decoration:none;color:inherit" }, el("h3", { style: "margin:0" }, found[1]), el("p", { style: "margin:4px 0" }, found[3]), el("span", { class: "note" }, `${found[0]} · 0% match. Exactly what you were not looking for.`)),
-    el("p", {}, "Did you mean: ", el("a", { href: next[0] }, next[1]), "? (You did not.)"));
+export function mountSearchBox(holder, { onSearch, from = "FIA", query = "" } = {}) {
+  const listId = "dest-suggestions";
+  const input = el("input", { type: "search", id: "dest-q", name: "q", value: query, autocomplete: "off",
+    placeholder: "Where do you want to go? (We may take you there.)", role: "combobox",
+    "aria-expanded": "false", "aria-controls": listId, "aria-autocomplete": "list" });
+  const fromSel = el("select", { id: "dest-from", name: "from" }, OA_PLACES.map((c) => el("option", { value: c, selected: c === from }, placeName(c))));
+  const list = el("ul", { class: "suggestions", id: listId, role: "listbox", hidden: true });
+  let active = -1, items = [];
+  const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); active = -1; };
+  const choose = (code) => { input.value = placeName(code); close(); onSearch(input.value, fromSel.value); };
+  const render = () => {
+    items = matchPlace(input.value);
+    list.replaceChildren(...items.map((c, k) => el("li", { id: "sug-" + c, role: "option", "aria-selected": String(k === active),
+      onmousedown: (e) => { e.preventDefault(); choose(c); } }, placeName(c), PLACES[c].oa ? "" : " (via Scraggy Airlines)")));
+    const open = items.length > 0 && input.value.trim().length > 0;
+    list.hidden = !open;
+    input.setAttribute("aria-expanded", String(open));
+    if (active >= 0 && items[active]) input.setAttribute("aria-activedescendant", "sug-" + items[active]);
+  };
+  input.addEventListener("input", () => { active = -1; render(); });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+    else if (e.key === "Escape") close();
+    else if (e.key === "Enter" && active >= 0 && items[active]) { e.preventDefault(); choose(items[active]); }
+  });
+  input.addEventListener("blur", () => setTimeout(close, 120));
+  const form = el("form", { class: "search-box", role: "search" },
+    el("div", { class: "field grow" }, el("label", { for: "dest-q" }, "Where to?"), input, list),
+    el("div", { class: "field" }, el("label", { for: "dest-from" }, "Flying from"), fromSel),
+    el("button", { class: "btn", type: "submit" }, "Search"));
+  form.addEventListener("submit", (e) => { e.preventDefault(); close(); onSearch(input.value, fromSel.value); });
+  holder.append(form);
+  return { input, fromSel };
 }
-form.addEventListener("submit", (e) => { e.preventDefault(); search(input.value.trim()); history.replaceState(null, "", "?q=" + encodeURIComponent(input.value.trim())); });
-const q0 = new URLSearchParams(location.search).get("q");
-if (q0) { input.value = q0; search(q0); }
+
+const legLine = (s) => el("li", { class: s.airline === "SA" ? "sa" : s.airline === "OU" ? "ou" : "" },
+  el("strong", {}, s.no), ` ${placeShort(s.from)} ${s.dep} → ${placeShort(s.to)} ${s.arr}`,
+  s.via.length ? ` (stops at ${s.via.map(placeShort).join(", ")}; stay on board)` : "",
+  s.airline === "OA" ? el("span", { class: "tag oa" }, "Octee") : "",
+  s.airline === "OU" ? el("span", { class: "tag ou" }, "One United") : "",
+  s.airline === "SA" ? el("span", { class: "tag sa" }, `Scraggy Airlines · gate ${s.gate}`) : "");
+
+function itineraryList(it) {
+  const items = [];
+  it.forEach((s, k) => {
+    if (k > 0) {
+      const wait = (+s.dep.slice(0, 2) * 60 + +s.dep.slice(3)) - (+it[k - 1].arr.slice(0, 2) * 60 + +it[k - 1].arr.slice(3));
+      items.push(el("li", { class: "change" }, `Change planes at ${placeName(s.from)} · ${wait} minutes `, el("em", {}, "(or 3 days)")));
+    }
+    items.push(legLine(s));
+  });
+  return el("ul", { class: "legs" }, items);
+}
+
+export async function renderResults(box, query, from) {
+  const { routes } = await scraggyData();
+  const codes = matchPlace(query);
+  box.replaceChildren();
+  if (!query.trim()) return;
+  if (!codes.length) {
+    box.append(el("article", { class: "card result none" },
+      el("h3", {}, `No flights to "${query}". Not even eventually.`),
+      el("p", {}, "Places we (sort of) fly to:"),
+      el("div", { class: "actions" }, Object.keys(PLACES).map((c) => el("a", { class: "btn small ghost", href: `destinations.html?q=${encodeURIComponent(placeName(c))}&from=${from}` }, placeName(c))))));
+    return;
+  }
+  const to = codes[0];
+  if (to === from) {
+    box.append(el("article", { class: "card result" },
+      el("h3", {}, `You are already at ${placeName(to)}. Probably.`),
+      el("p", {}, "Try asking the ", el("a", { href: "joelmobile.html" }, "JOELMOBILE"), ".")));
+    return;
+  }
+  const upcoming = nextDates(from, to, routes, today(), 4);
+  if (!upcoming.length) {
+    box.append(el("article", { class: "card result none" }, el("h3", {}, `No way to get from ${placeName(from)} to ${placeName(to)} in the next 3 weeks.`), el("p", {}, "Not even eventually.")));
+    return;
+  }
+  const hasSA = upcoming.some((u) => u.it.some((s) => s.airline === "SA"));
+  const direct = upcoming[0].it.length === 1;
+  const title = !PLACES[to].oa ? `🔁 Transfer flight — only Scraggy Airlines flies to ${placeName(to)}.`
+    : direct ? `✈ ${placeName(from)} → ${placeName(to)}` : `🔁 ${placeName(from)} → ${placeName(to)} with a change`;
+  const card = el("article", { class: "card result" + (hasSA ? " transfer" : "") }, el("h3", {}, title));
+  for (const u of upcoming) {
+    card.append(el("p", { style: "margin:.6em 0 0" }, el("strong", {}, niceDate(u.date)), " · ", describeItinerary(u.it)), itineraryList(u.it));
+  }
+  if (hasSA) card.append(el("p", { class: "note" }, "Flights marked Scraggy Airlines are booked with a second form (the SIA form). Octmiles are only earned on OA flights."));
+  card.append(el("div", { class: "actions" },
+    el("a", { class: "btn", href: `book.html?from=${from}&to=${to}&date=${upcoming[0].date}` }, hasSA ? "Book (2 forms)" : "Book this flight")));
+  // OA-only places: show which days Octee flies there
+  if (PLACES[to].oa && from === "FIA") {
+    const flights = ALL_FLIGHTS.filter((f) => f.stops.some((s, i) => s[0] === "FIA" && f.stops.slice(i + 1).some((x) => x[0] === to)));
+    card.append(el("p", { class: "note" }, "Flights from FIA (OA = Octee, OU = One United): ", flights.map((f) => `${f.no} (${daysText(f.days)}, ${routeText(f)})`).join(" · ")));
+  }
+  box.append(card);
+  if (to === "SCH") box.append(el("p", { class: "note" }, "Also possible any day: OA 58 to SIA, then SA101 to Scraggy House (if you enjoy airports)."));
+}
+
+export function goSearch(query, from) {
+  location.href = `destinations.html?q=${encodeURIComponent(query)}&from=${from}`;
+}

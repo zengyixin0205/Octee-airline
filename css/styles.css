@@ -905,3 +905,17 @@ body.turbulent main, body.turbulent .site-header, body.turbulent .site-footer { 
 .sf-row .sf-word:last-child .sf { color: #ffb347; }
 .sf-foot { margin-top: 14px; color: #ff7a00; text-align: center; font-size: .8rem; letter-spacing: .08em; }
 @media (prefers-reduced-motion: reduce) { .sf.flip { animation: none; } }
+
+/* ---------- Header search bar ---------- */
+.nav-search { display: flex; gap: 6px; align-items: center; flex: 1 1 220px; max-width: 360px; }
+.nav-search input { flex: 1; min-width: 0; padding: 6px 12px; border: 2px solid var(--octee-orange); border-radius: 99px; font: inherit; font-size: .9rem; }
+@media (max-width: 760px) { .nav-search { flex-basis: 100%; max-width: none; } }
+@media print { .nav-search { display: none; } }
+
+/* ---------- Entertainment games ---------- */
+.gm-canvas { display: block; width: 100%; max-width: 340px; height: auto; margin: 8px auto; border: 3px solid var(--octee-ink); border-radius: 12px; touch-action: manipulation; background: #cfe6f7; }
+.gm-big { font: 700 1.8rem var(--sans); margin: 8px 0; }
+.gm-add { font-size: 1.1rem; padding: 14px 26px; margin-bottom: 10px; }
+.mm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-width: 360px; margin: 10px 0; }
+.mm-card { aspect-ratio: 1; font-size: 1.8rem; border: 2px solid var(--octee-ink); border-radius: 12px; background: var(--octee-orange); cursor: pointer; }
+.mm-card.up { background: #fff; }
