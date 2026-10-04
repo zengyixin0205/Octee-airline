@@ -1098,3 +1098,7 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 
 - **Header search bar:** a search form in the header of every page (`main.js`, `.nav-search`) that opens `search.html?q=...`. The "Search" menu item is still there.
 - **Entertainment** (`entertainment.html`, `js/entertainment.js`; in the menu): "You are delayed" banner, four games in tabs: **Paper Plane** (canvas flappy game, 5 towers = peanut), **Delay Clicker** (idle clicker, 5 s of delay = peanut), **Suitcase Match** (6 pairs, 14 moves or fewer = peanut), **The Waiting Game** (do nothing, 30 s = peanut). Best scores in `octee.games.best`; one peanut per game per day (`user.gameDay`). Below the games: links to the other games and pages (Baggage Game, Bingo, Safety quiz, crossword, sudoku, Cockpit, Radio, Departures).
+
+## Five more games (Entertainment)
+
+- **Security Line** (15 items, a rule such as "Metal must be STOPPED" that changes every 5 items; 12 right = peanut), **Delay Trivia** (6 questions about the site; 5 right), **Find the Bag** (find your OA tag in a growing grid in 60 s, wrong bag costs 3 s; 6 found), **Boarding Call** (reaction test, 5 tries, early tap counts 999 ms; average under 450 ms), **Runway Landing** (canvas; hold to slow the sink rate below 2.4 and land on the runway; streak of 3). Same reward rule as the others (one peanut per game per day), bests in `octee.games.best`.
