@@ -53,6 +53,70 @@ export const TOKEN_PRICES = { joelmobile: 5, extraCode: 20, spin: 10 };
 export const tokensOf = (u) => (u && u.tokens) || 0;
 export const fmtTokens = (n) => `${Number(n || 0).toLocaleString("en-GB")} Octeetoken${Number(n) === 1 ? "" : "s"}`;
 
+// JoelAI Pro uses the provider's reported token usage. The JoelToken wallet follows
+// the same browser-local account model as Octeetokens; it is a game currency, not cash.
+export const JOEL_PRO_PRICE = 100;
+export const JOEL_TOKEN_RATE = 2500; // JoelTokens bought per Octeetoken
+export const JOEL_MONTHLY_GRANT = 10000;
+export const JOEL_MIN_CALL_RESERVE = 1000;
+export const joelUsageMonth = () => new Date().toISOString().slice(0, 7);
+const paidJoelTokensOf = (u) => Math.max(0, Math.floor(Number(u?.joelPaidTokens ?? (u?.joelPro ? 0 : u?.joelTokens)) || 0));
+export const joelTokensOf = (u) => {
+  const paid = paidJoelTokensOf(u);
+  if (!u?.joelPro) return paid;
+  const used = u.joelMonthlyUsage?.month === joelUsageMonth() ? Math.max(0, Math.floor(Number(u.joelMonthlyUsage.usedTokens) || 0)) : 0;
+  return paid + Math.max(0, JOEL_MONTHLY_GRANT - used);
+};
+export function buyJoelPro() {
+  return updateUser((u) => {
+    if (u.joelPro) return false;
+    spendTokens(u, JOEL_PRO_PRICE, "Unlocked JoelAI Pro");
+    u.joelPro = true;
+    u.joelPaidTokens = paidJoelTokensOf(u);
+    u.joelMonthlyUsage = { month: joelUsageMonth(), usedTokens: 0 };
+    u.joelTokens = joelTokensOf(u);
+    return true;
+  });
+}
+export function buyJoelTokens(octeeTokens = 1) {
+  const count = Math.floor(Number(octeeTokens));
+  if (!Number.isSafeInteger(count) || count < 1) throw new Error("Choose at least 1 Octeetoken.");
+  return updateUser((u) => {
+    if (!u.joelPro) throw new Error("Unlock JoelAI Pro first.");
+    if (tokensOf(u) < count) throw new Error(`You need ${count - tokensOf(u)} more Octeetoken${count - tokensOf(u) === 1 ? "" : "s"}.`);
+    u.tokens = tokensOf(u) - count;
+    u.joelPaidTokens = paidJoelTokensOf(u) + count * JOEL_TOKEN_RATE;
+    u.joelTokens = joelTokensOf(u);
+    u.history.unshift({ at: new Date().toISOString(), text: "Bought JoelTokens", amount: 0, tokens: -count, joelTokens: count * JOEL_TOKEN_RATE });
+    return count * JOEL_TOKEN_RATE;
+  });
+}
+export const fmtJoelTokens = (n) => `${Number(n || 0).toLocaleString("en-GB")} JoelToken${Number(n) === 1 ? "" : "s"}`;
+export function recordJoelUsage(usage, modelName) {
+  const total = Math.max(0, Math.floor(Number(usage?.totalTokens) || 0));
+  if (!total) throw new Error("JoelAI did not report token usage, so no answer was charged.");
+  return updateUser((u) => {
+    if (!u.joelPro) throw new Error("Unlock JoelAI Pro first.");
+    if (joelTokensOf(u) < total) throw new Error("That answer used more JoelTokens than you have. Buy more before asking again.");
+    const month = joelUsageMonth();
+    const usedThisMonth = u.joelMonthlyUsage?.month === month ? Math.max(0, Math.floor(Number(u.joelMonthlyUsage.usedTokens) || 0)) : 0;
+    const monthlyLeft = Math.max(0, JOEL_MONTHLY_GRANT - usedThisMonth);
+    const fromMonthly = Math.min(total, monthlyLeft);
+    u.joelMonthlyUsage = { month, usedTokens: usedThisMonth + fromMonthly };
+    u.joelPaidTokens = paidJoelTokensOf(u) - (total - fromMonthly);
+    u.joelTokens = joelTokensOf(u);
+    const old = u.joelUsage?.month === month ? u.joelUsage : { month, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+    u.joelUsage = {
+      month,
+      inputTokens: old.inputTokens + Math.max(0, Math.floor(Number(usage.inputTokens) || 0)),
+      outputTokens: old.outputTokens + Math.max(0, Math.floor(Number(usage.outputTokens) || 0)),
+      totalTokens: old.totalTokens + total
+    };
+    u.history.unshift({ at: new Date().toISOString(), text: `JoelAI Pro · ${modelName}`, amount: 0, tokens: 0, joelTokens: -total });
+    return { totalTokens: total, balance: u.joelTokens, usage: u.joelUsage };
+  });
+}
+
 // Use inside updateUser(): takes tokens off the account or throws a friendly error.
 export function spendTokens(u, n, text) {
   if (tokensOf(u) < n) { const short = n - tokensOf(u); throw new Error(`You need ${short} more Octeetoken${short === 1 ? "" : "s"} (this costs ${n}). Exchange Octmiles on the Octmiles page.`); }

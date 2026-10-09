@@ -666,6 +666,13 @@ input[type="range"] { width: 100%; accent-color: var(--octee-orange); }
 .jai-chip:hover { background: #ffd9b0; }
 .jai-form { display: flex; gap: 8px; }
 .jai-form input { flex: 1; min-width: 0; }
+.jai-pro { border: 1px solid #eadbcb; background: #fffaf3; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
+.jai-pro-copy { margin-bottom: 4px; }
+.jai-pro-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.jai-model-select { flex: 1 1 220px; min-width: 0; border: 1px solid #d9c4ad; border-radius: 8px; background: #fff; color: var(--octee-ink); padding: 7px 10px; font: inherit; }
+.jai-wallet { font: 700 .9rem var(--mono, monospace); margin: 8px 0 2px; }
+.jai-topups { display: flex; flex-wrap: wrap; gap: 6px; }
+.jai-usage { color: #6b5a4a; font: .72rem var(--mono, monospace); margin-top: 8px !important; }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--octee-orange-dark); text-decoration: underline; cursor: pointer; }
 
 /* ---------- Apology banner + JoelAI button ---------- */
@@ -959,3 +966,148 @@ body.turbulent main, body.turbulent .site-header, body.turbulent .site-footer { 
 @media (prefers-reduced-motion: no-preference) { .joel-fab-tip { animation: jf-pop .35s ease-out; } @keyframes jf-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } } }
 @media (max-width: 520px) { .joel-fab-t { display: none; } .joel-fab { padding: 6px; } .joel-fab-wrap { bottom: 64px; } }
 @media print { .joel-fab-wrap { display: none !important; } }
+
+/* Joel mode */
+.joel-closing { transition: transform .35s ease, opacity .35s ease; transform: scale(.9) translateY(-10px); opacity: 0; }
+.joel-closed { display: none !important; }
+.joel-closed-note { border: 2px dashed var(--octee-orange, #ff7a00); border-radius: 10px; padding: 6px 12px; margin: 6px 0; font-size: .85rem; background: rgba(255,122,0,.08); }
+.joel-mode-pill { position: fixed; left: 14px; bottom: 62px; z-index: 69; display: flex; align-items: center; gap: 10px; background: #2b1a0e; color: #ffd9b0; border: 2px solid #ff7a00; border-radius: 999px; padding: 4px 6px 4px 14px; font: 700 .82rem var(--sans); }
+.joel-mode-say { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%) translateY(10px); opacity: 0; transition: opacity .25s, transform .25s; z-index: 95; background: #fff; color: #2b1a0e; border: 2px solid #2b1a0e; border-radius: 12px; padding: 8px 14px; font: 600 .9rem var(--sans); max-width: calc(100vw - 28px); pointer-events: none; text-align: center; }
+.joel-mode-say.show { opacity: 1; transform: translateX(-50%); }
+@media (max-width: 520px) { .joel-mode-pill { bottom: 112px; } }
+@media print { .joel-mode-pill, .joel-mode-say { display: none !important; } }
+/* Joel's Tabs */
+.jt-win { border: 2px solid var(--ink, #2b1a0e); border-radius: 10px; overflow: hidden; background: #fff; margin: 8px 0; }
+.jt-bar { display: flex; gap: 10px; align-items: center; background: #e7ddd0; padding: 6px 10px; font-size: .8rem; }
+.jt-url { flex: 1; background: #fff; border-radius: 999px; padding: 2px 10px; color: #6b5a48; }
+.jt-tabs { display: flex; flex-wrap: wrap; gap: 3px; background: #d8ccbc; padding: 6px 6px 0; min-height: 40px; }
+.jt-tab { font: 600 .78rem var(--sans); padding: 6px 10px; border: 1px solid #b9a98f; border-bottom: 0; border-radius: 8px 8px 0 0; background: #efe6d8; cursor: pointer; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #2b1a0e; }
+.jt-tab.sel { background: #fff; }
+.jt-tab.saved { background: #d7f0df; border-color: #2e8b57; }
+.jt-tab.danger { background: #ffd7d3; border-color: #b3261e; color: #7a1410; }
+@media (prefers-reduced-motion: no-preference) { .jt-tab.danger { animation: jt-shake .18s infinite alternate; } @keyframes jt-shake { from { transform: translateX(-2px); } to { transform: translateX(2px); } } }
+.jt-page { padding: 22px 16px; min-height: 90px; font-size: 1.05rem; }
+/* The cupboard crush */
+body.cup-crush { overflow: hidden; }
+body.cup-crush .site-header, body.cup-crush main, body.cup-crush .site-footer, body.cup-crush .music-btn, body.cup-crush .turb-btn, body.cup-crush .joel-fab-wrap { transform-origin: 50% 100%; animation: crush-fall 1.4s cubic-bezier(.55,0,1,.55) forwards; }
+body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { animation-delay: .25s; }
+@keyframes crush-fall { 0% { transform: none; } 12% { transform: translateY(6px) scale(1.02, .97); } 100% { transform: translateY(125vh) rotate(5deg) scale(1.05, .5); opacity: .4; } }
+.crush-404 { position: fixed; inset: 0; z-index: 400; background: #111; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; gap: 6px; }
+.crush-big { font: 800 clamp(5rem, 28vw, 12rem)/1 var(--serif, serif); margin: 0; color: #ff7a00; transform: scaleY(.55); }
+.crush-h { color: #fff; margin: 0; font-size: clamp(1.6rem, 6vw, 2.8rem); }
+.crush-err { font: 700 1rem ui-monospace, Menlo, monospace; letter-spacing: .2em; color: #ff7a00; margin: 0 0 8px; }
+@media (prefers-reduced-motion: reduce) { body.cup-crush .site-header, body.cup-crush main, body.cup-crush .site-footer { animation: none; visibility: hidden; } }
+
+
+/* ---- Zhang Gullet Customer Service, Duty Free scan ---- */
+.gl-avatar { background: #1d3a5f; color: #fff; }
+.gl-log { height: 380px; }
+.gl-star { font-size: 1.4rem; color: #e8a400; padding: 0 2px; cursor: pointer; }
+.gl-star:hover, .gl-star:focus-visible { transform: scale(1.25); }
+.df-filters { align-items: center; gap: 14px; margin: 10px 0; }
+.df-scan { margin: 10px 0; border: 2px dashed var(--octee-orange); }
+.df-scan .actions { align-items: center; }
+.df-scan input { flex: 1 1 220px; }
+
+/* ---- Zhang Gullet Complaints Office ---- */
+.gc-letter { background: #fffdf6; border: 1px solid #d8c9a8; font-family: Georgia, "Times New Roman", serif; margin: 14px 0; }
+.gc-letter .gc-sign { margin: 0; font-style: italic; }
+.gc-rows { display: grid; gap: 10px; }
+.gc-track { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 6px 0 0; }
+.gc-dot { font-size: .78rem; padding: 2px 9px; border-radius: 999px; border: 1.5px solid #cdb79c; color: #7a6652; background: #fff; }
+.gc-dot.on { background: var(--octee-orange); border-color: var(--octee-ink); color: var(--octee-ink); font-weight: 700; }
+@media print { body * { visibility: hidden; } #gc-letter, #gc-letter * { visibility: visible; } #gc-letter { position: absolute; inset: 0 auto auto 0; width: 100%; } }
+.gc-badge { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; font: 700 1.6rem "Playfair Display", serif; }
+.gc-quote { margin: 10px 0; padding: 10px 14px; border-left: 4px solid var(--octee-orange); background: #fff8ee; font-style: italic; }
+.gc-sign { font: italic 700 1.5rem "Playfair Display", serif; margin: 0; }
+.gc-row { border-bottom: 1px dashed #d9c3a8; padding: 8px 0; }
+.gc-row:last-child { border-bottom: 0; }
+
+/* ---- Zhang Gullet: print, certificate, hold line, desk, staff ---- */
+.gc-print-root { display: none; }
+@media print {
+  body.gc-printing > *:not(.gc-print-root) { display: none !important; }
+  body.gc-printing .gc-print-root { display: block !important; padding: 20mm; color: #000; background: #fff; }
+  body.gc-printing .gc-print-root .card, body.gc-printing .gc-print-root .mail { box-shadow: none; border: 0; }
+}
+.gc-cert { text-align: center; border: 6px double #b45f06; border-radius: 6px; padding: 28px 24px; background: #fffdf6; max-width: 640px; margin: 14px auto; }
+.gc-cert-top { letter-spacing: .18em; text-transform: uppercase; font-size: .8rem; margin: 0; color: #7a4d24; }
+.gc-cert-title { font: 800 clamp(1.5rem, 4vw, 2.2rem) "Playfair Display", serif; margin: 6px 0 10px; color: #2b1a0e; }
+.gc-cert-name { font: italic 700 1.8rem "Playfair Display", serif; margin: 4px 0; border-bottom: 1px solid #b45f06; display: inline-block; padding: 0 20px; }
+.gc-doc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.hl-card { text-align: center; }
+.hl-phone { font-size: 3rem; margin: 0; }
+.hl-queue { font: 800 3.4rem var(--serif, serif); margin: 0; line-height: 1; }
+.hl-beat { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 54px; margin: 12px 0; }
+.hl-beat span { width: 10px; height: 4px; background: var(--octee-orange); border-radius: 3px; }
+.hl-beat.on span { animation: hlbeat 1.2s infinite ease-in-out; }
+.hl-beat.on span:nth-child(2) { animation-delay: .15s; } .hl-beat.on span:nth-child(3) { animation-delay: .3s; } .hl-beat.on span:nth-child(4) { animation-delay: .45s; }
+.hl-beat.on span:nth-child(5) { animation-delay: .6s; } .hl-beat.on span:nth-child(6) { animation-delay: .75s; } .hl-beat.on span:nth-child(7) { animation-delay: .9s; } .hl-beat.on span:nth-child(8) { animation-delay: 1.05s; }
+@keyframes hlbeat { 0%, 100% { height: 4px; } 12% { height: 4px; } 20% { height: 30px; } 30% { height: 4px; } }
+@media (prefers-reduced-motion: reduce) { .hl-beat.on span { animation: none; } }
+.hl-status { font-weight: 700; min-height: 1.4em; }
+.hl-caption { font-style: italic; color: #5a4030; min-height: 2.6em; }
+.hl-pickup { background: #e3f4e8; border: 2px solid var(--ok); border-radius: 12px; padding: 10px 14px; }
+.zd-desk { background: linear-gradient(#e7c9a0, #d1a770); border: 3px solid #7a4d24; border-radius: 14px; padding: 16px; text-align: center; }
+.zd-phone { font: inherit; font-size: 2.6rem; background: #2b1a0e; color: #ffd9b0; border: 3px solid #ff7a00; border-radius: 20px; width: 110px; height: 80px; cursor: pointer; }
+.zd-phone:active { transform: translateY(2px); }
+.zd-phone.ring { animation: zdring .5s 2; }
+@keyframes zdring { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+.zd-says { min-height: 3.2em; margin: 10px auto 4px; max-width: 520px; font-style: italic; background: #fff8ee; border-left: 4px solid var(--octee-orange); padding: 8px 12px; text-align: left; }
+.staff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 10px 0; }
+.staff-card { text-align: center; }
+.staff-card .gl-avatar { margin: 0 auto 6px; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font: 700 1.3rem "Playfair Display", serif; }
+.staff-unseen .gl-avatar { background: transparent; border: 3px dashed #7a4d24; color: #7a4d24; }
+.staff-phone .gl-avatar { background: #2b1a0e; font-size: 1.8rem; }
+.gc-says { background: #fff8ee; border: 2px dashed var(--octee-orange); border-radius: 12px; padding: 10px 14px; margin: 14px 0; }
+.gc-says strong { color: var(--octee-ink); }
+.joel-mode-btn { cursor: pointer; font: 700 .85rem var(--sans); padding: 6px 12px; border-radius: 999px; background: #fff; color: #2b1a0e; border: 2px solid #2b1a0e; box-shadow: 0 3px 0 #2b1a0e; }
+.joel-mode-btn[aria-pressed="true"] { background: #2b1a0e; color: #ffd9b0; border-color: #ff7a00; }
+.bp-cs { font-size: .62rem; margin: 6px 0 0; opacity: .8; }
+.chat-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0 0; font-size: .78rem; opacity: .75; }
+.chat-actions:hover, .chat-actions:focus-within { opacity: 1; }
+.chat-actions .chat-note { font-style: italic; color: #5a4030; }
+.jai-msg.me .chat-actions { display: none; }
+@media print { .chat-actions { display: none; } }
+
+/* FIA safety photos */
+.fia-safety-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 12px; }
+.fia-safety-grid figure { margin: 0; }
+.fia-safety-grid img { width: 100%; height: auto; border-radius: 8px; display: block; margin-bottom: 10px; }
+.fia-safety-grid figcaption { font-size: .95rem; line-height: 1.45; }
+
+/* Flight-Radar 25 */
+.fr-wrap { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 16px; margin: 16px 0; align-items: start; }
+.fr-map { padding: 0; overflow: hidden; background: #0a1a14; }
+.fr-map svg { display: block; width: 100%; height: auto; }
+.fr-plane { cursor: pointer; }
+.fr-plane:hover path, .fr-plane.sel path, .fr-plane:focus path { stroke: #ffe14a; stroke-width: 2.5; }
+.fr-plane:focus { outline: none; }
+.fr-sweep { transform-origin: 500px 330px; animation: frsweep 6s linear infinite; }
+.fr-glow { animation: frglow 1.6s ease-in-out infinite alternate; }
+@keyframes frsweep { to { transform: rotate(360deg); } }
+@keyframes frglow { from { fill-opacity: .15; } to { fill-opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .fr-sweep, .fr-glow { animation: none; } }
+.fr-side { display: grid; gap: 16px; }
+.fr-list { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; }
+.fr-row { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid #eadbcb; padding: 7px 4px; font: inherit; cursor: pointer; color: inherit; }
+.fr-row:hover, .fr-row.sel { background: #fff1de; }
+.fr-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.fr-time { margin: 0 0 16px; }
+.fr-timerow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.fr-timerow input[type=range] { flex: 1 1 220px; }
+.fr-clock { font-family: "JetBrains Mono", monospace; font-weight: 700; min-width: 100px; }
+@media (max-width: 760px) { .fr-wrap { grid-template-columns: 1fr; } }
+
+/* Normal Thursday log */
+.nt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+.nt-big { font: 800 2rem var(--serif, "Playfair Display", serif); margin: 0; color: var(--octee-orange-dark, #c25800); }
+.nt-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+.nt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.nt-entry { margin: 0; }
+/* Terminal maps */
+.tm-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.tm-tabs button { cursor: pointer; border: 2px solid var(--octee-orange, #ff7a00); border-radius: 999px; padding: 8px 16px; font: 700 .95rem var(--sans, Inter, sans-serif); background: var(--octee-orange, #ff7a00); color: var(--octee-ink, #2b1a0e); }
+.tm-tabs button[aria-selected="false"] { background: #fff; }
+.tm-map { padding: 10px; margin: 12px 0 18px; }
+.tm-scroll svg { min-width: 760px; }

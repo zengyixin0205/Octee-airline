@@ -29,7 +29,7 @@ const WHERE = [
 export const joelNow = () => { const h = new Date().getHours(); return (WHERE.find(([a, b]) => h >= a && h <= b) || WHERE[0])[2]; };
 export const timeGreeting = () => { const h = new Date().getHours(); return h < 5 ? "Hello (it is very late; the board is still on)" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 
-const MORE = {
+export const MORE = {
   delayed: "More on delays: every flight is exactly 1 millisecond late before it gets later. The stages are shown on the tracker in order (a bit, a lot, the plane has been informed). Each stage fills a square on Delay Bingo, and the apology letter gets longer as the delay does. The whole thing is written so that you always have something to press.",
   peanuts: "More on peanuts: the first ones come from the welcome bonus and the apology letters, and the cheapest way to earn is Whack-a-Joel and Hangman (1 a day each, just by playing well). Spend them on a JOELMOBILE (3) rather than tokens (5), and keep a few for the auction, where Gary always bids last.",
   miles: "More on Octmiles: they only come from flights (and codes, which I know nothing about). Tiers are by lifetime miles, so spending miles never lowers your tier. Turning miles into Octeetokens is one way only: the rate is 10 to 1, and tokens do not turn back.",

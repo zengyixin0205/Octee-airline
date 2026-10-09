@@ -31,3 +31,9 @@ allReviews().then((list) => {
     el("div", { class: "stars", "aria-label": r.stars + " out of 5" }, starsText(r.stars)),
     el("h3", {}, r.title), el("p", {}, r.body), el("p", { class: "meta" }, r.username))));
 });
+
+// "Zhang Gullet Says": one line from Customer Service, new every visit.
+const GSAYS = ["Your call is important to us. It is on a list.", "Everything is a ticket if you hold it for long enough.", "The telephone does not ring. It is thinking about it.", "A refund is only an apology that has been given a receipt.", "There is no queue. There is only me, and the person at the front of me.", "If a problem is not solved, wait. If it is still not solved, wait again. This is the whole job."];
+const says = el("aside", { class: "gc-says" }, el("strong", {}, "Zhang Gullet says: "), GSAYS[Math.floor(Math.random() * GSAYS.length)], " ", el("a", { href: "zhang-gullet.html" }, "Meet Mr Gullet"), " · ", el("a", { href: "gullet-hold.html" }, "Hold line"));
+const reviews = $("#review-strip");
+if (reviews) (reviews.previousElementSibling || reviews).before(says);

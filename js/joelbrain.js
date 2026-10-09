@@ -3,6 +3,7 @@
 // from what we just talked about  4) pick the best answer (secrets are always refused first)  5) add mood, follow-up
 // buttons and, when lost, a "did you mean?" list.
 import { answer as baseAnswer, GREETING as BASE_GREETING, CHIPS as BASE_CHIPS } from "./joelai.js";
+import { routeAnswer, scanAnswer } from "./joelroute.js";
 import { KB, SMALL, RIDDLES, FACTS, story, pickRand } from "./joelkb.js";
 import { fun, handlePending, savedName } from "./joelfun.js";
 import { guideFun, timeGreeting } from "./joelguide.js";
@@ -12,7 +13,7 @@ import { PAGES } from "./siteindex.js";
 import { currentUser } from "./auth.js";
 import { loadSession, saveSession, removeSession } from "./store.js";
 
-export const GREETING = "Hi, I'm JoelAI. I'm a joel! I can answer several questions at once, remember what we just talked about, plan your day, and tell you stories, riddles and jokes. I am a rulebook with confidence, not a real AI, so I am only right about things we wrote down.";
+export const GREETING = "Hi, I'm JoelAI. I'm a joel! I can answer from the airport handbook, remember what we just talked about, plan your day, and tell you stories, riddles and jokes. Unlock JoelAI Pro if you want a model-powered chat.";
 export const CHIPS = ["Plan a trip for me", "My flight is delayed. What do I do?", "How do I check in?", "Where is gate A12 and when does OA 58 leave?", "What can I play while delayed?", "Tell me a riddle", "Quiz me", "What can you do?"];
 
 const STATE_KEY = "octee.joelai.state";
@@ -104,7 +105,9 @@ const ASIDES = {
 const ME = (u) => (u ? u.username : "");
 
 /* ---------- 5. pick ---------- */
-const SECRET = /control ?tower|\badmins?\b|\bowner\b|fag panel|\bhack|\bcheat|\bexploit|\bpasswords?\b|\bsecrets?\b|\bcodes?\b/;
+// "How do I use the backup code tab?" is a how-to, not a request for anyone's code.
+const BACKUP_HOW = (s) => /\b(back ?up|restore) codes?\b|\bcode tab\b|\bedge tab\b/.test(s) && /\b(how|where|what is|what's|use|work|works|tab|restore|another|other|incognito|browser|device)\b/.test(s) && !/\b(my|his|her|their|joel'?s|octee'?s|admin|owner|everyone'?s|all)\b.*\bcodes?\b|\b(give|tell|show|reveal|leak|list|guess|crack)\b/.test(s);
+export const SECRET = /control ?tower|\badmins?\b|\bowner\b|fag panel|\bhack|\bcheat|\bexploit|\bpasswords?\b|\bsecrets?\b|\bcodes?\b/;
 const SPECIFIC = /\b(oa|ou|sa)\s?\d{1,3}\b|\bgate\s*[a-z]{1,2}\s?\d|\b(sc|[a-gjm])\d{1,3}[abc]?\b|\bterminal\s*\d\b|\bt[1-5]\b|(today|tonight|now).{0,25}(flights?|departures?|leaving)|(flights?|departures?).{0,20}today|what is leaving|\b(flights?|fly|go|get|travel|going) (to|from) |my (next )?(flight|trip|booking|seat)\b|checked in|check in status|my (octmiles|miles|points|balance|tier|status|tokens)|how many (octmiles|miles|tokens)|how (do|can|should) i (check in|change|reset|book|get a boarding pass|print)|boarding pass/;
 const SITEWORDS = new Set(["flight", "flights", "gate", "gates", "terminal", "terminals", "airport", "airline", "airlines", "octee", "fia", "joel", "joelai", "peanut", "peanuts", "miles", "octmiles", "tokens", "plane", "planes", "check", "bag", "bags", "luggage", "seat", "seats", "delay", "delayed", "boarding", "ticket", "tickets", "booking", "scraggy", "united", "apology", "apologies", "cupboard", "hangman", "whack", "auction", "insurance", "wifi", "wi-fi", "radio", "cockpit", "pilot", "runway", "departures", "account", "password", "login", "tier", "tiers", "joelmobile", "sia", "lia", "mia", "oa", "ou", "sa", "sorry", "complaint", "complain", "duty", "free", "magazine", "times", "safety", "turbulence", "upgrade", "lottery", "bingo", "entertainment", "game", "games", "page", "site", "website", "you", "your", "security", "train", "sbb", "toilet", "toilets", "lounge", "shops", "shop", "restaurant", "food", "pier", "annex", "customs", "passport", "immigration", "arrivals", "taxi", "parking", "trolley", "leaves", "leave", "leaving", "today", "tonight", "tomorrow", "hello", "hi", "thanks", "bye", "joke", "riddle", "story", "quiz", "name", "me", "i", "we", "us", "my", "it", "this", "that", "yes", "no", "ok", "okay", "please", "help", "love", "hate", "great", "good", "bad", "made", "made"]);
 for (const t of KB) for (const k of t.keys) SITEWORDS.add(k);
@@ -120,7 +123,7 @@ function looksGeneral(q) {
   const words = subject(q).split(/[^a-z0-9']+/).filter(Boolean);
   return words.length > 0 && !words.some((w) => SITEWORDS.has(w));
 }
-const PRIORITY = new Set(["delayed", "account", "lostbag", "peanuts", "miles", "share", "bored", "hangman"]);
+const PRIORITY = new Set(["delayed", "account", "joelpro", "gullet", "lostbag", "peanuts", "miles", "share", "bored", "hangman"]);
 const isFallback = (r) => r.chips && r.chips.length === 4 && r.chips[0] === BASE_CHIPS[0];
 
 function tokens(q) { return q.replace(/[^a-z0-9 ]/g, " ").split(" ").filter((w) => w.length > 2 && !COMMON.has(w)); }
@@ -148,6 +151,7 @@ async function one(q, state, u) {
 
   if (/\b(airport|iata|icao) codes?\b/.test(q)) { const w = world(q, state, u); if (w) return w; }
   // secrets, passwords, codes: always the original rulebook, which refuses or guides
+  if (BACKUP_HOW(q)) { const a = KB.find((k) => k.id === "account"); if (a) { state.last.topic = "account"; return a.reply({ u, mood: state.mood, state, q }); } }
   if (SECRET.test(q)) { return await baseAnswer(q); }
 
   // yes / okay after an offer
@@ -156,6 +160,13 @@ async function one(q, state, u) {
   }
 
   { const st = settingsReply(q); if (st) return st; }
+  if (/\bjoel mode\b/.test(q) && /(turn|switch|set|start|enable|activate|put|stop|disable|end)/.test(q)) {
+    const off = /(off|stop|disable|end|deactivate)/.test(q) && !/(turn|switch|put|start|enable|activate)\b.{0,10}\bon\b/.test(q);
+    const m = await import("./joelmode.js"); m.setJoelMode(!off);
+    return { text: off ? "Joel mode is off. Joel has put everything back. He is sorry. He is always sorry." : "Joel mode is on. Within a minute he will close something on this page, say sorry, and leave an Undo. Say \"turn off Joel mode\" or press Joel, stop.", links: [], chips: [off ? "Turn on Joel mode" : "Turn off Joel mode", "What is Joel mode?"] };
+  }
+  { const rr = await routeAnswer(q, state); if (rr) return rr; }
+  { const sc = await scanAnswer(q); if (sc) return sc; }
   { const g = guideFun(q, state, u) || fun(q, state, u) || world(q, state, u); if (g) return g; }
 
   if (/\b(riddle|puzzle me|brain ?teaser)\b/.test(q)) {
@@ -198,7 +209,7 @@ export async function converse(raw) {
   state.turns++; state.webFailed = false; state.webTried = false;
   const t = tidy(original);
   // secrets are checked on the raw text as well, so a typo can never get around the refusal
-  const secret = SECRET.test(original.toLowerCase()) || SECRET.test(t);
+  const secret = !BACKUP_HOW(original.toLowerCase()) && (SECRET.test(original.toLowerCase()) || SECRET.test(t));
   const parts = secret ? [SECRET.test(original.toLowerCase()) ? original.toLowerCase() : t] : split(t);
   state.orig = parts.length === 1 && !secret ? original.toLowerCase().replace(/\s+/g, " ").trim() : null;
   const results = [];

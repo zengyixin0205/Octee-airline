@@ -79,9 +79,9 @@ function render() {
       el("div", { class: "progress", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct), "aria-label": "Progress to next tier" }, el("span", { style: `width:${pct}%` })),
       el("p", { class: "hint" }, next ? `${fmtMiles(next.min - u.lifetime)} more lifetime Octmiles to ${next.name}.` : "Top tier. There is nowhere left to go. Like our planes."));
     $("#history").replaceChildren(el("div", { class: "table-wrap" }, el("table", { class: "plain" },
-      el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "What"), el("th", {}, "Octmiles"), el("th", {}, "Octeetokens"), el("th", {}, "Scraggymiles"))),
+      el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "What"), el("th", {}, "Octmiles"), el("th", {}, "Octeetokens"), el("th", {}, "JoelTokens"), el("th", {}, "Scraggymiles"))),
       el("tbody", {}, (u.history || []).slice(0, 50).map((h) => el("tr", {},
-        el("td", {}, niceDate(h.at.slice(0, 10))), el("td", {}, h.text), el("td", {}, h.amount ? (h.amount > 0 ? "+" : "") + fmtMiles(h.amount) : "—"), el("td", {}, h.tokens ? (h.tokens > 0 ? "+" : "") + fmtMiles(h.tokens) : "—"), el("td", {}, h.scraggy ? (h.scraggy > 0 ? "+" : "") + fmtMiles(h.scraggy) : "—")))))));
+        el("td", {}, niceDate(h.at.slice(0, 10))), el("td", {}, h.text), el("td", {}, h.amount ? (h.amount > 0 ? "+" : "") + fmtMiles(h.amount) : "—"), el("td", {}, h.tokens ? (h.tokens > 0 ? "+" : "") + fmtMiles(h.tokens) : "—"), el("td", {}, h.joelTokens ? (h.joelTokens > 0 ? "+" : "") + fmtMiles(h.joelTokens) : "—"), el("td", {}, h.scraggy ? (h.scraggy > 0 ? "+" : "") + fmtMiles(h.scraggy) : "—")))))));
   }
   const shop = $("#shop");
   shop.replaceChildren(...REWARDS.map((r) => {

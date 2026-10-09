@@ -23,6 +23,7 @@
 <div class="tabs" role="tablist" aria-label="Log in or sign up">
   <button type="button" role="tab" id="tab-login" aria-selected="true" aria-controls="form-login">Log in</button>
   <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form-signup">Sign up</button>
+  <button type="button" role="tab" id="tab-cloud" aria-selected="false" aria-controls="form-cloud">Cloud account</button>
   <button type="button" role="tab" id="tab-restore" aria-selected="false" aria-controls="form-restore">Backup code</button>
 </div>
 <form id="form-login" class="card" role="tabpanel" aria-labelledby="tab-login">
@@ -40,6 +41,15 @@
   <div class="field"><label for="su-confirm">Confirm password</label><input type="password" id="su-confirm" name="confirm" autocomplete="new-password"></div>
   <div class="actions"><button class="btn" type="submit">Sign up (+100 Octmiles)</button></div>
   <p id="msg-signup" class="msg" role="status" aria-live="polite"></p>
+</form>
+<form id="form-cloud" class="card" role="tabpanel" aria-labelledby="tab-cloud" hidden>
+  <p class="note" style="margin-top:0">A cloud account follows you to any device: log in anywhere and your Octmiles, tokens, peanuts and trips are there. Use a new password, not a real one.</p>
+  <div class="field"><label for="cl-user">Cloud username</label><input type="text" id="cl-user" name="username" autocomplete="username" maxlength="20"></div>
+  <div class="field"><label for="cl-pass">Password</label>
+    <div class="row" style="flex-wrap:nowrap"><input type="password" id="cl-pass" name="password" autocomplete="current-password"><button type="button" class="btn small ghost" data-show-password="cl-pass" aria-pressed="false">Show</button></div>
+    <p class="hint">At least 8 characters. Creating an account here also makes it in this browser (+100 Octmiles).</p></div>
+  <div class="actions"><button class="btn" type="submit" value="login">Log in to the cloud</button> <button class="btn ghost" type="button" id="cl-create">Create a cloud account</button></div>
+  <p id="msg-cloud" class="msg" role="status" aria-live="polite"></p>
 </form>
 <form id="form-restore" class="card" role="tabpanel" aria-labelledby="tab-restore" hidden>
   <div class="field"><label for="rs-code">Account backup code</label><textarea id="rs-code" name="code" rows="6" spellcheck="false" autocomplete="off" placeholder="OCTEE1.…" style="font-family:var(--mono,monospace);width:100%"></textarea>

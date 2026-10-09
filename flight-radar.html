@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight-Radar 25 — Octee Airlines</title>
+<meta name="description" content="Flight-Radar 25, better than 24. See every Octee, One United and Scraggy plane in the air right now, more or less.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/flight-radar.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+<p class="eyebrow">Live-ish · Every plane we can find</p>
+<h1 class="headline">FLIGHT-RADAR 25<span class="punch long">better than 24</span></h1>
+<p class="lead">One more than 24, and it shows. Every Octee Airlines, One United and Scraggy Airlines plane in the air, drawn from the timetable and the time. Click a plane to see what it is doing.</p>
+</section>
+<div class="fr-wrap">
+  <div class="fr-map card">
+    <svg id="fr-svg" viewBox="0 0 1000 600" role="img" aria-label="Radar map of the Octee network with planes moving between airports"></svg>
+  </div>
+  <aside class="fr-side">
+    <div class="card" id="fr-info" aria-live="polite"></div>
+    <div class="card"><h3 style="margin-top:0">In the air <span id="fr-count" class="tag"></span></h3><ul id="fr-list" class="fr-list"></ul></div>
+  </aside>
+</div>
+<div class="card fr-time">
+  <label for="fr-slider"><strong>Time machine</strong> <span class="note">drag to see the sky at any time of the day (FIA time)</span></label>
+  <div class="fr-timerow"><input id="fr-slider" type="range" min="0" max="1439" step="1" aria-label="Time of day"><output id="fr-clock" class="fr-clock"></output><button id="fr-busy" class="btn" type="button">Busiest sky</button><button id="fr-live" class="btn" type="button">Live</button></div>
+</div>
+<p class="note" style="text-align:center">Orange: Octee Airlines · Blue: One United · Green: Scraggy Airlines. Flight-Radar 25 is not affiliated with 24. We have not met 24. Positions are a guess based on the timetable, and nothing here is ever late (we do not check).</p>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">Flight-Radar 25 needs JavaScript. Radar usually does.</p></noscript>
+</body>
+</html>

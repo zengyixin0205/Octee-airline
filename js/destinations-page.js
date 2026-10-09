@@ -49,10 +49,12 @@ const SPOT = {
   SCH: { x: 345, y: 395, label: "Scraggy House", sub: "", dx: 0, dy: 30, anchor: "middle" },
   LIA: { x: 765, y: 410, label: "LIA", sub: "Lu Pin International", dx: 0, dy: 32, anchor: "middle" },
   MIA: { x: 385, y: 95, label: "MIA", sub: "Mdm Wrong-Wrong International", dx: 16, dy: -8 },
+  TDA: { x: 505, y: 432, label: "TDA", sub: "Tabletop Domestic", dx: 0, dy: 32, anchor: "middle" },
+  MFIA: { x: 690, y: 148, label: "MFIA", sub: "Mt Fuji International", dx: 16, dy: -6 },
   LUJ: { x: 105, y: 355, label: "Lujin's", sub: "", dx: 0, dy: 30, anchor: "middle" }
 };
 const LAND = [   // [cx, cy, rx, ry, seed]
-  [585, 300, 150, 100, 7], [770, 400, 78, 52, 3], [305, 315, 120, 135, 11], [380, 95, 95, 52, 5], [105, 350, 52, 40, 2], [690, 140, 40, 22, 9], [180, 180, 26, 16, 4]
+  [585, 300, 150, 100, 7], [770, 400, 78, 52, 3], [305, 315, 120, 135, 11], [380, 95, 95, 52, 5], [105, 350, 52, 40, 2], [690, 140, 40, 22, 9], [180, 180, 26, 16, 4], [505, 428, 46, 26, 13]
 ];
 function rng(seed) { let s = seed * 9301 + 49297; return () => ((s = (s * 9301 + 49297) % 233280) / 233280); }
 function blob(cx, cy, rx, ry, seed) {

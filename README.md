@@ -2,7 +2,7 @@
 
 **FLY SOMEWHERE. EVENTUALLY.** A parody airline website: Octee pretends everything is fine. It isn't.
 
-Plain HTML, CSS and JavaScript. **100% static**: no build step, no server, no database. See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full plan.
+The site is plain HTML, CSS and JavaScript. Most pages are static and save accounts in each browser. **JoelAI Pro** adds one Vercel Node function and calls Vercel AI Gateway for real model answers. See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full plan.
 
 ## Run it locally
 
@@ -19,9 +19,20 @@ python3 -m http.server 8000
 2. **Settings → Pages → Build and deployment → Source: Deploy from a branch**, choose **main** and **/ (root)**, **Save**.
 3. After about a minute the site is live at `https://zengyixin0205.github.io/Octee-airline/`. Every push to `main` redeploys it.
 
+GitHub Pages runs the handbook version of JoelAI only. JoelAI Pro needs the `api/joelai.js` function, so deploy the project to Vercel to enable it.
+
+## Enable JoelAI Pro on Vercel
+
+1. Import this repository into Vercel.
+2. Set `JOELAI_ENABLED=true` and add an `AI_GATEWAY_API_KEY` in the project's server environment (Vercel OIDC can be used on a linked deployment instead).
+3. Set an AI Gateway project or team spend budget before enabling the endpoint. It is publicly reachable, and the light per-IP rate limit is not a durable spend limit.
+4. Redeploy. JoelAI Pro stays unavailable until `JOELAI_ENABLED=true` and gateway authentication are both present.
+
+JoelAI Pro uses the model's reported input and output token counts. Users unlock Pro for 10 Octeetokens, receive 10,000 JoelTokens each month, and can buy 2,500 more per Octeetoken. Purchased tokens carry over. The account wallet and history still live in browser storage, so users can edit them and balances do not sync across devices. These are game credits with no real-world value. Chat messages sent in Pro mode go to the selected model through AI Gateway.
+
 ## What is saved where
 
-There is no database. Accounts, Octmiles, trips and reviews are saved **in each visitor's own browser** (`localStorage`). They don't follow you to another device.
+There is no account database. Accounts, Octmiles, trips, JoelTokens and personal usage totals are saved **in each visitor's own browser** (`localStorage`). They don't follow you to another device. Published reviews and codes are repo data. JoelAI Pro's model request runs on the Vercel function when deployed there.
 
 Things everyone sees live in `data/` and change when you commit:
 

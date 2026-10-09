@@ -1,0 +1,11 @@
+{
+  "name": "octee-airline",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ai": "7.0.133"
+  }
+}

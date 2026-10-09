@@ -7,15 +7,17 @@ export const PLACES = {
   LIA: { name: "Lu Pin International Airport", short: "LIA", oa: true, aliases: ["lia", "lu pin", "lupin", "lu pin international"] },
   SCH: { name: "Scraggy House", short: "Scraggy House", oa: true, aliases: ["scraggy house", "scraggys house", "sch"] },
   MIA: { name: "Mdm Wrong-Wrong International Airport", short: "MIA", oa: true, aliases: ["mia", "mdm wrong wrong", "madam wrong wrong", "wrong wrong", "mdm wrong wrong house", "mdm wrongwrongs", "mdm wrong wrong international"] },
+  TDA: { name: "Tabletop Domestic Airport", short: "TDA", oa: true, aliases: ["tda", "tabletop", "tabletop domestic", "table top", "domestic airport", "tabletop airport"] },
+  MFIA: { name: "Mt Fuji International Airport", short: "MFIA", oa: true, aliases: ["mfia", "mt fuji", "mount fuji", "mt fuji international", "mount fuji international", "mt fuji airport", "transit hub"] },
   LUJ: { name: "Lujin's", short: "Lujin's", oa: false, aliases: ["lujin", "lujins"] }
 };
 // Places you can start a trip from on the FIA form (served by Octee or One United)
-export const OA_PLACES = ["FIA", "SIA", "LIA", "SCH", "MIA"];
+export const OA_PLACES = ["FIA", "SIA", "LIA", "SCH", "MIA", "TDA", "MFIA"];
 export const placeName = (c) => PLACES[c]?.name || c;
 export const placeShort = (c) => PLACES[c]?.short || c;
 
 // Octmiles per stretch between two neighbouring stops
-const RATES = { "FIA-SIA": 150, "FIA-LIA": 200, "FIA-SCH": 250, "LIA-SIA": 120, "SCH-SIA": 80, "FIA-MIA": 300 };
+const RATES = { "FIA-SIA": 150, "FIA-LIA": 200, "FIA-SCH": 250, "LIA-SIA": 120, "SCH-SIA": 80, "FIA-MIA": 300, "FIA-TDA": 120, "SIA-TDA": 140, "FIA-MFIA": 180, "MFIA-SIA": 110, "MFIA-TDA": 90, "SCH-TDA": 130 };
 export const rate = (a, b) => RATES[[a, b].sort().join("-")] || 0;
 
 // Weekly timetable. days: 1 = Mon … 7 = Sun. stops: [airport, arrive, depart]. All Singapore time.
@@ -40,8 +42,19 @@ export const OA_FLIGHTS = [
   { no: "OA 115", days: [6],    stops: [["LIA", null, "06:30"], ["FIA", "09:00", "09:45"], ["SCH", "11:35", null]] },
   { no: "OA 116", days: [7],    stops: [["SCH", null, "08:20"], ["FIA", "10:10", "10:50"], ["LIA", "13:20", null]] },
   { no: "OA 117", days: [4],    stops: [["FIA", null, "10:00"], ["SCH", "11:50", "12:30"], ["SIA", "13:10", null]] },
-  { no: "OA 118", days: [4],    stops: [["SIA", null, "15:00"], ["SCH", "15:40", "16:20"], ["FIA", "18:10", null]] }
+  { no: "OA 118", days: [4],    stops: [["SIA", null, "15:00"], ["SCH", "15:40", "16:20"], ["FIA", "18:10", null]] },
+  // Tabletop Domestic Airport (TDA): Octee and One United only. No Scraggy Airlines.
+  { no: "OA 120", days: ALL,       stops: [["FIA", null, "08:10"], ["TDA", "09:20", null]] },
+  { no: "OA 121", days: ALL,       stops: [["TDA", null, "10:00"], ["FIA", "11:10", null]] },
+  { no: "OA 122", days: [1, 3, 5], stops: [["TDA", null, "12:30"], ["SIA", "14:10", null]] },
+  { no: "OA 123", days: [1, 3, 5], stops: [["SIA", null, "15:30"], ["TDA", "17:10", null]] },
+  // Mt Fuji International Airport (MFIA): a transit hub. Octee is the ONLY airline that flies between MFIA and FIA.
+  { no: "OA 124", days: ALL,          stops: [["FIA", null, "13:00"], ["MFIA", "14:35", null]] },
+  { no: "OA 125", days: ALL,          stops: [["MFIA", null, "15:30"], ["FIA", "17:05", null]] },
+  { no: "OA 126", days: [2, 4, 6, 7], stops: [["FIA", null, "09:40"], ["MFIA", "11:15", null]] },
+  { no: "OA 127", days: [2, 4, 6, 7], stops: [["MFIA", null, "12:10"], ["FIA", "13:45", null]] }
 ];
+export const MFIA_NOTE = "MFIA is a transit hub for SIA and One United. Octee Airlines is the only airline that flies between MFIA and FIA.";
 // ONE UNITED (OU) — "unitation is a dream, it's chaos." Another airline at FIA, serving mainly
 // Scraggy House and SIA. Its flights are timed to connect with Octee (OA) and Scraggy Airlines (SA).
 // Booked on the FIA form; earns half Octmiles.
@@ -55,7 +68,18 @@ export const OU_FLIGHTS = [
   { no: "OU 7", days: ALL,       stops: [["FIA", null, "16:30"], ["SIA", "18:20", null]] },
   { no: "OU 8", days: ALL,       stops: [["SIA", null, "19:10"], ["FIA", "21:00", null]] },
   { no: "OU 9",  days: [2, 4, 6], stops: [["FIA", null, "09:30"], ["MIA", "11:40", null]] },
-  { no: "OU 10", days: [2, 4, 6], stops: [["MIA", null, "12:40"], ["FIA", "14:50", null]] }
+  { no: "OU 10", days: [2, 4, 6], stops: [["MIA", null, "12:40"], ["FIA", "14:50", null]] },
+  // Tabletop Domestic Airport (TDA) and the MFIA hub. One United never flies between MFIA and FIA.
+  { no: "OU 11", days: ALL,          stops: [["FIA", null, "07:20"], ["TDA", "08:30", null]] },
+  { no: "OU 12", days: ALL,          stops: [["TDA", null, "18:40"], ["FIA", "19:50", null]] },
+  { no: "OU 13", days: [1, 3, 5, 7], stops: [["SIA", null, "07:00"], ["MFIA", "08:10", null]] },
+  { no: "OU 14", days: [1, 3, 5, 7], stops: [["MFIA", null, "09:00"], ["SIA", "10:10", null]] },
+  { no: "OU 15", days: [2, 4, 6],    stops: [["SCH", null, "08:00"], ["TDA", "09:15", null]] },
+  { no: "OU 16", days: [2, 4, 6],    stops: [["TDA", null, "10:00"], ["SCH", "11:15", null]] },
+  { no: "OU 17", days: ALL,          stops: [["TDA", null, "12:00"], ["MFIA", "13:05", null]] },
+  { no: "OU 18", days: ALL,          stops: [["MFIA", null, "16:00"], ["TDA", "17:05", null]] },
+  { no: "OU 19", days: ALL,          stops: [["MFIA", null, "11:00"], ["SIA", "12:10", null]] },
+  { no: "OU 20", days: ALL,          stops: [["SIA", null, "14:00"], ["MFIA", "15:10", null]] }
 ];
 export const AIRLINES = {
   OA: { name: "Octee Airlines", milesFactor: 1 },

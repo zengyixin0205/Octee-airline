@@ -22,7 +22,9 @@
       "codeDays": {},
       "codeExtra": {},
       "rides": [],
-      "reviewBonus": false
+      "reviewBonus": false,
+      "codeSalt": "EoVPVJ/QTsez+3fk7qJsBg==",
+      "codeHash": "StYyQXAlZ31R4c+wl5WyQzE1u6eZdGJBlbeb23kkGEw="
     },
     {
       "username": "Octee",
@@ -46,7 +48,9 @@
       "codeDays": {},
       "codeExtra": {},
       "rides": [],
-      "reviewBonus": false
+      "reviewBonus": false,
+      "codeSalt": "Ud98isqYpilr9GQwxrQZ8A==",
+      "codeHash": "su077+EGT+GFjtVdFQQTpDcz32z+UnO17ti1wl4O/0Y="
     },
     {
       "username": "Marcus",
@@ -70,7 +74,9 @@
       "codeDays": {},
       "codeExtra": {},
       "rides": [],
-      "reviewBonus": false
+      "reviewBonus": false,
+      "codeSalt": "9T/k8fNocQ4aneJy0ISb3Q==",
+      "codeHash": "1TiLpLorZAwC3H8uKO/QNS1ldir1nDIwde5os9kQNK8="
     },
     {
       "username": "Lu Jin",
@@ -94,7 +100,9 @@
       "codeDays": {},
       "codeExtra": {},
       "rides": [],
-      "reviewBonus": false
+      "reviewBonus": false,
+      "codeSalt": "AXy3z98lMfY2C3m/nc5uaQ==",
+      "codeHash": "MZpC+85pAdguuuRFOBCdQuSzndluDs3NPgvZrbbdR5c="
     },
     {
       "username": "Oliver",
@@ -118,7 +126,9 @@
       "codeDays": {},
       "codeExtra": {},
       "rides": [],
-      "reviewBonus": false
+      "reviewBonus": false,
+      "codeSalt": "/RYRS3n2IdJqlFWHlLDWyw==",
+      "codeHash": "V3HJc+vw+MQKgp5n8Y6GjAdg2GaF224iky1Ubkg3+JY="
     },
     {
       "username": "David",
@@ -142,7 +152,9 @@
       "codeDays": {},
       "codeExtra": {},
       "rides": [],
-      "reviewBonus": false
+      "reviewBonus": false,
+      "codeSalt": "BeW/cIa3n4Qv4GXP7ZnUvA==",
+      "codeHash": "FuaSmKto7ak0WjDSYAuq8j/9W6sB9uqHaz4zkWHFgl0="
     }
   ]
 }

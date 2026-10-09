@@ -1,9 +1,10 @@
 import { $, setMsg } from "./dom.js";
 import { signUp, logIn, MESSAGES, safeNext } from "./auth.js";
-import { restoreBackup, BACKUP_MESSAGES } from "./backup.js";
+import { loadCode, codeMessage } from "./codeload.js";
+import { cloudLogin, cloudCreate, cloudMessage } from "./cloud.js";
 
-const tabs = { login: $("#tab-login"), signup: $("#tab-signup"), restore: $("#tab-restore") };
-const forms = { login: $("#form-login"), signup: $("#form-signup"), restore: $("#form-restore") };
+const tabs = { login: $("#tab-login"), signup: $("#tab-signup"), cloud: $("#tab-cloud"), restore: $("#tab-restore") };
+const forms = { login: $("#form-login"), signup: $("#form-signup"), cloud: $("#form-cloud"), restore: $("#form-restore") };
 function show(which) {
   for (const k of Object.keys(tabs)) {
     tabs[k].setAttribute("aria-selected", String(k === which));
@@ -12,9 +13,11 @@ function show(which) {
 }
 tabs.login.addEventListener("click", () => show("login"));
 tabs.signup.addEventListener("click", () => show("signup"));
+tabs.cloud.addEventListener("click", () => show("cloud"));
 tabs.restore.addEventListener("click", () => show("restore"));
 if (location.hash === "#restore") show("restore");
 if (location.hash === "#signup") show("signup");
+if (location.hash === "#cloud") show("cloud");
 
 for (const btn of document.querySelectorAll("[data-show-password]")) {
   btn.addEventListener("click", () => {
@@ -49,8 +52,22 @@ forms.restore.addEventListener("submit", async (e) => {
   const msg = $("#msg-restore");
   setMsg(msg, "Opening your backup… (we lose things)", "info");
   try {
-    const u = await restoreBackup(forms.restore.elements.code.value);
+    const u = await loadCode(forms.restore.elements.code.value);
     setMsg(msg, `Welcome back, ${u.username}. Your miles are here. We found them in a code.`, "ok");
     setTimeout(() => (location.href = safeNext("account.html")), 900);
-  } catch (err) { setMsg(msg, BACKUP_MESSAGES[err.message] || "Something went wrong. Blame Joel.", "error"); }
+  } catch (err) { setMsg(msg, codeMessage(err), "error"); }
 });
+
+// Cloud account: log in (or create) with a username and password that works on any device.
+const cloudGo = async (fn, hello) => {
+  const msg = $("#msg-cloud"), f = forms.cloud, u = f.elements.username.value, p = f.elements.password.value;
+  setMsg(msg, "Calling the cloud… (it is a long way up)", "info");
+  f.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try {
+    const user = await fn(u, p);
+    setMsg(msg, hello(user), "ok");
+    setTimeout(() => (location.href = safeNext("account.html")), 900);
+  } catch (err) { setMsg(msg, cloudMessage(err), "error"); f.querySelectorAll("button").forEach((b) => (b.disabled = false)); }
+};
+forms.cloud.addEventListener("submit", (e) => { e.preventDefault(); cloudGo(cloudLogin, (u) => `Welcome back, ${u.username}. Your account came down from the cloud.`); });
+$("#cl-create").addEventListener("click", () => cloudGo(cloudCreate, (u) => `Cloud account made. Welcome aboard, ${u.username}.`));

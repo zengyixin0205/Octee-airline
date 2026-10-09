@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Normal Thursday log — Octee Airlines</title>
+<meta name="description" content="The Octee incident log. Every incident is a normal Thursday. OA 014 is entry number one.">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/main.js"></script>
+<script type="module" src="js/normal-thursday.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main id="main">
+<section class="hero">
+<p class="eyebrow">Incident log · Safety · FIA</p>
+<h1 class="headline">NORMAL THURSDAY<span class="punch long">the incident log</span></h1>
+<p class="lead">Every incident at Octee Airlines is filed here, and every incident is a normal Thursday. That is not a rule. It is how we remember them.</p>
+</section>
+<div class="nt-stats" id="nt-stats"></div>
+<section class="guide" aria-labelledby="nt-h">
+  <h2 id="nt-h">The log</h2>
+  <div class="nt-filter" role="group" aria-label="Filter the log"><button type="button" class="btn small" data-f="all" aria-pressed="true">All entries</button><button type="button" class="btn small ghost" data-f="PEANUT" aria-pressed="false">Peanut faults</button><button type="button" class="btn small ghost" data-f="Weather" aria-pressed="false">Weather</button><button type="button" class="btn small ghost" data-f="Gate" aria-pressed="false">Gate</button><button type="button" class="btn small ghost" data-f="Yours" aria-pressed="false">Yours</button></div>
+  <ol id="nt-list" class="nt-list"></ol>
+</section>
+<section class="card" aria-labelledby="nt-add-h">
+  <h2 id="nt-add-h" style="margin-top:0">File a normal Thursday</h2>
+  <p class="note">Something happened to you? It was a normal Thursday. Write it down. It stays in this browser, and nobody will read it, but it will be filed.</p>
+  <form id="nt-form"><div class="field"><label for="nt-what">What happened?</label><textarea id="nt-what" rows="3" maxlength="300"></textarea></div>
+  <div class="field"><label for="nt-where">Where?</label><input id="nt-where" maxlength="40" placeholder="Gate, flight, airport, or the cupboard"></div>
+  <div class="actions"><button class="btn small" type="submit">File it</button></div><p id="nt-msg" class="msg" role="status" aria-live="polite"></p></form>
+</section>
+<p class="note" style="text-align:center">All incidents are fictional. Octee Airlines does not exist, and neither does Thursday. See also the <a href="fia.html#safety">Safety section at FIA</a> and <a href="safety.html">the safety demo</a>.</p>
+</main>
+<div id="site-footer"></div>
+<noscript><p style="text-align:center;padding:12px">This page needs JavaScript. A normal Thursday does not.</p></noscript>
+</body>
+</html>

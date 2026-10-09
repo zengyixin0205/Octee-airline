@@ -23,6 +23,8 @@ export const MESSAGES = {
   bad_username: "Usernames need 3–20 letters, numbers or underscores. No spaces, no peanuts.",
   short_password: "Password too short. Like our legroom.",
   mismatch: "Those passwords don't match. Neither do our timetables.",
+  bad_code: "That backup code is not one of ours. Check the letters. Zero is not O. Sometimes.",
+  code_wait: "Too many wrong codes. The code desk is closed for a few minutes. Please sit.",
   storage: "Login is delayed. Please hold. (This browser won't let us save anything.)"
 };
 
@@ -40,13 +42,13 @@ export function etchedAccounts() {
   }
   return etchedCache;
 }
-const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, scraggymiles: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
+const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, joelTokens: 0, joelPaidTokens: 0, joelMonthlyUsage: null, joelPro: false, joelUsage: null, scraggymiles: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
 const fromEtched = (e) => ({ ...BLANK(), ...e });
 const etchedFor = async (key) => (await etchedAccounts()).find((a) => a.username.toLowerCase() === key) || null;
 // What the Account page shows: is this account in the code, and since when?
 export async function etchedInfo(username) {
   const e = await etchedFor(String(username || "").toLowerCase());
-  return e ? { etchedAt: e.etchedAt || null } : null;
+  return e ? { etchedAt: e.etchedAt || null, hasCode: !!(e.codeSalt && e.codeHash) } : null;
 }
 // A logged-in account picks up a newer copy from the code by itself (same password only).
 export async function syncEtched() {
@@ -75,6 +77,7 @@ export async function signUp(username, password, confirm) {
   users[key] = {
     username, salt, hash: await hashPassword(password, salt), createdAt: now,
     octmiles: WELCOME_BONUS, lifetime: WELCOME_BONUS,
+    joelTokens: 0, joelPaidTokens: 0, joelMonthlyUsage: null, joelPro: false, joelUsage: null,
     history: [{ at: now, text: "Welcome bonus. Please do not ask what they are worth.", amount: WELCOME_BONUS }],
     trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false
   };
@@ -97,6 +100,48 @@ export async function logIn(username, password) {
   save(SESSION, key);
   notify();
   return u;
+}
+
+// Backup code for an etched account (data/accounts.json holds only a salted hash of it).
+// Works in any browser with no login. Wrong guesses are slowed down in this browser.
+const TRIES = "octee.codetries";
+export async function logInWithCode(code) {
+  const norm = String(code || "").toUpperCase().replace(/[\s-]/g, "");
+  if (norm.length < 4) throw new AuthError("bad_code");
+  const t = load(TRIES, { n: 0, until: 0 });
+  if (t.until && Date.now() < t.until) throw new AuthError("code_wait");
+  let hit = null;
+  for (const e of await etchedAccounts()) {
+    if (e.codeSalt && e.codeHash && (await hashPassword(norm, e.codeSalt)) === e.codeHash) { hit = e; break; }
+  }
+  if (!hit) {
+    const n = (t.n || 0) + 1;
+    save(TRIES, n >= 5 ? { n: 0, until: Date.now() + 5 * 60 * 1000 } : { n, until: 0 });
+    throw new AuthError("bad_code");
+  }
+  remove(TRIES);
+  const key = hit.username.toLowerCase();
+  const users = allUsers();
+  if (!users[key] || String(hit.etchedAt || "") > String(users[key].etchedAt || "")) { users[key] = fromEtched(hit); saveUsers(users); }
+  save(SESSION, key);
+  notify();
+  return users[key];
+}
+
+// Change the logged-in account's password. For an etched account the new password works in THIS browser only
+// (other devices keep using the one in the file, until the airline publishes a new one).
+export async function changePassword(current, next, confirm) {
+  const key = load(SESSION, null);
+  const users = allUsers();
+  const u = key && users[key];
+  if (!u || (await hashPassword(current || "", u.salt)) !== u.hash) throw new AuthError("bad_login");
+  if (String(next || "").length < CONFIG.PASSWORD_MIN) throw new AuthError("short_password");
+  if (next !== confirm) throw new AuthError("mismatch");
+  const salt = randomSalt();
+  u.salt = salt; u.hash = await hashPassword(next, salt);
+  saveUsers(users);
+  notify();
+  return true;
 }
 
 export function logOut() { remove(SESSION); notify(); }

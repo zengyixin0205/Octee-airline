@@ -45,7 +45,7 @@ export async function restoreBackup(code) {
   const u = await readBackup(code);
   const key = u.username.toLowerCase();
   const users = load(USERS, {});
-  users[key] = { octmiles: 0, lifetime: 0, tokens: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], ...u };
+  users[key] = { octmiles: 0, lifetime: 0, tokens: 0, joelTokens: 0, joelPaidTokens: 0, joelMonthlyUsage: null, joelPro: false, joelUsage: null, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], ...u };
   save(USERS, users);
   save(SESSION, key);
   notify();

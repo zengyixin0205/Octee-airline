@@ -2,7 +2,7 @@
 import { CONFIG } from "./config.js";
 import { $, el, fmtMiles } from "./dom.js";
 import { currentUser, logOut, syncEtched } from "./auth.js";
-import { tierFor } from "./miles.js";
+import { tierFor, joelTokensOf } from "./miles.js";
 import "./music.js";
 
 const PAGES = [
@@ -31,8 +31,9 @@ const PAGES = [
 // Drop-down menus: every extra page is its own menu entry (nothing hides in a hub page).
 const GROUPS = [
   ["Peanuts and Money", [["peanuts.html", "Peanut Wallet"], ["creditcard.html", "Octee Credit Card"], ["dutyfree.html", "Duty Free"], ["auction.html", "Lost Property Auction"], ["insurance.html", "Octee Insurance"], ["upgrade.html", "Upgrade Lottery"]]],
-  ["Airport", [["lostfound.html", "Lost and Found"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["wifi.html", "Octee Wi-Fi"]]],
+  ["Airport", [["flight-radar.html", "Flight-Radar 25"], ["terminal-maps.html", "TDA and MFIA Maps"], ["normal-thursday.html", "Normal Thursday Log"], ["lostfound.html", "Lost and Found"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["wifi.html", "Octee Wi-Fi"]]],
   ["On Board", [["safety.html", "Safety Demo"], ["safetycard.html", "Safety Card"], ["cockpit.html", "The Cockpit"], ["radio.html", "Octee Radio"]]],
+  ["Zhang Gullet", [["zhang-gullet.html", "Zhang Gullet"], ["customer-service.html", "Customer Service (GulletAI)"], ["gullet-complaints.html", "Complaints Office"], ["gullet-hold.html", "Hold Line"]]],
   ["Reading", [["news.html", "The Octee Times"], ["magazine.html", "In-Flight Magazine"]]]
 ];
 const here = () => location.pathname.split("/").pop() || "index.html";
@@ -42,7 +43,7 @@ const joelBtn = () => el("button", { class: "btn small jai-open", type: "button"
 function renderAccount(box) {
   const u = currentUser();
   if (!u) {
-    box.replaceChildren(joelBtn(), el("a", { class: "btn small", href: "login.html?next=" + encodeURIComponent(here()) }, "Log in / Sign up"));
+    box.replaceChildren(el("a", { class: "bk-link", href: "login.html?next=" + encodeURIComponent(here()) + "#restore", title: "Load your account from a backup code" }, "Use a backup code"), joelBtn(), el("a", { class: "btn small", href: "login.html?next=" + encodeURIComponent(here()) }, "Log in / Sign up"));
     return;
   }
   const tier = tierFor(u.lifetime);
@@ -50,6 +51,7 @@ function renderAccount(box) {
     el("span", {}, "Hi, ", el("a", { href: "account.html" }, u.username)),
     el("a", { class: "pill", href: "octmiles.html", title: "Your Octmiles" }, fmtMiles(u.octmiles) + " Octmiles"),
     el("a", { class: "pill", href: "octmiles.html#tokens", title: "Your Octeetokens" }, fmtMiles(u.tokens || 0) + " Octeetokens"),
+    u.joelPro ? el("a", { class: "pill", href: "joelmobile.html#joelai", title: "Your JoelTokens" }, fmtMiles(joelTokensOf(u)) + " JoelTokens") : "",
     el("a", { class: "pill peanut", href: "peanuts.html", title: "Your peanuts" }, "🥜 " + (u.peanuts || 0)),
     el("span", { class: "pill gold" }, tier.name),
     el("a", { href: "#", onclick: async (e) => { e.preventDefault(); (await import("./code-box.js")).openCodeBox(); } }, "Have a code?"),
@@ -147,9 +149,10 @@ function buildFooter() {
   holder.replaceWith(el("footer", { class: "site-footer" },
     el("div", { class: "inner" },
       el("p", {}, "Octee Airlines, a member of FAG (Fuji Airport Group). Operating from FIA (Fuji International Airport)."),
+      el("p", { class: "foot" }, "Customer Service: ", el("a", { href: "zhang-gullet.html" }, "Zhang Gullet"), ", Head of Customer Service. Your call is important to him. ", el("a", { href: "gullet-hold.html" }, "Hold Line"), " · Wait: 1 millisecond · Answered Tuesdays, 03:00 to 03:01."),
       el("p", { class: "foot" }, "Scraggy Airlines (SA) is part of Octee Airlines, based at Scraggy International Airport (SIA). One United (OU) is a partner airline. Accounts and Octmiles are kept in your browser."),
       el("p", {}, el("a", { href: "status.html" }, "Flight Status"), " · ", el("a", { href: "reviews.html" }, "Reviews"), " · ", el("a", { href: "contact.html" }, "Contact"), " · ", el("a", { href: "complaint.html" }, "Complaints")),
-      el("p", {}, "More: ", [["peanuts.html", "Peanut Wallet"], ["lostfound.html", "Lost and Found"], ["upgrade.html", "Upgrade Lottery"], ["news.html", "The Octee Times"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["safety.html", "Safety Demo"], ["radio.html", "Octee Radio"], ["dutyfree.html", "Duty Free"], ["safetycard.html", "Safety Card"], ["entertainment.html", "Entertainment"], ["whackajoel.html", "Whack-a-Joel"], ["departures.html", "Departures Board"], ["search.html", "Search"], ["auction.html", "Lost Property Auction"], ["creditcard.html", "Octee Credit Card"], ["cockpit.html", "The Cockpit"], ["wifi.html", "Octee Wi-Fi"], ["magazine.html", "In-Flight Magazine"], ["insurance.html", "Octee Insurance"]].flatMap(([h, t], k) => [k ? " · " : "", el("a", { href: h }, t)]))
+      el("p", {}, "More: ", [["peanuts.html", "Peanut Wallet"], ["flight-radar.html", "Flight-Radar 25"], ["terminal-maps.html", "TDA and MFIA Maps"], ["normal-thursday.html", "Normal Thursday Log"], ["lostfound.html", "Lost and Found"], ["upgrade.html", "Upgrade Lottery"], ["news.html", "The Octee Times"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["safety.html", "Safety Demo"], ["radio.html", "Octee Radio"], ["dutyfree.html", "Duty Free"], ["zhang-gullet.html", "Zhang Gullet"], ["customer-service.html", "Customer Service"], ["gullet-complaints.html", "Gullet Complaints"], ["gullet-hold.html", "Hold Line"], ["safetycard.html", "Safety Card"], ["entertainment.html", "Entertainment"], ["whackajoel.html", "Whack-a-Joel"], ["departures.html", "Departures Board"], ["search.html", "Search"], ["auction.html", "Lost Property Auction"], ["creditcard.html", "Octee Credit Card"], ["cockpit.html", "The Cockpit"], ["wifi.html", "Octee Wi-Fi"], ["magazine.html", "In-Flight Magazine"], ["insurance.html", "Octee Insurance"]].flatMap(([h, t], k) => [k ? " · " : "", el("a", { href: h }, t)]))
     )));
 }
 
@@ -160,6 +163,8 @@ buildFooter();
 // A banner on every page when Octee has sent you an apology (flights get late; see apology.js).
 import("./turbulence.js");
 import("./joelfab.js");
+import("./joelmode.js");
+import("./cloud.js");
 import("./apology.js").then((m) => {
   m.showBanner();
   m.watchFlights();

@@ -74,7 +74,7 @@ async function flightsToPlace(code) {
   const { routes } = await scraggyData();
   const sa = routes.filter((r) => r.place === code);
   if (code === "FIA") return A("You are at FIA. Everything leaves from here, nothing arrives on time, and the departures sign is on the FIA page.", [["Departure gates", "fia.html"], ["Flight status board", "status.html"]]);
-  if (!fl.length && !sa.length) return A(`We do not fly to ${name}. Try Scraggy House, SIA, LIA or MIA.`, [["Destinations", "destinations.html"]]);
+  if (!fl.length && !sa.length) return A(`We do not fly to ${name}. Try Scraggy House, SIA, LIA, MIA, Tabletop Domestic (TDA) or Mt Fuji International (MFIA).`, [["Destinations", "destinations.html"]]);
   const lines = fl.slice(0, 5).map((f) => `${f.no} (${daysText(f.days).toLowerCase()}): ${routeText(f)}, leaves ${f.stops[0][2] || f.stops[0][1]}`);
   sa.forEach((r) => lines.push(`${r.outNo}/${r.inNo} (Scraggy Airlines, via SIA): out ${r.outDep}, back ${r.inDep}`));
   return A(`Flights for ${name}: ` + lines.join("; ") + (fl.length > 5 ? "; and more on the Destinations page." : "."), [["Destinations", "destinations.html"], ["Book a flight", "book.html"]]);

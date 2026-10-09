@@ -1158,3 +1158,77 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## Floating JoelAI button
 
 - `js/joelfab.js` (loaded by `main.js`) adds a round "J" button, bottom right above Turbulence, that opens the JoelAI pop-up on every page except `joelmobile.html` (chat is built in) and `pass.html`. Phones show only the "J". A speech bubble appears once per browser session after 5 s (`octee.fab.tip`). Hidden in print.
+
+
+## Joel mode, Joel's Tabs, and the sandwich
+
+- `js/joelmode.js` (loaded by `main.js`): a footer switch ("Joel mode") that every 18 to 48 s hides a random visible block inside `main` (cards, headings, paragraphs, lists, tables), puts a dashed "Joel closed this tab. Undo" note in its place, and shows a sorry bubble. Up to 6 stay closed, then all return. A "Joel, stop" pill shows while it is on. State: `octee.joelmode`. It cannot close real browser tabs (browsers forbid it), and it skips modals, the JoelAI box and anything with focus. JoelAI can switch it ("turn on Joel mode").
+- `js/joeltabs.js` (tab 13 on Entertainment): pretend browser with 12 tabs. Joel marks one (shake + red), you click it to save it before the warning runs out (1.5 s down to 0.5 s). 30 s. Keep 6 tabs for a peanut. The tab bar is NOT rebuilt on the clock tick (that swallowed clicks).
+- Cupboard (`js/cupboard.js`): eating the sandwich once ("you're getting fat"), a second time ("you are obese") makes the page fall (`body.cup-crush`) and shows the `U Crushed the page / ERROR 404` overlay with a "Put the page back" button (reload). The eat counter resets when it crushes. Reduced motion skips the fall.
+
+## Backup code tab and JoelAI Pro (handbook)
+
+- `js/backuptab.js`: a "Backup code" tab on the right edge of every page (loaded from `main.js`). It accepts the long `OCTEE1…` code (`restoreBackup`) or a short personal code of an etched account (`logInWithCode` in `auth.js`).
+- Etched accounts in `data/accounts.json` carry `codeSalt` and `codeHash` (PBKDF2-SHA256, 150000 rounds, over the code upper-cased with spaces and dashes removed). Only the hash is public. To add or change a code, hash it the same way and set both fields. Five wrong tries lock the code desk for 5 minutes in that browser (a speed bump, not real security: a short code in a public file can be brute-forced offline, so use long random codes for anything that matters).
+- JoelAI Pro unlock costs 100 Octeetokens (`JOEL_PRO_PRICE` in `miles.js`). The default model is "Handbook Pro" (`js/joelpro.js`): the normal rulebook answer plus a "more on this" paragraph, a random page to explore and follow-up questions. The Vercel model options remain, and fall back to Handbook Pro when no server answers.
+
+## Zhang Gullet Customer Service and the bigger Duty Free
+
+- `customer-service.html` + `js/customer-service.js` + `js/gulletai.js`: GulletAI, a separate chat (own session keys `octee.gullet`). It has its own customer-service rules (refunds, hold, escalation, rating) and passes everything else to the JoelAI handbook (`converse`) in Gullet's voice. Secrets are always refused by the handbook. It is a rulebook, not a real AI.
+- `js/dutyfree.js`: 32 items now, each with a `cat` and a `why` (the reason it is banned), a category filter, a search box, and the Security Scan (`SCAN` rules: type any item, the answer is always no, except peanuts).
+
+## Zhang Gullet menu, profile page and Complaints Office
+
+- The nav has its own "Zhang Gullet" menu (`GROUPS` in `main.js`): `zhang-gullet.html` (profile, `js/zhang-gullet.js`), `customer-service.html` (GulletAI) and `gullet-complaints.html` (`js/gullet-complaints.js`). It is no longer under Airport.
+- The Complaints Office is separate from the automatic `complaint.html`. Tickets are `ZG-####`, saved in this browser only (`octee.gullet.complaints`, last 20), with a letter signed by Mr Gullet, a status that changes with age, and a Withdraw button. It pays no peanuts, so it cannot be farmed.
+
+## Zhang Gullet, round 3
+
+- `gullet-hold.html` + `js/gullet-hold.js`: the Hold Line. Queue position is always 1, the "music" is a silent beat you can see, and Mr Gullet picks up only on Tuesdays 03:00 to 03:01 local time (`inWindow`, `nextWindow`).
+- `js/gullettickets.js`: one ticket list per browser (`octee.gullet.tickets`): GulletAI chats `GA-`, complaint letters `ZG-`, hold-line calls `HL-`. The status is worked out from the ticket's age (`statusOf`). The Account page shows them (`ticketCard` in `account.js`).
+- `js/gulletai.js`: remembers the name (from "my name is ..." or the logged-in username) and one ticket per chat, asks "Have I resolved your issue?" after the second answer, and has rules for bags, seats, Octmiles, peanuts and Duty Free.
+- `js/gulletdocs.js`: print the letter, save it as a .txt, and the Certificate of Having Been Heard. Printing copies the node into a hidden `.gc-print-root` and uses `body.gc-printing` in the print CSS.
+- `js/zhang-gullet.js`: Mr Gullet's desk (30 phone answers, 5 moods by hour, a "heard N of 30" counter) and the staff list.
+- Signatures: footer line (`main.js`), apology letters (`apology-page.js`), boarding pass (`boardingpass.js`), and "Zhang Gullet says" on the home page (`home.js`).
+- Joel mode now has a visible button next to "Ask JoelAI" (`addVisibleButton` in `joelmode.js`), as well as the footer link.
+- Fix: `auth.js` now exports `changePassword`. `account.js` imported it but it did not exist, so the Account page failed to load.
+
+## TDA, MFIA and the Octee code
+
+- **Tabletop Domestic Airport (TDA)**: Octee (OA 120 to 123) and One United (OU 11, 12, 15, 16) only. No Scraggy Airlines.
+- **Mt Fuji International Airport (MFIA)**: a transit hub for SIA (Scraggy Airlines, SA109/SA110) and One United (OU 13, 14, 17 to 20). The only airline that flies between MFIA and FIA is Octee (OA 124 to 127). `MFIA_NOTE` in `destinations.js` holds the sentence. The trip finder enforces it for free, because no other airline has an MFIA to FIA leg; test: no non-OA leg joins MFIA and FIA on any day.
+- Scraggy Airlines to MFIA is added in `scraggy.js` (only when the Scraggy site's own list has no `mfia` route), including `legPoints` and `flightTimes`.
+- Octmiles rates for the new legs are in `RATES` (`destinations.js`). Places are in `PLACES`, `OA_PLACES`, the map (`SPOT` and `LAND` in `destinations-page.js`), `oneunited.js` and the cards in `destinations.html`.
+- `Octee`'s backup code is now `Oct0205` (hash and salt only in `data/accounts.json`). Publish the file to use it. `Oct001` stops working at the same time.
+
+## JoelAI + GulletAI upgrade
+- `js/dutyscan.js`: the Duty Free Security Scan rules, shared by the Duty Free page and JoelAI ("can I take X on board").
+- `js/gulletwindow.js`: Mr Gullet's Tuesday 03:00-03:01 window helpers, shared by the Hold Line and GulletAI.
+- `js/joelroute.js`: JoelAI answers "how do I get from A to B", "next flight to X" (from the timetable) and "can I take X on board".
+- `js/chatextras.js`: Copy / Read aloud / thumbs row under bot replies in both chats. Customer Service also has "Save this ticket" (.txt).
+- GulletAI: ticket lookup (GA-/ZG-/HL-), "my tickets", "my flights", anger de-escalation, "when can I speak to Mr Gullet", plus check-in, Wi-Fi, meal, assistance, change-booking and lounge topics.
+- JoelAI KB: "what is new on the site".
+
+## FIA Safety section
+`fia.html#safety`: two photos (`assets/img/fia-safety-1.jpg`, `fia-safety-2.jpg`) with "normal Thursday" captions; real airline logos on photo 2 (nose and the other plane's tail) are blurred out. JoelAI KB entry `fiasafety` answers "is it safe at FIA".
+
+## Flight-Radar 25 ("better than 24")
+`flight-radar.html` + `js/flight-radar.js`: an SVG radar map. Planes are placed from today's timetable (`ALL_FLIGHTS` plus the Scraggy routes) by FIA time; a Time machine slider, Busiest sky and Live buttons; click a plane for details. On Thursdays OA 014 circles FIA with a glow. Linked in the Airport menu, footer, All pages, site search and JoelAI (`flightradar` KB entry). Map positions are made up (`POS` in the JS).
+
+## Backup code moved to the Account page
+The floating "Backup code" tab on the right edge is gone (`js/backuptab.js` is now an empty stub, no longer loaded). `js/codeload.js` (`loadCode`, `codeMessage`) accepts the long OCTEE1 code or a short personal code. It is used by the Log in page (Backup code tab, now takes both kinds) and by a new "Load a backup code" form in the Account page's Backup code card.
+
+## Normal Thursday log and TDA / MFIA terminal maps
+- `normal-thursday.html` + `js/normal-thursday.js`: the incident log. Entry 1 is OA 014 (Thu 8 Oct 2026). Filters (Peanut faults, Weather, Gate, Yours), stat tiles, and a "File a normal Thursday" form (saved in this browser, key `octee.normalthursday`). Incidents are all text, fictional, no photos.
+- `terminal-maps.html` + `js/terminal-maps.js`: SVG maps for TDA (a table with four legs) and MFIA (a mountain with a transit hall, a wall, and an Octee-only corridor to FIA). Gates (A=OA, U=OU, S=SA) and the flight table are built from the timetable, so they follow the data. `terminal-maps.html#mfia` opens the MFIA tab.
+- Linked from the Airport menu, footer, All pages, site search, JoelAI (`terminalmaps`, `normalthursday` KB entries), the FIA Safety section and the Flight-Radar OA 014 panel.
+
+## Header: "Use a backup code" when logged out
+`renderAccount` in `js/main.js` shows a "Use a backup code" link (to `login.html?next=<page>#restore`) where "Hi, <user>" appears when someone is logged in. After loading a code you are sent back to the page you were on.
+
+## Octee Cloud (cloud accounts)
+- `cloud/`: the Cloudflare Worker (`index.js`), its tables (`schema.sql`) and a README. Deployed as `octee-cloud-api` with a D1 database `octee-cloud` on the owner's Cloudflare account. The older `octee-airlines` Worker and `octee-airlines-db` there are untouched.
+- `js/cloud.js` (loaded from `main.js`): `cloudLogin`, `cloudCreate`, `cloudLinkCurrent`, `cloudLogout`, `push` (debounced 2 s after any account change) and `pull` (on page load). State is in `octee.cloud` (token, name, updatedAt). The password hash is NOT uploaded: a new device derives its own local hash from the typed password. Last write wins; a 409 conflict loads the newer cloud copy.
+- Login page: "Cloud account" tab (log in, or create). Account page: "Cloud account" card (save now, log out of the cloud, or save this account). `auth.js` gained `profileOf`, `installProfile`, `localPasswordOk`, `localExists`, `isEtched`, `sessionKey`.
+- Etched accounts cannot be put in the cloud (they already work everywhere). Local accounts, etched accounts and backup codes are unchanged.
+- Tested by running the real Worker code against SQLite (`node:sqlite`) and routing the browser to it, because the build sandbox cannot reach `workers.dev`. Check the live Worker once from a normal browser.

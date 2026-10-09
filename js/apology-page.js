@@ -37,8 +37,8 @@ function general() {
       el("p", {}, `Dear ${who},`),
       ...paragraphs.map((t) => el("p", {}, t)),
       el("p", {}, "Yours most apologetically, apologetically, and then more apologetically,"),
-      el("p", {}, el("strong", {}, "Sir Peanuel Nut"), el("br"), "Chief Apology Officer, Octee Airlines", el("br"), el("strong", {}, "Joel"), el("br"), "JOELMOBILE Operations Manager (crying, a little)"),
-      el("p", { class: "note" }, "P.S. We are sorry. P.P.S. Still sorry. P.P.P.S. We will write again in 20 seconds."),
+      el("p", {}, el("strong", {}, "Sir Peanuel Nut"), el("br"), "Chief Apology Officer, Octee Airlines", el("br"), el("strong", {}, "Joel"), el("br"), "JOELMOBILE Operations Manager (crying, a little)", el("br"), el("strong", {}, "Zhang Gullet"), el("br"), "Head of Customer Service (read aloud to the telephone)"),
+      el("p", { class: "note" }, "P.S. We are sorry. P.P.S. Still sorry. P.P.P.S. We will write again in 10 seconds."),
       el("p", { class: "mail-comp", id: "sorry-count" })),
     el("div", { class: "actions" }, unrelated ? el("a", { class: "btn", href: "cupboard.html" }, "Open Joel's cupboard") : el("a", { class: "btn", href: "book.html" }, "Book a flight (so we can be sorrier)"), el("a", { class: "btn secondary", href: "complaint.html" }, "Complain about it")));
   const mail = $(".mail", root), line = $("#sorry-count");
@@ -72,7 +72,7 @@ function show() {
       el("p", {}, `Dear ${who},`),
       ...paragraphs.map((t) => el("p", {}, t)),
       el("p", {}, "Yours most apologetically, apologetically, and then more apologetically,"),
-      el("p", {}, el("strong", {}, "Sir Peanuel Nut"), el("br"), "Chief Apology Officer, Octee Airlines", el("br"), el("strong", {}, "Joel"), el("br"), "JOELMOBILE Operations Manager (crying, a little)"),
+      el("p", {}, el("strong", {}, "Sir Peanuel Nut"), el("br"), "Chief Apology Officer, Octee Airlines", el("br"), el("strong", {}, "Joel"), el("br"), "JOELMOBILE Operations Manager (crying, a little)", el("br"), el("strong", {}, "Zhang Gullet"), el("br"), "Head of Customer Service (read aloud to the telephone)"),
       el("p", { class: "note" }, "P.S. We are sorry. P.P.S. Still sorry. P.P.P.S. This letter will be sent again if things get worse. They will."),
       el("p", { class: "mail-comp", id: "sorry-count" })),
     el("div", { class: "actions" },
