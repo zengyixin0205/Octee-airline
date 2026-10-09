@@ -1232,3 +1232,6 @@ The floating "Backup code" tab on the right edge is gone (`js/backuptab.js` is n
 - Login page: "Cloud account" tab (log in, or create). Account page: "Cloud account" card (save now, log out of the cloud, or save this account). `auth.js` gained `profileOf`, `installProfile`, `localPasswordOk`, `localExists`, `isEtched`, `sessionKey`.
 - Etched accounts cannot be put in the cloud (they already work everywhere). Local accounts, etched accounts and backup codes are unchanged.
 - Tested by running the real Worker code against SQLite (`node:sqlite`) and routing the browser to it, because the build sandbox cannot reach `workers.dev`. Check the live Worker once from a normal browser.
+
+## Cache-busting (run before every push)
+GitHub Pages lets browsers keep js/css for about 10 minutes, so a fresh page could meet an old script (a new tab that did nothing). `node tools/stamp.mjs` fingerprints every `js/*.js` and `css/styles.css`, rewrites each page's `<script src>` and stylesheet link with `?v=<hash>`, and puts an import map (between `<!--stamp-->` markers) in every page so modules imported by other modules get the same treatment. It is safe to run again (it only changes pages whose files changed). Run it after editing any js or css, then `git add -A`. Browsers without import-map support still work, they just skip the busting for nested modules.

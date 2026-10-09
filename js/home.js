@@ -1,6 +1,6 @@
 import { $, el, today, addDays } from "./dom.js";
 import { mountRotator } from "./taglines.js";
-import { mountSearchBox, goSearch } from "./destsearch.js?v=2";
+import { mountSearchBox, goSearch } from "./destsearch.js";
 import { OA_PLACES, placeName } from "./destinations.js";
 import { allReviews, starsText } from "./reviews-data.js";
 

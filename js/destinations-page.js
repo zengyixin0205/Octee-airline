@@ -1,5 +1,5 @@
 import { $, el } from "./dom.js";
-import { mountSearchBox, renderResults } from "./destsearch.js?v=2";
+import { mountSearchBox, renderResults } from "./destsearch.js";
 import { ALL_FLIGHTS, OA_FLIGHTS, OU_FLIGHTS, daysText, placeName as pn } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
 
