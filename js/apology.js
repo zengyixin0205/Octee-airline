@@ -49,12 +49,12 @@ export function markRead(id, stage) {
 // A flight you already had turns late 20 seconds after you are on the site.
 // A flight you have just booked turns late exactly 8.88 seconds after booking.
 // Very rarely (about 1 in 25) a flight does not turn late by itself. It is worked out from the flight, so it never changes.
-// On top of that, an "everything is 1 millisecond late" apology appears every 20 seconds for everybody (see watchAmbient).
+// On top of that, an "everything is 1 millisecond late" apology appears every 10 seconds for everybody (see watchAmbient).
 const SCHED = "octee.apology.sched";
 const RARE = 25;
 const FRESH_MS = 8880;                 // a new booking: 8.88 seconds
 const EXISTING_MS = 20000;             // a flight you already had: 20 seconds
-const AMBIENT_MS = 20000;              // the general apology: every 20 seconds
+const AMBIENT_MS = 10000;              // the general apology: every 10 seconds
 function turnLate(b, i, l) {
   const key = trackKey(b, i);
   const st = load(key, null) || { stage: 0, log: [], seen: Date.now() };
@@ -105,7 +105,7 @@ export function watchFlights() {
   window.addEventListener("octee:account", scanFlights);      // a new booking
 }
 
-// ---------- every 20 seconds: everything is 1 millisecond late ----------
+// ---------- every 10 seconds: everything is 1 millisecond late ----------
 // Joel says sorry 3 times a visit, then he runs out of sorry and apologises for something else instead.
 // There is a Mute button on the banner (and a switch in the footer). The count starts again in a new browser session.
 const AMBIENT = "octee.apology.ambient";
@@ -145,7 +145,7 @@ export function watchAmbient() {
     ambientOn = true;
     showBanner();
     clearTimeout(ambientTimer);
-    ambientTimer = setTimeout(() => { ambientOn = false; showBanner(); }, 12000);     // stays 12 seconds, unless you dismiss it
+    ambientTimer = setTimeout(() => { ambientOn = false; showBanner(); }, 6000);     // stays 6 seconds, unless you dismiss it
   }, 1000);
 }
 
@@ -209,7 +209,7 @@ export function letter({ names, l, stage, n = 1 }) {
   return { who, late, paragraphs: p };
 }
 
-// The general letter (no flight needed): for everybody, every 20 seconds.
+// The general letter (no flight needed): for everybody, every 10 seconds.
 export function generalLetter(n = 1, who = "Valued Passenger") {
   if (n > SORRY_LIMIT) return {
     who, unrelated: true, paragraphs: [
@@ -225,7 +225,7 @@ export function generalLetter(n = 1, who = "Valued Passenger") {
   p.push(`We are writing to you with a heavy heart, a shaking hand and a slightly damp peanut. Everything at Octee Airlines is 1 millisecond late. The website. The planes. The peanuts. The letter you are reading now, which arrived 1 millisecond after we sent it. We are so sorry.`);
   p.push("We want to be very clear about the size of the problem. It is one millisecond. A millisecond is one thousandth of a second. You could not blink in it. A bee could not flap in it. Even so, we should have been on time, we were not, and that is entirely our fault. We are sorry. We are so very sorry.");
   p.push("You do not have to have a flight for us to be sorry. You do not have to have a booking. You do not even have to have been here for long. We would have been sorry before you came, if we had known. We are sorry that we did not know.");
-  p.push("Let us say it again, in case it did not land. We are sorry. We are sorry that we are late. We are sorry that we are late saying sorry. We are sorry that this letter is long. We are sorry that it is not longer. We will be sorry again in 20 seconds. We are already sorry about that.");
+  p.push("Let us say it again, in case it did not land. We are sorry. We are sorry that we are late. We are sorry that we are late saying sorry. We are sorry that this letter is long. We are sorry that it is not longer. We will be sorry again in 10 seconds. We are already sorry about that.");
   p.push("Joel has been told. Joel said, \"I'm a joel!\" and then cried a little. We are sorry for Joel. We are sorry for you. We are sorry for the clock, which did nothing wrong, but is blamed every day.");
   p.push("If you have booked a flight, we are sorrier. We will say so in 8.88 seconds. If you have not booked a flight, please book one, so that we have something proper to be sorry about.");
   p.push("Once again, with all our hearts: we are sorry, sorry, sorry, sorry. If we have not said it enough, please tell us, and we will say it more.");

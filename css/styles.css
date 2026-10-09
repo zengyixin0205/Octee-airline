@@ -1111,3 +1111,5 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .tm-tabs button[aria-selected="false"] { background: #fff; }
 .tm-map { padding: 10px; margin: 12px 0 18px; }
 .tm-scroll svg { min-width: 760px; }
+
+.bk-link { font-weight: 700; color: var(--octee-ink); text-decoration: underline; white-space: nowrap; }

@@ -5,6 +5,9 @@ export const CONFIG = {
   // Usernames: 3–20 letters, numbers or underscores
   PASSWORD_MIN: 8,
 
+  // Octee Cloud: accounts that work on any device (a small Cloudflare Worker with a database).
+  CLOUD_URL: "https://octee-cloud-api.octee.workers.dev",
+
   // Side clock
   FIA_TIMEZONE: "Asia/Singapore",   // Fuji International Airport
   SIA_TIMEZONE: "Asia/Singapore",   // Scraggy International Airport (same as the Scraggy project)

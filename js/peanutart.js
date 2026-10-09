@@ -20,3 +20,4 @@ export const SEAL = `<svg class="cert-seal" viewBox="0 0 140 140" role="img" ari
   <polygon transform="translate(70 62) scale(.72) translate(-70 -66)" points="70,40 77,59 98,60 82,72 88,92 70,81 52,92 58,72 42,60 63,59" fill="#b3261e"/>
   <text x="70" y="96" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" font-weight="800" fill="#b3261e">VERY OFFICIAL</text>
 </svg>`;
+

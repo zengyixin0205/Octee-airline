@@ -144,6 +144,31 @@ export async function changePassword(current, next, confirm) {
   return true;
 }
 
+// ----- helpers for Octee Cloud (js/cloud.js) -----
+// The part of an account that is saved to the cloud: everything except the local password hash.
+export function profileOf(u) {
+  const { salt, hash, codeFails, ...rest } = u || {};
+  return { ...rest, history: (u?.history || []).slice(-60) };
+}
+export async function localPasswordOk(username, password) {
+  const u = allUsers()[String(username || "").trim().toLowerCase()];
+  return !!u && (await hashPassword(password || "", u.salt)) === u.hash;
+}
+export const localExists = (username) => !!allUsers()[String(username || "").trim().toLowerCase()];
+export const isEtched = async (username) => !!(await etchedFor(String(username || "").trim().toLowerCase()));
+// Put a cloud profile into this browser. Give the typed password (new device) or the existing salt+hash (a later sync).
+export async function installProfile(username, profile, creds, { login = true, quiet = false } = {}) {
+  const key = String(username).toLowerCase(), users = allUsers();
+  let salt = creds.salt, hash = creds.hash;
+  if (creds.password !== undefined) { salt = randomSalt(); hash = await hashPassword(creds.password, salt); }
+  users[key] = { ...BLANK(), ...profile, username, salt, hash };
+  saveUsers(users);
+  if (login) save(SESSION, key);
+  if (!quiet) notify();
+  return users[key];
+}
+export const sessionKey = () => load(SESSION, null);
+
 export function logOut() { remove(SESSION); notify(); }
 
 export function currentUser() {

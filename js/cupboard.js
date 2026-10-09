@@ -29,7 +29,7 @@ const DISTURB = [
   "Joel has left the cupboard. The cupboard is now just a cupboard. (He is back. He forgot his sandwich.)"
 ];
 
-const st = () => ({ todo: {}, sand: 0, disturbed: 0, talk: 0, visited: false, ...load(KEY, {}) });
+const st = () => ({ todo: {}, sand: 0, disturbed: 0, talk: 0, visited: false, ate: 0, ...load(KEY, {}) });
 const put = (s) => save(KEY, s);
 
 function locked() {
@@ -57,7 +57,18 @@ function open() {
     sandEmoji.textContent = s2.sand >= 3 ? "🍽️" : "🥪";
   };
   const sandEmoji = el("span", { class: "cup-sand", "aria-hidden": "true" });
-  sandBtn.addEventListener("click", () => { const s2 = st(); s2.sand = s2.sand >= 3 ? 0 : s2.sand + 1; put(s2); paintSand(); });
+  sandBtn.addEventListener("click", () => {
+    const s2 = st(); const eating = s2.sand === 2;
+    s2.sand = s2.sand >= 3 ? 0 : s2.sand + 1;
+    if (eating) s2.ate = (s2.ate || 0) + 1;
+    put(s2); paintSand();
+    if (!eating) return;
+    if (s2.ate === 1) { say("Joel peeks round the bucket. \"You're getting fat,\" he says. Then: \"Sorry. That was not a sorry. I do not have any left.\"", "info"); return; }
+    sandBtn.disabled = true;
+    say(s2.ate === 2 ? "Joel puts his hand over his eyes. \"You are obese,\" he whispers. \"The shelf is making a noise. Please stop eating the sandwich.\"" : "\"You are obese,\" says Joel, from very far away. The cupboard is making a noise.", "error");
+    crush();
+  });
+  const say = (t, kind) => setMsg(msg, t, kind);
 
   const list = el("ul", { class: "cup-todo" });
   const paintList = () => {
@@ -100,6 +111,22 @@ function open() {
     const got = addPeanuts("Found Joel's cupboard (hush money)", 2);
     setMsg(msg, `You found Joel's cupboard. Joel says nothing. Joel pushes two peanuts under the door.${got ? " +2 peanuts." : ""}`, "ok");
   }
+}
+
+// Eat the sandwich too many times: the page falls down and lands on the 404.
+function crush() {
+  const s2 = st(); s2.ate = 0; put(s2);
+  const over = el("div", { class: "crush-404", role: "alert" },
+    el("p", { class: "crush-big" }, "404"),
+    el("h1", { class: "crush-h" }, "U Crushed the page"),
+    el("p", { class: "crush-err" }, "ERROR 404"),
+    el("p", {}, "The page could not take it. It is flat. Joel says sorry. Joel was not under it."),
+    el("button", { class: "btn", type: "button", onclick: () => location.reload() }, "Put the page back"));
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setTimeout(() => {
+    document.body.classList.add("cup-crush");
+    setTimeout(() => { document.body.append(over); over.querySelector("button").focus(); }, reduce ? 0 : 1500);
+  }, reduce ? 300 : 1400);
 }
 
 cupboardOpen() ? open() : locked();

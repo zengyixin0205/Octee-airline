@@ -9,3 +9,4 @@ export function nextWindow(d = new Date()) {
   return n;
 }
 export const span = (ms) => { const m = Math.max(0, Math.floor(ms / 60000)); const dd = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60; return `${dd} day${dd === 1 ? "" : "s"}, ${hh} hour${hh === 1 ? "" : "s"}, ${mm} minute${mm === 1 ? "" : "s"}`; };
+
