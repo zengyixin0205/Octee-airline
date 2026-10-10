@@ -4,9 +4,10 @@ import { load, save, loadSession, saveSession, removeSession } from "./store.js"
 import { proConverse } from "./joelpro.js";
 import { actionRow, stopSpeaking } from "./chatextras.js";
 import { converse, GREETING, CHIPS, resetState, setPage } from "./joelbrain.js";
-import { currentUser, updateUser } from "./auth.js";
-import { buyJoelPro, buyJoelTokens, joelTokensOf, joelUsageMonth, JOEL_PRO_PRICE, JOEL_TOKEN_RATE, JOEL_MONTHLY_GRANT, JOEL_MIN_CALL_RESERVE, recordJoelUsage } from "./miles.js";
+import { currentUser } from "./auth.js";
+import { buyJoelPro, joelTokensOf, joelUsageMonth, JOEL_PRO_PRICE, JOEL_TOKEN_RATE, JOEL_MONTHLY_GRANT, JOEL_MIN_CALL_RESERVE } from "./miles.js";
 import { JOEL_MODELS, JOEL_MODEL_DEFAULT } from "./joel-models.js";
+import { modelStatus, hasLedger, unlockPro, buyJoelTokens, askModel, ModelError } from "./joelwallet.js";
 
 const KEY = "octee.joelai";
 const MODEL_KEY = "octee.joelai.model";
@@ -30,28 +31,34 @@ export function openJoelAI() {
 export function mountJoelAI(box, idSuffix = "q") {
   const here = location.pathname.split("/").pop() || "index.html";
   setPage(here);
-  let selectedModel = load(MODEL_KEY, JOEL_MODEL_DEFAULT);
-  if (!JOEL_MODELS.some((m) => m.id === selectedModel)) selectedModel = JOEL_MODEL_DEFAULT;
+  // chosen = what the visitor picked (null = never picked). The default is Joel-3.3, but only where the model server answers.
+  let chosen = load(MODEL_KEY, null);
+  if (chosen && !JOEL_MODELS.some((m) => m.id === chosen)) chosen = null;
+  let modelInfo = { state: "checking", why: "" };
+  const modelReady = () => modelInfo.state === "ready" && hasLedger();
+  const selectedId = () => chosen || (modelReady() ? JOEL_MODEL_DEFAULT : "handbook");
+  const selectedModelObj = () => JOEL_MODELS.find((m) => m.id === selectedId()) || JOEL_MODELS[0];
+  const handbookModel = JOEL_MODELS.find((m) => !m.model);
   const log = el("div", { class: "jai-log", role: "log", "aria-live": "polite", "aria-label": "Conversation with JoelAI" });
   const input = el("input", { type: "text", id: "jai-" + idSuffix, maxlength: "200", autocomplete: "off", placeholder: "Ask about gates, flights, security, bags, Octmiles…" });
   const send = el("button", { class: "btn", type: "submit" }, "Ask");
   const chips = el("div", { class: "jai-chips", "aria-label": "Suggested questions" });
   const proBox = el("div", { class: "jai-pro" });
-  const account = currentUser();
-  const savedHistory = account?.joelChat;
-  let history = account
-    ? (Array.isArray(savedHistory) && savedHistory.length ? savedHistory.slice(-40) : [{ who: "bot", text: GREETING, links: [] }])
-    : loadSession(KEY, null) || [{ who: "bot", text: GREETING, links: [] }];
+  let history = loadSession(KEY, null) || [{ who: "bot", text: GREETING, links: [] }];
   let busy = false;
 
   const bubble = (m) => el("div", { class: "jai-msg " + m.who },
     el("span", { class: "jai-who" }, m.who === "bot" ? "JoelAI" : "You", m.mood && m.mood !== "calm" ? el("span", { class: "jai-mood" }, "feeling " + m.mood) : ""),
     ...String(m.text).split("\n\n").map((t) => el("p", {}, t)),
     m.usage ? el("p", { class: "jai-usage" }, `${m.usage.inputTokens.toLocaleString("en-GB")} input + ${m.usage.outputTokens.toLocaleString("en-GB")} output = ${m.usage.totalTokens.toLocaleString("en-GB")} tokens · ${m.modelName}`) : "",
+    m.note ? el("p", { class: "jai-usage jai-note" }, m.note) : (m.via ? el("p", { class: "jai-usage" }, m.via) : ""),
     m.links?.length ? el("p", { class: "jai-links" }, m.links.map(([label, href]) => el("a", { class: "tag", href, ...(/^https?:/.test(href) ? { target: "_blank", rel: "noopener noreferrer" } : {}) }, label))) : "",
     m.who === "bot" && !m.error && history.indexOf(m) > 0 ? actionRow(m.text, { up: "Joel is glad. Joel is always glad. Joel is also sorry.", down: "Sorry! Joel will try again. Ask it another way and Joel will look in a different drawer." }) : "");
   const draw = () => { log.replaceChildren(...history.map(bubble)); log.scrollTop = log.scrollHeight; };
   const drawChips = (list = (here === "joelmobile.html" ? CHIPS : ["What is this page?", ...CHIPS.slice(0, 5)])) => chips.replaceChildren(...list.map((c) => el("button", { type: "button", class: "jai-chip", onclick: () => ask(c) }, c)));
+
+  const problem = (msg) => { proBox.querySelector(".msg.error")?.remove(); proBox.append(el("p", { class: "msg error", role: "status" }, msg)); };
+  const pending = async (btn, work) => { btn.disabled = true; try { await work(); } catch (e) { problem(e.message || "That did not work. Nothing was charged."); btn.disabled = false; } };
 
   function drawPro() {
     const u = currentUser();
@@ -59,63 +66,66 @@ export function mountJoelAI(box, idSuffix = "q") {
       proBox.replaceChildren(el("p", { class: "note" }, "JoelAI Pro needs an account. ", el("a", { href: "login.html?next=" + encodeURIComponent(here) }, "Log in or sign up")));
       return;
     }
+    const ledger = hasLedger();
     if (!u.joelPro) {
+      const price = JOEL_PRO_PRICE, short = (u.tokens || 0) < price;
+      const unlock = el("button", { class: "btn small secondary", type: "button", disabled: short, onclick: (e) => pending(e.target, async () => {
+        if (ledger) await unlockPro(); else buyJoelPro();
+        drawPro();
+      }) }, `Unlock JoelAI Pro · ${price} Octeetokens`);
       const controls = [
-        el("div", { class: "jai-pro-copy" }, el("strong", {}, "JoelAI Pro"), " · Longer answers from the handbook, a random page to explore, and questions to ask next."),
-        el("p", { class: "note" }, `One-time unlock: ${JOEL_PRO_PRICE} Octeetokens. Works on every page, no server needed.`),
-        el("button", { class: "btn small secondary", type: "button", disabled: (u.tokens || 0) < JOEL_PRO_PRICE, onclick: () => {
-          try { buyJoelPro(); drawPro(); }
-          catch (e) { proBox.append(el("p", { class: "msg error", role: "status" }, e.message)); }
-        } }, `Unlock JoelAI Pro · ${JOEL_PRO_PRICE} Octeetokens`)
+        el("div", { class: "jai-pro-copy" }, el("strong", {}, "JoelAI Pro"), " · Longer handbook answers built from the real timetable, a random page to explore, and questions to ask next. With a cloud account you also get a model and a monthly JoelToken allowance."),
+        el("p", { class: "note" }, `One-time unlock: ${price} Octeetokens. ` + (ledger ? "The cloud records it, so it follows you to every device." : "This account is not in the cloud, so Pro works as the handbook only.")),
+        unlock
       ];
-      if ((u.tokens || 0) < JOEL_PRO_PRICE) controls.push(el("p", { class: "hint" }, `You have ${fmtMiles(u.tokens || 0)} Octeetokens. Get more on the `, el("a", { href: "octmiles.html#tokens" }, "Octmiles page"), "."));
+      if (short) controls.push(el("p", { class: "hint" }, `You have ${fmtMiles(u.tokens || 0)} Octeetokens. Get more on the `, el("a", { href: "octmiles.html#tokens" }, "Octmiles page"), "."));
+      if (!ledger) controls.push(el("p", { class: "hint" }, "Want the model too? ", el("a", { href: "login.html?next=" + encodeURIComponent(here) }, "Log in with a cloud account"), " first."));
       proBox.replaceChildren(...controls);
       return;
     }
 
-    const model = JOEL_MODELS.find((m) => m.id === selectedModel) || JOEL_MODELS[0];
+    const model = selectedModelObj(), usingModel = !!model.model && modelReady();
+    const choices = el("select", { class: "jai-model-select", "aria-label": "JoelAI Pro model", onchange: (e) => { chosen = e.target.value; save(MODEL_KEY, chosen); drawPro(); } },
+      JOEL_MODELS.map((m) => el("option", { value: m.id, selected: m.id === model.id }, `${m.name} · ${m.detail}`)));
+
+    // 1. which model is answering, and can it?
+    let status;
+    if (modelInfo.state === "checking") status = el("p", { class: "jai-status" }, "Checking the model server…");
+    else if (modelInfo.state !== "ready") {
+      status = el("p", { class: "jai-status warn" }, el("strong", {}, "Model unavailable here. "), modelInfo.why + " ",
+        modelInfo.state === "file" ? "Run the site through a local server, or deploy it to Vercel with the AI service switched on, to get model answers. " : modelInfo.state === "none" ? "Model answers need the site on Vercel (or JOELAI_API_URL pointing at it). " : "",
+        model.model ? el("button", { class: "btn small ghost", type: "button", onclick: () => { chosen = handbookModel.id; save(MODEL_KEY, chosen); drawPro(); } }, "Use Handbook JoelAI") : el("span", {}, "Handbook JoelAI is answering."),
+        " ", el("button", { class: "linklike", type: "button", onclick: async () => { modelInfo = { state: "checking", why: "" }; drawPro(); modelInfo = await modelStatus(true); drawPro(); } }, "Check again"));
+    } else status = !hasLedger() ? el("p", { class: "jai-status warn" }, el("strong", {}, "Model unavailable here. "), "Model answers need a cloud account. ", el("a", { href: "login.html?next=" + encodeURIComponent(here) }, "Log in"), ", or keep using Handbook JoelAI.") : el("p", { class: "jai-status ok" }, "Model server ready.");
+    const answering = usingModel ? `${model.name} · ${model.detail}` : model.model ? "Handbook Pro (the model is unavailable, so Joel uses the handbook)" : "Handbook Pro · free, works everywhere";
+
+    // 2. the wallet, shown the same way everywhere (the numbers come from the server's ledger)
     const month = u.joelUsage?.month === joelUsageMonth() ? u.joelUsage : { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+    const usedMonthly = u.joelMonthlyUsage?.month === joelUsageMonth() ? Math.max(0, u.joelMonthlyUsage.usedTokens || 0) : 0;
     const [year, monthNo] = joelUsageMonth().split("-").map(Number);
-    const resetDate = new Date(Date.UTC(year, monthNo, 1));
-    const choices = el("select", { class: "jai-model-select", "aria-label": "JoelAI Pro model", onchange: (e) => { selectedModel = e.target.value; save(MODEL_KEY, selectedModel); } },
-      JOEL_MODELS.map((m) => el("option", { value: m.id, selected: m.id === selectedModel }, `${m.name} · ${m.detail}`)));
-    const topups = [1, 5, 10].map((n) => el("button", { class: "btn small ghost", type: "button", disabled: (u.tokens || 0) < n, onclick: () => {
-      try { buyJoelTokens(n); drawPro(); }
-      catch (e) { proBox.append(el("p", { class: "msg error", role: "status" }, e.message)); }
-    } }, `+${fmtMiles(n * JOEL_TOKEN_RATE)} JoelTokens · ${n} Octeetoken${n === 1 ? "" : "s"}`));
-    if (!model.model) {
-      proBox.replaceChildren(
-        el("div", { class: "jai-pro-row" }, el("strong", {}, "JoelAI Pro"), el("span", { class: "tag" }, model.name), choices),
-        el("p", { class: "note" }, "Handbook Pro is free once unlocked: longer answers, a random page to explore, and follow-up questions. The model choices need the Vercel server and use JoelTokens."));
-      return;
-    }
+    const resetDate = new Date(Date.UTC(year, monthNo, 1)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    const wallet = el("div", { class: "jai-wallet-box" },
+      el("p", { class: "jai-wallet" }, el("strong", {}, fmtMiles(joelTokensOf(u))), " JoelTokens"),
+      el("ul", { class: "jai-wallet-list" },
+        el("li", {}, `Monthly allowance: ${fmtMiles(Math.max(0, JOEL_MONTHLY_GRANT - usedMonthly))} of ${fmtMiles(JOEL_MONTHLY_GRANT)} left · refreshes ${resetDate} UTC`),
+        el("li", {}, `Bought with Octeetokens: ${fmtMiles(Math.max(0, u.joelPaidTokens || 0))} (carries over)`),
+        el("li", {}, `Used this month: ${fmtMiles(month.totalTokens)} model tokens (${fmtMiles(month.inputTokens)} in + ${fmtMiles(month.outputTokens)} out)`)),
+      el("p", { class: "note" }, hasLedger() ? "Charged 1:1 from the input and output tokens the model reports, and counted by the cloud, not by this browser. A failed request costs nothing. The last four chat messages go to the model provider: no passwords or sensitive details." : "Handbook Pro costs no JoelTokens."));
+    const topups = hasLedger() ? [1, 5, 10].map((n) => el("button", { class: "btn small ghost", type: "button", disabled: (u.tokens || 0) < n, onclick: (e) => pending(e.target, async () => { await buyJoelTokens(n); drawPro(); }) }, `+${fmtMiles(n * JOEL_TOKEN_RATE)} JoelTokens · ${n} Octeetoken${n === 1 ? "" : "s"}`)) : [];
     proBox.replaceChildren(
-      el("div", { class: "jai-pro-row" }, el("strong", {}, "JoelAI Pro"), el("span", { class: "tag" }, model.name), choices),
-      el("p", { class: "jai-wallet" }, `${fmtMiles(joelTokensOf(u))} JoelTokens · ${fmtMiles(month.totalTokens)} model tokens used this month`),
-      el("p", { class: "note" }, `${fmtMiles(JOEL_MONTHLY_GRANT)} JoelTokens refresh monthly on ${resetDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} UTC. Usage is charged 1:1 from reported input and output tokens; purchased tokens carry over. The last four chat messages go to the model provider; do not include passwords or sensitive details.`),
-      el("div", { class: "jai-topups" }, topups));
+      el("div", { class: "jai-pro-row" }, el("strong", {}, "JoelAI Pro"), choices),
+      el("p", { class: "jai-answering" }, "Answering with: ", el("span", { class: "tag" }, answering)),
+      status, wallet, topups.length ? el("div", { class: "jai-topups" }, topups) : "");
   }
 
-  async function proAnswer() {
-    const selected = JOEL_MODELS.find((m) => m.id === selectedModel) || JOEL_MODELS[0];
-    const messages = history.filter((m) => m.who === "me" || m.who === "bot").slice(-4).map((m) => ({ role: m.who === "me" ? "user" : "assistant", content: String(m.text).slice(0, 300) }));
+  async function proAnswer(selected, messages) {
     const reserve = JOEL_MIN_CALL_RESERVE + messages.reduce((n, m) => n + m.content.length, 0);
     const u = currentUser();
-    if (!u) throw new Error("Log in to use JoelAI Pro.");
-    if (joelTokensOf(u) < reserve) throw new Error(`Keep ${fmtMiles(reserve)} JoelTokens available for this chat first. Buy a top-up above.`);
-    let response;
-    try {
-      response = await fetch("/api/joelai", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: selected.id, messages })
-      });
-    } catch { throw new Error("JoelAI Pro needs its server endpoint. GitHub Pages only runs the handbook version."); }
-    const data = await response.json().catch(() => ({}));
-    if (response.status === 404) throw new Error("JoelAI Pro needs its server endpoint. GitHub Pages only runs the handbook version.");
-    if (!response.ok) throw new Error(data.error || "JoelAI Pro is unavailable right now.");
-    const charged = recordJoelUsage(data.usage, selected.name);
+    if (!u) throw new ModelError("Log in to use JoelAI Pro. Nothing was charged.");
+    if (joelTokensOf(u) < reserve) throw new ModelError(`Keep ${fmtMiles(reserve)} JoelTokens available for this chat first. Buy a top-up above. Nothing was charged.`);
+    const data = await askModel(selected.id, messages);
     drawPro();
-    return { ...data, modelName: selected.name, balance: charged.balance };
+    return { ...data, modelName: selected.name };
   }
 
   async function ask(text) {
@@ -129,12 +139,19 @@ export function mountJoelAI(box, idSuffix = "q") {
     const t0 = performance.now();
     let res;
     const pro = !!currentUser()?.joelPro;
-    const sel = JOEL_MODELS.find((m) => m.id === selectedModel) || JOEL_MODELS[0];
-    try { res = pro ? (sel.model ? await proAnswer() : await proConverse(text)) : await converse(text); }
-    catch (e) {
-      // the model path failed (no server, no tokens): fall back to the handbook, with a note
-      if (pro && sel.model) { try { res = await proConverse(text); res.text = `(${e.message || "The model is unavailable."} Handbook Pro answered instead.)\n\n` + res.text; } catch {} }
+    const sel = selectedModelObj();
+    const messages = history.filter((m) => m.who === "me" || m.who === "bot").slice(-4).map((m) => ({ role: m.who === "me" ? "user" : "assistant", content: String(m.text).slice(0, 300) }));
+    try {
+      if (pro && sel.model && modelReady()) res = await proAnswer(sel, messages);
+      else if (pro) {
+        res = await proConverse(text);
+        if (sel.model) res.via = `Answered by Handbook JoelAI · ${modelInfo.state === "checking" ? "the model server was still being checked" : "model unavailable here"}. Nothing was charged.`;
+      } else res = await converse(text);
+    } catch (e) {
+      // the model failed before anything was charged: the handbook answers, and says so in one line
+      if (pro && sel.model) { try { res = await proConverse(text); res.note = `${e.message || "The model could not answer."} Handbook JoelAI answered instead.`; } catch {} }
       if (!res) res = { text: e.message || "Something went wrong. Please blame Joel.", links: [], error: true };
+      if (e instanceof ModelError) { drawPro(); }
     }
     const wait = reducedMotion() ? 0 : Math.min(2200, 400 + res.text.length * 3);
     await new Promise((r) => setTimeout(r, Math.max(0, wait - (performance.now() - t0))));
@@ -149,8 +166,8 @@ export function mountJoelAI(box, idSuffix = "q") {
         await new Promise((r) => setTimeout(r, 22));
       }
     }
-    history.push({ who: "bot", text: res.text, links: res.links, mood: res.mood, usage: res.usage, modelName: res.modelName });
-    saveHistory();
+    history.push({ who: "bot", text: res.text, links: res.links, mood: res.mood, usage: res.usage, modelName: res.modelName, note: res.note, via: res.via });
+    saveSession(KEY, history);
     draw();
     if (res.chips) drawChips(res.chips);
     busy = false; send.disabled = false; input.focus();
@@ -162,16 +179,6 @@ export function mountJoelAI(box, idSuffix = "q") {
     document.body.append(a); a.click(); a.remove();
   }
 
-  function saveHistory() {
-    history = history.slice(-40);
-    saveSession(KEY, history);
-    // The cloud already stores the signed-in account profile. Keeping JoelAI chat
-    // there makes it follow that account to another device without a new API table.
-    if (currentUser()) {
-      try { updateUser((u) => { u.joelChat = history; }); } catch { /* the local chat remains available */ }
-    }
-  }
-
   box.replaceChildren(
     el("div", { class: "jai-head" },
       el("div", { class: "jai-avatar", "aria-hidden": "true" }, "J"),
@@ -179,12 +186,9 @@ export function mountJoelAI(box, idSuffix = "q") {
     proBox, log, chips,
     el("form", { class: "jai-form", onsubmit: (e) => { e.preventDefault(); ask(input.value); } },
       el("label", { class: "visually-hidden", for: "jai-" + idSuffix }, "Your question for JoelAI"), input, send),
-    el("p", { class: "note" }, el("button", { class: "linklike", type: "button", onclick: saveChat }, "Save this chat"), " · ", el("button", { class: "linklike", type: "button", onclick: () => { stopSpeaking(); removeSession(KEY); resetState(); history = [{ who: "bot", text: GREETING, links: [] }]; const u = currentUser(); if (u) { try { updateUser((x) => { delete x.joelChat; }); } catch {} } drawChips(); draw(); } }, "Start again"), " · Your chat is saved with your account; a cloud-linked account syncs it across devices. Avoid passwords or private details."));
+    el("p", { class: "note" }, el("button", { class: "linklike", type: "button", onclick: saveChat }, "Save this chat"), " · ", el("button", { class: "linklike", type: "button", onclick: () => { stopSpeaking(); removeSession(KEY); resetState(); history = [{ who: "bot", text: GREETING, links: [] }]; drawChips(); draw(); } }, "Start again")));
   drawPro(); draw(); drawChips();
-  window.addEventListener("octee:account", () => {
-    const chat = currentUser()?.joelChat;
-    if (Array.isArray(chat) && chat.length) history = chat.slice(-40);
-    else history = [{ who: "bot", text: GREETING, links: [] }];
-    drawPro(); draw();
-  });
+  window.addEventListener("octee:account", drawPro);
+  window.addEventListener("octee:cloud", drawPro);
+  modelStatus().then((info) => { modelInfo = info; drawPro(); });
 }

@@ -1113,3 +1113,12 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .tm-scroll svg { min-width: 760px; }
 
 .bk-link { font-weight: 700; color: var(--octee-ink); text-decoration: underline; white-space: nowrap; }
+
+/* JoelAI Pro status and wallet */
+.jai-answering { margin: 6px 0 2px; font-size: .9rem; }
+.jai-status { margin: 6px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line, #ddd); font-size: .88rem; background: #faf6f0; }
+.jai-status.warn { border-color: #d9a441; background: #fff6df; }
+.jai-status.ok { border-color: #5c9a68; background: #eaf6ec; }
+.jai-wallet-box { margin: 8px 0; }
+.jai-wallet-list { margin: 4px 0 6px; padding-left: 1.2em; font-size: .85rem; }
+.jai-note { color: #8a4b00; }

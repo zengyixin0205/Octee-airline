@@ -8,6 +8,10 @@ export const CONFIG = {
   // Octee Cloud: accounts that work on any device (a small Cloudflare Worker with a database).
   CLOUD_URL: "https://octee-cloud-api.octee.workers.dev",
 
+  // JoelAI Pro model server (api/joelai.js on Vercel). "" = the same site as this page (works when the site is served by
+  // Vercel, or by `vercel dev`). To use the model from GitHub Pages, put the Vercel address here, e.g. "https://octee.vercel.app".
+  JOELAI_API_URL: "",
+
   // Side clock
   FIA_TIMEZONE: "Asia/Singapore",   // Fuji International Airport
   SIA_TIMEZONE: "Asia/Singapore",   // Scraggy International Airport (same as the Scraggy project)

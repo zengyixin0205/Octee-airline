@@ -2,7 +2,7 @@
 
 **FLY SOMEWHERE. EVENTUALLY.** A parody airline website: Octee pretends everything is fine. It isn't.
 
-The site is plain HTML, CSS and JavaScript. Most pages are static and save accounts in each browser. **JoelAI Pro** adds one Vercel Node function and calls Vercel AI Gateway for real model answers. See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full plan.
+Plain HTML, CSS and JavaScript. **100% static**: no build step, no server, no database. See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full plan.
 
 ## Run it locally
 
@@ -13,26 +13,23 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
+## JoelAI Pro (handbook and model)
+
+- **Handbook JoelAI** works everywhere, including GitHub Pages and a plain local server. Pro handbook answers add the real timetable, gates and terminals.
+- **Model answers** (Joel-3.3, Quick, Think) need the model server `api/joelai.js`, so the site must run on Vercel (or `vercel dev`), or `JOELAI_API_URL` in `js/config.js` must point at the Vercel deployment. Opening `index.html` as a `file://` page, or using GitHub Pages alone, shows **"Model unavailable here"** and keeps using Handbook JoelAI.
+- **Prices** live in `js/miles.js` and are copied by the cloud (`cloud/index.js`): Pro unlock **100 Octeetokens**, **2,500 JoelTokens per Octeetoken**, **10,000 JoelTokens free each month**. The Octmiles page reads the same numbers.
+- **JoelTokens are counted by the cloud**, not the browser. Unlock, top-ups and charges are recorded in the Octee Cloud database (`joel_wallet`, `joel_ledger`), so a balance cannot be edited in the browser and follows a cloud account to every device. Model answers need a cloud account. Octeetokens themselves are still earned and stored in the saved profile (see `cloud/README.md`).
+- Vercel settings: `JOELAI_ENABLED=true`, `AI_GATEWAY_API_KEY` (or OIDC), and `JOEL_LEDGER_SECRET` (the same secret as the Worker). Optional: `JOEL_CLOUD_URL`, `JOELAI_ALLOWED_ORIGINS`.
+
 ## Deploy on GitHub Pages
 
 1. Push this repo to GitHub (branch `main`).
 2. **Settings → Pages → Build and deployment → Source: Deploy from a branch**, choose **main** and **/ (root)**, **Save**.
 3. After about a minute the site is live at `https://zengyixin0205.github.io/Octee-airline/`. Every push to `main` redeploys it.
 
-GitHub Pages runs the handbook version of JoelAI only. JoelAI Pro needs the `api/joelai.js` function, so deploy the project to Vercel to enable it.
-
-## Enable JoelAI Pro on Vercel
-
-1. Import this repository into Vercel.
-2. Set `JOELAI_ENABLED=true` and add an `AI_GATEWAY_API_KEY` in the project's server environment (Vercel OIDC can be used on a linked deployment instead).
-3. Set an AI Gateway project or team spend budget before enabling the endpoint. It is publicly reachable, and the light per-IP rate limit is not a durable spend limit.
-4. Redeploy. JoelAI Pro stays unavailable until `JOELAI_ENABLED=true` and gateway authentication are both present.
-
-JoelAI Pro uses the model's reported input and output token counts. JoelAI conversations are saved with a signed-in account. Cloud-linked accounts sync them with the account profile; manual accounts keep them in this browser. Avoid entering passwords or private details in chat. Chat messages sent in model mode go to the selected model through AI Gateway.
-
 ## What is saved where
 
-Accounts that are not linked to Octee Cloud, along with guest activity, are saved **in each visitor's own browser** (`localStorage`). A cloud-linked account syncs its account profile—including Octmiles, trips, JoelTokens, usage totals and JoelAI chat history—to Cloudflare Worker + D1, so it follows the account to another device. Published reviews and codes are repo data. JoelAI Pro's model request runs on the Vercel function when deployed there.
+There is no database. Accounts, Octmiles, trips and reviews are saved **in each visitor's own browser** (`localStorage`). They don't follow you to another device.
 
 Things everyone sees live in `data/` and change when you commit:
 

@@ -7,4 +7,5 @@ export const JOEL_MODELS = [
   { id: "joel-3.3-think", name: "Joel-3.3 Think", detail: "GPT-6 Sol", model: "openai/gpt-6-sol" }
 ];
 
-export const JOEL_MODEL_DEFAULT = "handbook";
+// Joel-3.3 is the default model. Where the model server is not reachable the page uses Handbook Pro instead (see joelwallet.js).
+export const JOEL_MODEL_DEFAULT = "joel-3.3";

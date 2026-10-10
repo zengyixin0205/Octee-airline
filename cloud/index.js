@@ -4,6 +4,8 @@ const ORIGINS = ["https://zengyixin0205.github.io", "http://localhost:8765", "ht
 const MAX_PROFILE = 300 * 1024;          // bytes of JSON per user
 const SESSION_MS = 30 * 24 * 3600 * 1000; // 30 days
 const ETCHED_URL = "https://zengyixin0205.github.io/Octee-airline/data/accounts.json";
+// JoelAI Pro ledger (the browser copies these numbers in js/miles.js; the server is the one that counts).
+const JOEL = { price: 100, rate: 2500, grant: 10000, minReserve: 1000, maxCharge: 20000, maxBuy: 50 };
 const enc = new TextEncoder();
 const iso = () => new Date().toISOString();
 
@@ -37,6 +39,30 @@ async function etchedList(env) {
 }
 const clip = (v, n) => String(v ?? "").slice(0, n);
 
+// ---- JoelAI Pro wallet: Pro flag, purchased JoelTokens, this month's use. Lives on the server only. ----
+const monthNow = () => new Date().toISOString().slice(0, 7);
+async function wallet(db, userId) {
+  const w = (await db.prepare("SELECT * FROM joel_wallet WHERE user_id=?").bind(userId).first()) || { user_id: userId, pro: 0, paid: 0, month: monthNow(), used: 0, in_t: 0, out_t: 0, total_t: 0 };
+  if (w.month !== monthNow()) Object.assign(w, { month: monthNow(), used: 0, in_t: 0, out_t: 0, total_t: 0 }); // the monthly grant refreshes
+  return w;
+}
+const monthlyLeft = (w) => (w.pro ? Math.max(0, JOEL.grant - w.used) : 0);
+const balanceOf = (w) => w.paid + monthlyLeft(w);
+function walletView(w) {
+  const [y, m] = w.month.split("-").map(Number);
+  return { pro: !!w.pro, balance: balanceOf(w), paid: w.paid, monthlyLeft: monthlyLeft(w), grant: JOEL.grant, month: w.month, resetsAt: new Date(Date.UTC(y, m, 1)).toISOString(),
+    usage: { month: w.month, inputTokens: w.in_t, outputTokens: w.out_t, totalTokens: w.total_t, fromMonthly: w.used }, price: JOEL.price, rate: JOEL.rate, minReserve: JOEL.minReserve };
+}
+// The same numbers written into the saved profile, so the site shows what the server says (a browser edit is overwritten).
+const joelFields = (w) => ({ joelPro: !!w.pro, joelPaidTokens: w.paid, joelMonthlyUsage: { month: w.month, usedTokens: w.used }, joelUsage: { month: w.month, inputTokens: w.in_t, outputTokens: w.out_t, totalTokens: w.total_t }, joelTokens: balanceOf(w) });
+const saveWallet = (db, w) => db.prepare("INSERT INTO joel_wallet(user_id,pro,paid,month,used,in_t,out_t,total_t) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET pro=?, paid=?, month=?, used=?, in_t=?, out_t=?, total_t=?")
+  .bind(w.user_id, w.pro ? 1 : 0, w.paid, w.month, w.used, w.in_t, w.out_t, w.total_t, w.pro ? 1 : 0, w.paid, w.month, w.used, w.in_t, w.out_t, w.total_t);
+const ledgerRow = (db, userId, kind, octee, joel, model = "", inT = 0, outT = 0) => db.prepare("INSERT INTO joel_ledger(user_id,at,kind,octee,joel,model,in_t,out_t) VALUES(?,?,?,?,?,?,?,?)").bind(userId, iso(), kind, octee, joel, model, inT, outT);
+async function profileWithJoel(db, userId, body) {
+  const prof = JSON.parse(body);
+  return { ...prof, ...joelFields(await wallet(db, userId)) };
+}
+
 async function limited(db, key) {
   const r = await db.prepare("SELECT n, until FROM attempts WHERE k=?").bind(key).first();
   return r && r.until > Date.now() ? Math.ceil((r.until - Date.now()) / 1000) : 0;
@@ -67,6 +93,7 @@ export default {
     const db = env.DB;
     try {
       if (path === "/") return reply(req, { ok: true, service: "octee-cloud" });
+      const u = await userFrom(db, req);
       // An etched account (in the code) joins the cloud the first time its owner logs in. The browser has already checked the
       // password against the etched hash; the cloud checks that the name really is etched, and that nobody has claimed it yet.
       if (req.method === "POST" && path === "/api/claim") {
@@ -81,6 +108,58 @@ export default {
         await fail(db, "reg:" + ip);
         const r = await db.prepare("INSERT INTO users(username,username_key,password_hash,created_at) VALUES(?,?,?,?)").bind(e.name, key, await hashPassword(password), iso()).run();
         return reply(req, { ok: true, username: e.name, token: await newSession(db, r.meta.last_row_id), profile: null, updatedAt: null }, 201);
+      }
+      // ---- JoelAI Pro: unlock, buy JoelTokens, read the wallet. Octeetokens are taken from the saved profile. ----
+      if (path === "/api/joel" && req.method === "GET") {
+        if (!u) return reply(req, { error: "login", message: "Log in to the cloud to see your JoelTokens." }, 401);
+        const w = await wallet(db, u.id);
+        const rows = await db.prepare("SELECT at, kind, octee, joel, model, in_t, out_t FROM joel_ledger WHERE user_id=? ORDER BY id DESC LIMIT 20").bind(u.id).all();
+        return reply(req, { ...walletView(w), ledger: rows.results || [] });
+      }
+      if (path === "/api/joel/unlock" || path === "/api/joel/buy") {
+        if (req.method !== "POST") return reply(req, { error: "not_found" }, 404);
+        if (!u) return reply(req, { error: "login", message: "Log in to the cloud first." }, 401);
+        const b = await req.json().catch(() => ({}));
+        const w = await wallet(db, u.id), buying = path === "/api/joel/buy";
+        const count = buying ? Math.floor(Number(b.count)) : 1;
+        if (buying && !(count >= 1 && count <= JOEL.maxBuy)) return reply(req, { error: "bad_count", message: `Choose 1 to ${JOEL.maxBuy} Octeetokens.` }, 400);
+        if (buying && !w.pro) return reply(req, { error: "not_pro", message: "Unlock JoelAI Pro first." }, 409);
+        if (!buying && w.pro) return reply(req, { error: "already", message: "JoelAI Pro is already unlocked." }, 409);
+        const cost = buying ? count : JOEL.price;
+        const p = await db.prepare("SELECT body, updated_at FROM profiles WHERE user_id=?").bind(u.id).first();
+        if (!p) return reply(req, { error: "no_profile", message: "Your account has not been saved to the cloud yet. Try again in a moment." }, 409);
+        const prof = JSON.parse(p.body), have = Math.max(0, Math.floor(Number(prof.tokens) || 0));
+        if (have < cost) return reply(req, { error: "short", message: `You need ${cost - have} more Octeetoken${cost - have === 1 ? "" : "s"} (this costs ${cost}). Nothing was charged.` }, 402);
+        if (buying) w.paid += count * JOEL.rate; else { w.pro = 1; w.month = monthNow(); w.used = 0; }
+        const at = iso();
+        const next = { ...prof, tokens: have - cost, ...joelFields(w), history: [{ at, text: buying ? "Bought JoelTokens" : "Unlocked JoelAI Pro", amount: 0, tokens: -cost, ...(buying ? { joelTokens: count * JOEL.rate } : {}) }, ...(Array.isArray(prof.history) ? prof.history : [])].slice(0, 60) };
+        // compare-and-set on updated_at, so two devices cannot spend the same Octeetokens twice
+        const done = await db.prepare("UPDATE profiles SET body=?, updated_at=? WHERE user_id=? AND updated_at=?").bind(JSON.stringify(next), at, u.id, p.updated_at).run();
+        if (!done.meta?.changes) return reply(req, { error: "busy", message: "Your account changed at the same moment. Nothing was charged. Please try again." }, 409);
+        await db.batch([saveWallet(db, w), ledgerRow(db, u.id, buying ? "buy" : "unlock", -cost, buying ? count * JOEL.rate : 0)]);
+        return reply(req, { ok: true, ...walletView(w), tokens: have - cost, updatedAt: at });
+      }
+      // The model server (Vercel) reports what a finished answer used. Needs the shared secret, so a browser cannot call it.
+      if (path === "/api/joel/charge" && req.method === "POST") {
+        if (!env.JOEL_LEDGER_SECRET || req.headers.get("x-ledger-secret") !== env.JOEL_LEDGER_SECRET) return reply(req, { error: "forbidden" }, 403);
+        if (!u) return reply(req, { error: "login", message: "Log in to the cloud first." }, 401);
+        const b = await req.json().catch(() => ({}));
+        const inT = Math.max(0, Math.floor(Number(b.usage?.inputTokens) || 0)), outT = Math.max(0, Math.floor(Number(b.usage?.outputTokens) || 0));
+        const total = Math.min(JOEL.maxCharge, Math.max(0, Math.floor(Number(b.usage?.totalTokens) || inT + outT)));
+        if (!total) return reply(req, { error: "no_usage", message: "The model did not report token usage, so nothing was charged." }, 400);
+        const w = await wallet(db, u.id);
+        if (!w.pro) return reply(req, { error: "not_pro", message: "Unlock JoelAI Pro first." }, 409);
+        const fromMonthly = Math.min(total, monthlyLeft(w)), fromPaid = Math.min(w.paid, total - fromMonthly);
+        w.used += fromMonthly; w.paid -= fromPaid; w.in_t += inT; w.out_t += outT; w.total_t += total;
+        const p = await db.prepare("SELECT body FROM profiles WHERE user_id=?").bind(u.id).first();
+        const at = iso(), stmts = [saveWallet(db, w), ledgerRow(db, u.id, "use", 0, -(fromMonthly + fromPaid), clip(b.model, 40), inT, outT)];
+        if (p) {
+          const prof = JSON.parse(p.body);
+          const next = { ...prof, ...joelFields(w), history: [{ at, text: `JoelAI Pro · ${clip(b.modelName || b.model, 40)}`, amount: 0, tokens: 0, joelTokens: -(fromMonthly + fromPaid) }, ...(Array.isArray(prof.history) ? prof.history : [])].slice(0, 60) };
+          stmts.push(db.prepare("UPDATE profiles SET body=?, updated_at=? WHERE user_id=?").bind(JSON.stringify(next), at, u.id));
+        }
+        await db.batch(stmts);
+        return reply(req, { ok: true, charged: fromMonthly + fromPaid, ...walletView(w) });
       }
       // Reviews: everyone can read them; a cloud login writes one review each.
       if (req.method === "GET" && path === "/api/reviews") {
@@ -108,21 +187,20 @@ export default {
         if (!u || !(await checkPassword(password, u.password_hash))) { await fail(db, k); return reply(req, { error: "bad_login" }, 401); }
         await clear(db, k);
         const p = await db.prepare("SELECT body, updated_at FROM profiles WHERE user_id=?").bind(u.id).first();
-        return reply(req, { ok: true, username: u.username, token: await newSession(db, u.id), profile: p ? JSON.parse(p.body) : null, updatedAt: p?.updated_at || null });
+        return reply(req, { ok: true, username: u.username, token: await newSession(db, u.id), profile: p ? await profileWithJoel(db, u.id, p.body) : null, updatedAt: p?.updated_at || null });
       }
-      const u = await userFrom(db, req);
       if (path === "/api/profile") {
         if (!u) return reply(req, { error: "login" }, 401);
         const p = await db.prepare("SELECT body, updated_at FROM profiles WHERE user_id=?").bind(u.id).first();
-        if (req.method === "GET") return reply(req, { username: u.username, profile: p ? JSON.parse(p.body) : null, updatedAt: p?.updated_at || null });
+        if (req.method === "GET") return reply(req, { username: u.username, profile: p ? await profileWithJoel(db, u.id, p.body) : null, updatedAt: p?.updated_at || null });
         if (req.method === "PUT") {
           const text = await req.text();
           if (text.length > MAX_PROFILE) return reply(req, { error: "too_big" }, 413);
           let b; try { b = JSON.parse(text); } catch { return reply(req, { error: "bad_json" }, 400); }
           if (!b || typeof b.profile !== "object" || b.profile === null || Array.isArray(b.profile)) return reply(req, { error: "bad_profile" }, 400);
-          if (b.baseUpdatedAt !== undefined && p && p.updated_at !== b.baseUpdatedAt && !b.force) return reply(req, { error: "conflict", profile: JSON.parse(p.body), updatedAt: p.updated_at }, 409);
-          const at = iso();
-          await db.prepare("INSERT INTO profiles(user_id,body,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET body=?, updated_at=?").bind(u.id, JSON.stringify(b.profile), at, JSON.stringify(b.profile), at).run();
+          if (b.baseUpdatedAt !== undefined && p && p.updated_at !== b.baseUpdatedAt && !b.force) return reply(req, { error: "conflict", profile: await profileWithJoel(db, u.id, p.body), updatedAt: p.updated_at }, 409);
+          const at = iso(), merged = JSON.stringify({ ...b.profile, ...joelFields(await wallet(db, u.id)) });
+          await db.prepare("INSERT INTO profiles(user_id,body,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET body=?, updated_at=?").bind(u.id, merged, at, merged, at).run();
           return reply(req, { ok: true, updatedAt: at });
         }
       }

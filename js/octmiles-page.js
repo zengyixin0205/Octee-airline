@@ -2,8 +2,11 @@ import { $, el, setMsg, fmtMiles, niceDate } from "./dom.js";
 import { currentUser, requireLogin } from "./auth.js";
 import { TIERS, tierFor, nextTier, REWARDS, redeemReward, TOKEN_RATE, TOKEN_PRICES, CODES_PER_DAY, tokensOf, fmtTokens, exchangeMiles, buyExtraCode, codesToday, codesLeft, SCRAGGY_RATE, scraggyOf, exchangeScraggymiles, sharedScraggy, transferScraggymiles } from "./miles.js";
 import { CONFIG } from "./config.js";
+import { JOEL_PRO_PRICE, JOEL_TOKEN_RATE, JOEL_MONTHLY_GRANT } from "./miles.js";
 import { codeBoxCard } from "./code-box.js";
 
+// The JoelAI Pro numbers on this page come from miles.js, so the page and the code cannot disagree.
+for (const [k, v] of Object.entries({ price: JOEL_PRO_PRICE, rate: JOEL_TOKEN_RATE, grant: JOEL_MONTHLY_GRANT })) document.querySelectorAll(`[data-joel="${k}"]`).forEach((n) => (n.textContent = fmtMiles(v)));
 $("#code-slot").append(codeBoxCard());
 $("#tier-rows").replaceChildren(...TIERS.map((t) => el("tr", {}, el("td", {}, t.name), el("td", {}, fmtMiles(t.min) + "+"), el("td", {}, t.perk))));
 
