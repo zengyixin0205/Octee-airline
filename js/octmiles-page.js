@@ -4,6 +4,7 @@ import { TIERS, tierFor, nextTier, REWARDS, redeemReward, TOKEN_RATE, TOKEN_PRIC
 import { CONFIG } from "./config.js";
 import { JOEL_PRO_PRICE, JOEL_TOKEN_RATE, JOEL_MONTHLY_GRANT } from "./miles.js";
 import { codeBoxCard } from "./code-box.js";
+import { FUJITECH_MILES_PER_EXCHANGE, FUJITECH_TENTHS_PER_EXCHANGE, fujitechTenthsOf, fmtFujitech, exchangeOctmilesForFujitech } from "./fujitech.js";
 
 // The JoelAI Pro numbers on this page come from miles.js, so the page and the code cannot disagree.
 for (const [k, v] of Object.entries({ price: JOEL_PRO_PRICE, rate: JOEL_TOKEN_RATE, grant: JOEL_MONTHLY_GRANT })) document.querySelectorAll(`[data-joel="${k}"]`).forEach((n) => (n.textContent = fmtMiles(v)));
@@ -33,6 +34,24 @@ function renderTokens(u) {
     el("div", { class: "actions" }, el("button", { class: "btn small secondary", type: "button", id: "buy-code",
       onclick: () => act(() => buyExtraCode(), "One more code unlocked for today.") }, `Get one more code today (${TOKEN_PRICES.extraCode} Octeetokens)`)),
     msg);
+}
+
+function renderFujitech(u) {
+  const card = $("#fujitech-card");
+  if (!u) { card.replaceChildren(el("p", {}, "Log in to exchange Octmiles for Fujitech.")); return; }
+  const max = Math.floor((u.octmiles || 0) / FUJITECH_MILES_PER_EXCHANGE);
+  const amount = el("input", { type: "number", id: "fujitech-amount", min: "1", max: String(Math.max(1, max)), step: "1", value: String(Math.min(1, Math.max(1, max))), inputmode: "numeric" });
+  const hint = el("p", { class: "hint" }), msg = el("p", { class: "msg", id: "fujitech-msg", role: "status", "aria-live": "polite" });
+  const show = () => { const n = Math.max(0, Math.floor(Number(amount.value) || 0)); hint.textContent = `${fmtMiles(n * FUJITECH_MILES_PER_EXCHANGE)} Octmiles = ${fmtFujitech(n * FUJITECH_TENTHS_PER_EXCHANGE)}. You can exchange up to ${max} batch${max === 1 ? "" : "es"}.`; };
+  amount.addEventListener("input", show); show();
+  card.replaceChildren(
+    el("p", { class: "big-rating", style: "font-size:3rem" }, fmtFujitech(fujitechTenthsOf(u))),
+    el("p", {}, "Fujitech to spend on flights and cargo"),
+    el("form", { onsubmit: (e) => { e.preventDefault(); try { const n = Math.floor(Number(amount.value)); exchangeOctmilesForFujitech(n); render(); setMsg($("#fujitech-msg"), `Exchanged for ${fmtFujitech(n * FUJITECH_TENTHS_PER_EXCHANGE)}.`, "ok"); } catch (err) { setMsg(msg, err.message, "error"); } } },
+      el("div", { class: "field" }, el("label", { for: "fujitech-amount" }, `Exchange batches of ${FUJITECH_MILES_PER_EXCHANGE} Octmiles`), amount, hint),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit", disabled: max < 1 }, "Exchange for Fujitech"))),
+    msg,
+    el("p", { class: "note" }, "Fujitech has no real-world value. Octee checked the exchange rate twice, and both times it was 50 Octmiles = 5.5 Fujitech."));
 }
 
 function renderScraggy(u) {
@@ -69,6 +88,7 @@ function renderScraggy(u) {
 function render() {
   const u = currentUser();
   renderTokens(u);
+  renderFujitech(u);
   renderScraggy(u);
   if (!u) {
     $("#balance").replaceChildren(el("p", {}, "Log in to see your Octmiles. ", el("a", { class: "btn small", href: "login.html?next=octmiles.html" }, "Log in / Sign up")));
@@ -82,9 +102,9 @@ function render() {
       el("div", { class: "progress", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct), "aria-label": "Progress to next tier" }, el("span", { style: `width:${pct}%` })),
       el("p", { class: "hint" }, next ? `${fmtMiles(next.min - u.lifetime)} more lifetime Octmiles to ${next.name}.` : "Top tier. There is nowhere left to go. Like our planes."));
     $("#history").replaceChildren(el("div", { class: "table-wrap" }, el("table", { class: "plain" },
-      el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "What"), el("th", {}, "Octmiles"), el("th", {}, "Octeetokens"), el("th", {}, "JoelTokens"), el("th", {}, "Scraggymiles"))),
+      el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "What"), el("th", {}, "Octmiles"), el("th", {}, "Octeetokens"), el("th", {}, "Fujitech"), el("th", {}, "JoelTokens"), el("th", {}, "Scraggymiles"))),
       el("tbody", {}, (u.history || []).slice(0, 50).map((h) => el("tr", {},
-        el("td", {}, niceDate(h.at.slice(0, 10))), el("td", {}, h.text), el("td", {}, h.amount ? (h.amount > 0 ? "+" : "") + fmtMiles(h.amount) : "—"), el("td", {}, h.tokens ? (h.tokens > 0 ? "+" : "") + fmtMiles(h.tokens) : "—"), el("td", {}, h.joelTokens ? (h.joelTokens > 0 ? "+" : "") + fmtMiles(h.joelTokens) : "—"), el("td", {}, h.scraggy ? (h.scraggy > 0 ? "+" : "") + fmtMiles(h.scraggy) : "—")))))));
+        el("td", {}, niceDate(h.at.slice(0, 10))), el("td", {}, h.text), el("td", {}, h.amount ? (h.amount > 0 ? "+" : "") + fmtMiles(h.amount) : "—"), el("td", {}, h.tokens ? (h.tokens > 0 ? "+" : "") + fmtMiles(h.tokens) : "—"), el("td", {}, h.fujitechTenths ? (h.fujitechTenths > 0 ? "+" : "") + fmtFujitech(Math.abs(h.fujitechTenths)) : "—"), el("td", {}, h.joelTokens ? (h.joelTokens > 0 ? "+" : "") + fmtMiles(h.joelTokens) : "—"), el("td", {}, h.scraggy ? (h.scraggy > 0 ? "+" : "") + fmtMiles(h.scraggy) : "—")))))));
   }
   const shop = $("#shop");
   shop.replaceChildren(...REWARDS.map((r) => {

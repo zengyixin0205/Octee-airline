@@ -1,8 +1,11 @@
 // The Normal Thursday incident log. Every incident is a normal Thursday. OA 014 is entry number one.
 import { $, el, setMsg } from "./dom.js";
 import { load, save } from "./store.js";
+import { currentUser } from "./auth.js";
+import { accountRecords, saveAccountRecords } from "./profile-records.js";
 
 const KEY = "octee.normalthursday";
+const owner = currentUser()?.username || "guest";
 // Dates are Thursdays (FIA time). Cause tags: PEANUT, Weather, Gate, Crew.
 export const ENTRIES = [
   { n: 1, date: "2026-10-08", where: "FIA, climbing out", flight: "OA 014", cause: "Weather",
@@ -29,7 +32,9 @@ export const ENTRIES = [
 ];
 
 const niceDate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const mine = () => load(KEY, []).filter((x) => x && x.what);
+const entryId = (x) => x.id || `${x.date}|${x.where || ""}|${x.what || ""}`;
+const mine = () => accountRecords(KEY, "normalThursday", owner, entryId, 20).filter((x) => x && x.what);
+const saveMine = (items) => saveAccountRecords(KEY, "normalThursday", owner, items, entryId, 20);
 let filter = "all";
 
 function nextThursday() {
@@ -61,7 +66,7 @@ $("#nt-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const what = $("#nt-what").value.trim().slice(0, 300), where = $("#nt-where").value.trim().slice(0, 40);
   if (!what) return setMsg($("#nt-msg"), "Write what happened first. Even a normal Thursday needs a sentence.", "error");
-  save(KEY, [...mine(), { what, where, date: new Date().toISOString().slice(0, 10) }].slice(-20));
+  saveMine([...mine(), { id: crypto.randomUUID?.() || `${Date.now()}`, owner, what, where, date: new Date().toISOString().slice(0, 10) }].slice(-20));
   e.target.reset(); setMsg($("#nt-msg"), "Filed. It was a normal Thursday. (It may not have been a Thursday.)", "ok");
   filter = "all"; draw();
 });

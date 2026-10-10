@@ -94,6 +94,41 @@ export default {
     try {
       if (path === "/") return reply(req, { ok: true, service: "octee-cloud" });
       const u = await userFrom(db, req);
+      const isCloudOwner = !!u && !!env.CONTROL_TOWER_OWNER_USERNAME && u.username.toLowerCase() === String(env.CONTROL_TOWER_OWNER_USERNAME).toLowerCase();
+      const adminRole = async () => {
+        if (!u) return null;
+        if (isCloudOwner) return "owner";
+        return (await db.prepare("SELECT user_id FROM cloud_admins WHERE user_id=?").bind(u.id).first()) ? "admin" : null;
+      };
+      if (path.startsWith("/api/admin/")) {
+        const role = await adminRole();
+        if (!role) return reply(req, { error: u ? "forbidden" : "login" }, u ? 403 : 401);
+        if (path === "/api/admin/me" && req.method === "GET") return reply(req, { role, username: u.username });
+        if (path === "/api/admin/users" && req.method === "GET") {
+          const rows = await db.prepare("SELECT id, username, created_at FROM users ORDER BY created_at DESC LIMIT 500").all();
+          return reply(req, { users: (rows.results || []).map((x) => ({ username: x.username, createdAt: x.created_at })) });
+        }
+        if ((path === "/api/admin/admins" || path.startsWith("/api/admin/admins/")) && role !== "owner") return reply(req, { error: "owner_only" }, 403);
+        if (path === "/api/admin/admins" && req.method === "GET") {
+          const rows = await db.prepare("SELECT users.username, cloud_admins.granted_at FROM cloud_admins JOIN users ON users.id=cloud_admins.user_id ORDER BY users.username").all();
+          return reply(req, { admins: rows.results || [] });
+        }
+        if (path === "/api/admin/admins" && req.method === "POST") {
+          const b = await req.json().catch(() => ({})), username = clip(b.username, 20).trim();
+          const target = await db.prepare("SELECT id FROM users WHERE username_key=?").bind(username.toLowerCase()).first();
+          if (!target) return reply(req, { error: "no_user", message: "That Cloud account does not exist." }, 404);
+          if (target.id === u.id) return reply(req, { error: "owner" }, 400);
+          await db.prepare("INSERT INTO cloud_admins(user_id,granted_by,granted_at) VALUES(?,?,?) ON CONFLICT(user_id) DO NOTHING").bind(target.id, u.id, iso()).run();
+          return reply(req, { ok: true });
+        }
+        const demote = path.match(/^\/api\/admin\/admins\/([^/]+)$/);
+        if (demote && req.method === "DELETE") {
+          const username = decodeURIComponent(demote[1]);
+          await db.prepare("DELETE FROM cloud_admins WHERE user_id=(SELECT id FROM users WHERE username_key=?)").bind(username.toLowerCase()).run();
+          return reply(req, { ok: true });
+        }
+        return reply(req, { error: "not_found" }, 404);
+      }
       // An etched account (in the code) joins the cloud the first time its owner logs in. The browser has already checked the
       // password against the etched hash; the cloud checks that the name really is etched, and that nobody has claimed it yet.
       if (req.method === "POST" && path === "/api/claim") {

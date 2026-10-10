@@ -12,6 +12,7 @@ import { makeBackup } from "./backup.js";
 import { loadCode, codeMessage } from "./codeload.js";
 import { cloudState, cloudLinked, cloudLastError, cloudLinkCurrent, cloudLogout, cloudMessage, push as cloudPush } from "./cloud.js";
 import { ticketsFor, statusOf, KINDS } from "./gullettickets.js";
+import { fujitechTenthsOf, fmtFujitech } from "./fujitech.js";
 
 if (requireLogin()) { render(null); scraggyData().then(render); passwordCard(); cloudCard(); backupCard(); ticketCard(); }
 
@@ -125,10 +126,11 @@ function render(SA) {
       el("dt", {}, "Member since"), el("dd", {}, niceDate(u.createdAt.slice(0, 10))),
       el("dt", {}, "Octmiles"), el("dd", {}, fmtMiles(u.octmiles), " (", el("a", { href: "octmiles.html" }, "details"), ")"),
       el("dt", {}, "Octeetokens"), el("dd", {}, fmtMiles(tokensOf(u)), " (", el("a", { href: "octmiles.html#tokens" }, "get more"), ")"),
+      el("dt", {}, "Fujitech"), el("dd", {}, fmtFujitech(fujitechTenthsOf(u)), " (", el("a", { href: "octmiles.html#fujitech" }, "exchange Octmiles"), ")"),
       el("dt", {}, "JoelAI Pro"), el("dd", {}, u.joelPro ? `Active · ${fmtMiles(joelTokensOf(u))} JoelTokens · ${u.joelUsage?.month === joelUsageMonth() ? fmtMiles(u.joelUsage.totalTokens) : "0"} used this month` : el("a", { href: "joelmobile.html#joelai" }, "Not unlocked")),
       el("dt", {}, "Scraggymiles"), el("dd", {}, fmtMiles(scraggyOf(u) + sharedScraggy(u)), sharedScraggy(u) ? ` (${fmtMiles(sharedScraggy(u))} shared with Scraggy Airlines)` : "", " (", el("a", { href: "octmiles.html#scraggymiles" }, "exchange or share"), ")"),
       el("dt", {}, "Tier"), el("dd", {}, tierFor(u.lifetime).name)),
-    el("p", { class: "note", id: "where-note" }, "Your account lives in this browser only. Another device or browser won't know you. We won't either."));
+    el("p", { class: "note", id: "where-note" }, cloudLinked() ? "This account is linked to Octee Cloud and syncs to your other devices." : "This account is stored in this browser. Link an Octee Cloud account to sync it across devices."));
   etchedInfo(u.username).then((info) => {
     const note = $("#where-note");
     if (info && note) note.textContent = `This account is etched in the code${info.etchedAt ? " (saved " + niceDate(info.etchedAt.slice(0, 10)) + ")" : ""}, so you can log in on any device. Anything earned after that date stays on this device until the airline saves it again.`;

@@ -1,10 +1,11 @@
 // Zhang Gullet's Complaints Office: a complaint gets a ZG- ticket and a letter signed by Mr Gullet.
-// Nothing leaves this browser. Kept separate from the automatic Complaint Desk (js/complaint.js).
+// Local records sync with a linked Cloud profile. Kept separate from the automatic Complaint Desk (js/complaint.js).
 import { $, el, setMsg } from "./dom.js";
 import { currentUser } from "./auth.js";
 import { load, save } from "./store.js";
 import { addTicket, updateTicket, statusOf } from "./gullettickets.js";
 import { certificate, letterText, saveText, printNode } from "./gulletdocs.js";
+import { accountRecords, saveAccountRecords } from "./profile-records.js";
 
 const KEY = "octee.gullet.complaints";
 const MAX = 20;
@@ -24,8 +25,9 @@ $("#gc-name").value = user ? user.username : "";
 $("#gc-cat").replaceChildren(...CATS.map(([id, label]) => el("option", { value: id }, label)));
 $("#gc-mad").addEventListener("input", (e) => { $("#gc-mad-out").textContent = e.target.value; });
 
-const all = () => load(KEY, []).filter((c) => c && c.ticket);
-const mine = () => all().filter((c) => c.owner === owner).sort((a, b) => b.at - a.at);
+const all = () => [...new Map([...load(KEY, []).filter((c) => c && c.ticket), ...accountRecords(KEY, "gulletComplaints", owner, (c) => c.ticket, MAX)].map((c) => [c.ticket, c])).values()];
+const mine = () => accountRecords(KEY, "gulletComplaints", owner, (c) => c.ticket, MAX).sort((a, b) => b.at - a.at);
+const saveMine = (items) => saveAccountRecords(KEY, "gulletComplaints", owner, items, (c) => c.ticket, MAX);
 const ticket = () => "ZG-" + String(Math.floor(Math.random() * 9000) + 1000);
 
 const status = (c) => statusOf({ ...c, kind: "complaint" });
@@ -76,8 +78,8 @@ function drawList() {
     el("div", {}, el("strong", {}, c.ticket), " ", el("span", { class: "tag" }, (CATS.find((x) => x[0] === c.cat) || CATS[CATS.length - 1])[1])),
     el("p", { class: "note", style: "margin:2px 0" }, status(c)),
     el("p", { class: "actions", style: "margin:0" },
-      el("button", { class: "linklike", type: "button", onclick: () => show(c) }, "Read the letter"),
-      !c.withdrawn ? el("button", { class: "linklike", type: "button", onclick: () => { save(KEY, all().map((x) => (x.ticket === c.ticket && x.owner === owner ? { ...x, withdrawn: true } : x))); updateTicket(c.ticket, owner, { withdrawn: true }); drawList(); } }, "Withdraw") : ""))));
+    el("button", { class: "linklike", type: "button", onclick: () => show(c) }, "Read the letter"),
+      !c.withdrawn ? el("button", { class: "linklike", type: "button", onclick: () => { saveMine(mine().map((x) => (x.ticket === c.ticket ? { ...x, withdrawn: true } : x))); updateTicket(c.ticket, owner, { withdrawn: true }); drawList(); } }, "Withdraw") : ""))));
 }
 
 form.addEventListener("submit", (e) => {
@@ -86,7 +88,7 @@ form.addEventListener("submit", (e) => {
   const msg = $("#gc-msg").value.trim();
   if (!msg) { setMsg(out, "Please write something. Mr Gullet cannot read an empty page aloud. He has tried.", "error"); return; }
   const c = { ticket: ticket(), owner, name, cat: $("#gc-cat").value, msg, mad: Number($("#gc-mad").value), aloud: $("#gc-aloud").checked, at: Date.now() };
-  save(KEY, [c, ...all()].slice(0, MAX));
+  saveMine([c, ...mine()].slice(0, MAX));
   setMsg(out, `Sent. Ticket ${c.ticket}. Mr Gullet has the letter and a pen.`, "ok");
   form.reset(); $("#gc-name").value = user ? user.username : ""; $("#gc-mad-out").textContent = "5";
   addTicket({ ticket: c.ticket, kind: "complaint", title: (CATS.find((x) => x[0] === c.cat) || CATS[CATS.length - 1])[1], owner });

@@ -3,12 +3,14 @@ import { CONFIG } from "./config.js";
 import { $, el, fmtMiles } from "./dom.js";
 import { currentUser, logOut, syncEtched } from "./auth.js";
 import { tierFor, joelTokensOf } from "./miles.js";
+import { fujitechTenthsOf, fmtFujitech } from "./fujitech.js";
 import "./music.js";
 
 const PAGES = [
   ["index.html", "Home"],
   ["destinations.html", "Destinations"],
   ["book.html", "Book a Flight"],
+  ["cargo.html", "Octee Airline Cargo"],
   ["status.html", "Flight Status"],
   ["checkin.html", "Check-in"],
   ["baggage.html", "Baggage", "wonky"],
@@ -31,7 +33,7 @@ const PAGES = [
 // Drop-down menus: every extra page is its own menu entry (nothing hides in a hub page).
 const GROUPS = [
   ["Peanuts and Money", [["peanuts.html", "Peanut Wallet"], ["creditcard.html", "Octee Credit Card"], ["dutyfree.html", "Duty Free"], ["auction.html", "Lost Property Auction"], ["insurance.html", "Octee Insurance"], ["upgrade.html", "Upgrade Lottery"]]],
-  ["Airport", [["flight-radar.html", "Flight-Radar 25"], ["terminal-maps.html", "TDA and MFIA Maps"], ["normal-thursday.html", "Normal Thursday Log"], ["lostfound.html", "Lost and Found"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["wifi.html", "Octee Wi-Fi"]]],
+  ["Airport", [["cargo.html", "Octee Airline Cargo"], ["flight-radar.html", "Flight-Radar 25"], ["terminal-maps.html", "TDA and MFIA Maps"], ["normal-thursday.html", "Normal Thursday Log"], ["lostfound.html", "Lost and Found"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["wifi.html", "Octee Wi-Fi"]]],
   ["On Board", [["safety.html", "Safety Demo"], ["safetycard.html", "Safety Card"], ["cockpit.html", "The Cockpit"], ["radio.html", "Octee Radio"]]],
   ["Zhang Gullet", [["zhang-gullet.html", "Zhang Gullet"], ["customer-service.html", "Customer Service (GulletAI)"], ["gullet-complaints.html", "Complaints Office"], ["gullet-hold.html", "Hold Line"]]],
   ["Reading", [["news.html", "The Octee Times"], ["magazine.html", "In-Flight Magazine"]]]
@@ -51,6 +53,7 @@ function renderAccount(box) {
     el("span", {}, "Hi, ", el("a", { href: "account.html" }, u.username)),
     el("a", { class: "pill", href: "octmiles.html", title: "Your Octmiles" }, fmtMiles(u.octmiles) + " Octmiles"),
     el("a", { class: "pill", href: "octmiles.html#tokens", title: "Your Octeetokens" }, fmtMiles(u.tokens || 0) + " Octeetokens"),
+    el("a", { class: "pill", href: "octmiles.html#fujitech", title: "Your Fujitech" }, fmtFujitech(fujitechTenthsOf(u))),
     u.joelPro ? el("a", { class: "pill", href: "joelmobile.html#joelai", title: "Your JoelTokens" }, fmtMiles(joelTokensOf(u)) + " JoelTokens") : "",
     el("a", { class: "pill peanut", href: "peanuts.html", title: "Your peanuts" }, "🥜 " + (u.peanuts || 0)),
     el("span", { class: "pill gold" }, tier.name),

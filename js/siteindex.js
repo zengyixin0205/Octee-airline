@@ -14,6 +14,7 @@ export const PAGES = [
   ["oneunited.html", "One United", "united partner alliance merger", "A partnership nobody has explained."],
   ["reviews.html", "Reviews", "reviews rating stars feedback customer", "Five stars. Mostly from us."],
   ["octmiles.html", "Octmiles", "miles points loyalty frequent flyer octmiles tokens", "Points that you earn and cannot use."],
+  ["cargo.html", "Octee Airline Cargo", "cargo shipping parcel package lost bag peanut mystery object Fujitech", "Ship any parcel between Octee airports; fare depends on weight and route."],
   ["about.html", "About", "about us company history team who", "About us. We are sorry about us."],
   ["zhang-gullet.html", "Zhang Gullet", "zhang gullet head customer service profile about mr gullet staff", "Meet Mr Gullet. He is at his desk."],
   ["gullet-complaints.html", "Zhang Gullet Complaints Office", "complaint complain zhang gullet letter angry upset ticket office", "Complain to Mr Gullet in person. He replies by hand."],

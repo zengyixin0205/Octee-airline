@@ -2,7 +2,7 @@
 
 > A parody website for **Octee Airlines**, a completely fictional airline that is a total mess but desperately pretends everything is fine.
 >
-> **The site is 100% static and is hosted on GitHub Pages.** There is no server and no database: everything runs in the visitor's browser (see §7). Live at `https://zengyixin0205.github.io/Octee-airline/` once Pages is switched on.
+> **The website is static on GitHub Pages, with an optional Cloudflare Worker and D1 database for Cloud accounts.** Local-only accounts remain in each visitor's browser; linked Cloud accounts sync their profile (see §7). Live at `https://zengyixin0205.github.io/Octee-airline/` once Pages is switched on.
 
 ---
 
@@ -990,7 +990,7 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## Delay certificate, complaint desk and JoelAI
 
 - **Certificate of Delay** (`certificate.html`, `js/certificate.js`, `js/delays.js`): the tracker's delay table (`STAGES`, `NOTES`) now lives in `js/delays.js` so the tracker and the certificate agree. Once a tracked flight is late, the tracker shows "Get my delay certificate". The certificate names the passengers, flight, route, date, the delay ("2h 10m and counting" while the flight is still getting worse), the reason (current status), a certificate number (`CD-####`), a peanut signature (SVG peanut with monocle, moustache and bow tie, signed "P. Nut, Chief Delay Officer") and a red "VERY OFFICIAL" seal. Print uses landscape. If the flight is not delayed yet it says "NOT DELAYED YET".
-- **Complaint Desk** (`complaint.html`, `js/complaint.js`): name, flight (from your trips), category, "how upset" slider and text. It gives a ticket `COMP-#####` and an automatic reply that says the complaint is "at the front of the queue" and that compensation is paid in peanuts (1 to 6, from the slider and length). Tickets are saved in this browser only (`octee.complaints`, newest 20) with a status that slowly gets sillier. Linked from the Contact page and the footer. Complaint text is always shown as plain text.
+- **Complaint Desk** (`complaint.html`, `js/complaint.js`): name, flight (from your trips), category, "how upset" slider and text. It gives a ticket `COMP-#####` and an automatic reply that says the complaint is "at the front of the queue" and that compensation is paid in peanuts (1 to 6, from the slider and length). Tickets are saved locally (`octee.complaints`, newest 20) and sync in a Cloud-linked account profile with a status that slowly gets sillier. Linked from the Contact page and the footer. Complaint text is always shown as plain text.
 - **JoelAI** (`js/joelai.js`, `js/joelai-ui.js`, section `#joelai` on `joelmobile.html`): a chat box under the JOELMOBILE. It is NOT a real AI. It is a scripted rulebook that matches words in the question and answers from the site's own data: timetable (flight numbers, today's departures, places), FIA terminals and gates (`fiaGate`), Scraggy routes, tiers and rewards (`miles.js`), and, when logged in, your own Octmiles, Octeetokens, next flight and check-in. It has about 40 topic answers (security, passports, lounge, food, train, bags, wifi, check-in, tracker, certificate, complaints...), jokes, and chips for follow-ups. It refuses questions about the control tower, passwords, secrets and the code rule. History is kept per tab (`sessionStorage`, 40 messages) with a "Start again" button. To make it a real AI later you would need a backend with an API key (a key must never be put in static files).
 
 ## Apology letters, banner and the JoelAI button
@@ -1180,12 +1180,12 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 ## Zhang Gullet menu, profile page and Complaints Office
 
 - The nav has its own "Zhang Gullet" menu (`GROUPS` in `main.js`): `zhang-gullet.html` (profile, `js/zhang-gullet.js`), `customer-service.html` (GulletAI) and `gullet-complaints.html` (`js/gullet-complaints.js`). It is no longer under Airport.
-- The Complaints Office is separate from the automatic `complaint.html`. Tickets are `ZG-####`, saved in this browser only (`octee.gullet.complaints`, last 20), with a letter signed by Mr Gullet, a status that changes with age, and a Withdraw button. It pays no peanuts, so it cannot be farmed.
+- The Complaints Office is separate from the automatic `complaint.html`. Tickets are `ZG-####`, saved in `octee.gullet.complaints` and synced in the Cloud-linked profile (last 20), with a letter signed by Mr Gullet, a status that changes with age, and a Withdraw button. It pays no peanuts, so it cannot be farmed.
 
 ## Zhang Gullet, round 3
 
 - `gullet-hold.html` + `js/gullet-hold.js`: the Hold Line. Queue position is always 1, the "music" is a silent beat you can see, and Mr Gullet picks up only on Tuesdays 03:00 to 03:01 local time (`inWindow`, `nextWindow`).
-- `js/gullettickets.js`: one ticket list per browser (`octee.gullet.tickets`): GulletAI chats `GA-`, complaint letters `ZG-`, hold-line calls `HL-`. The status is worked out from the ticket's age (`statusOf`). The Account page shows them (`ticketCard` in `account.js`).
+- `js/gullettickets.js`: a ticket list in `octee.gullet.tickets`, synced in the Cloud-linked profile: GulletAI chats `GA-`, complaint letters `ZG-`, hold-line calls `HL-`. The status is worked out from the ticket's age (`statusOf`). The Account page shows them (`ticketCard` in `account.js`).
 - `js/gulletai.js`: remembers the name (from "my name is ..." or the logged-in username) and one ticket per chat, asks "Have I resolved your issue?" after the second answer, and has rules for bags, seats, Octmiles, peanuts and Duty Free.
 - `js/gulletdocs.js`: print the letter, save it as a .txt, and the Certificate of Having Been Heard. Printing copies the node into a hidden `.gc-print-root` and uses `body.gc-printing` in the print CSS.
 - `js/zhang-gullet.js`: Mr Gullet's desk (30 phone answers, 5 moods by hour, a "heard N of 30" counter) and the staff list.
@@ -1219,7 +1219,7 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 The floating "Backup code" tab on the right edge is gone (`js/backuptab.js` is now an empty stub, no longer loaded). `js/codeload.js` (`loadCode`, `codeMessage`) accepts the long OCTEE1 code or a short personal code. It is used by the Log in page (Backup code tab, now takes both kinds) and by a new "Load a backup code" form in the Account page's Backup code card.
 
 ## Normal Thursday log and TDA / MFIA terminal maps
-- `normal-thursday.html` + `js/normal-thursday.js`: the incident log. Entry 1 is OA 014 (Thu 8 Oct 2026). Filters (Peanut faults, Weather, Gate, Yours), stat tiles, and a "File a normal Thursday" form (saved in this browser, key `octee.normalthursday`). Incidents are all text, fictional, no photos.
+- `normal-thursday.html` + `js/normal-thursday.js`: the incident log. Entry 1 is OA 014 (Thu 8 Oct 2026). Filters (Peanut faults, Weather, Gate, Yours), stat tiles, and a "File a normal Thursday" form (saved locally under `octee.normalthursday` and synced in the Cloud-linked account profile). Incidents are all text, fictional, no photos.
 - `terminal-maps.html` + `js/terminal-maps.js`: SVG maps for TDA (a table with four legs) and MFIA (a mountain with a transit hall, a wall, and an Octee-only corridor to FIA). Gates (A=OA, U=OU, S=SA) and the flight table are built from the timetable, so they follow the data. `terminal-maps.html#mfia` opens the MFIA tab.
 - Linked from the Airport menu, footer, All pages, site search, JoelAI (`terminalmaps`, `normalthursday` KB entries), the FIA Safety section and the Flight-Radar OA 014 panel.
 
@@ -1235,3 +1235,11 @@ The floating "Backup code" tab on the right edge is gone (`js/backuptab.js` is n
 
 ## Cache-busting (run before every push)
 GitHub Pages lets browsers keep js/css for about 10 minutes, so a fresh page could meet an old script (a new tab that did nothing). `node tools/stamp.mjs` fingerprints every `js/*.js` and `css/styles.css`, rewrites each page's `<script src>` and stylesheet link with `?v=<hash>`, and puts an import map (between `<!--stamp-->` markers) in every page so modules imported by other modules get the same treatment. It is safe to run again (it only changes pages whose files changed). Run it after editing any js or css, then `git add -A`. Browsers without import-map support still work, they just skip the busting for nested modules.
+
+
+## Fujitech, fares, cargo and flight discounts
+- Fujitech is stored as tenths (`fujitechTenths`) on the account profile. Exchange rate: 50 Octmiles for 5.5 Fujitech. Passenger fares apply to OA, OU and SA legs: 0.055 Fujitech per route mile, multiplied by Economy 1×, Business 1.5×, First 2×, Scraggy Class 2.5×; Platinum Wing pays the Economy rate. Discount codes can reduce fares up to 100%.
+- `cargo.html` and `js/cargo.js` provide Octee Airline Cargo. Parcel entries, origin/destination and weight determine the quote; shipment costs are charged in Fujitech and saved in `cargoShipments` on the account profile. Route mileage uses shortest paths through airport distances.
+- The Control Tower's Flight discounts tab creates hashed codes and downloads `data/flight-discounts.json` for publication. The code can target a destination and cabin, expire, and provide any percentage up to 100%.
+- Cloud-linked profiles synchronize complaint desk records, Gullet complaints/tickets, Normal Thursday entries, cargo shipments and Fujitech. Local-only accounts remain browser-local.
+- Cloud Control Tower authorization is implemented by `/api/admin/*` in the Worker. Configure `CONTROL_TOWER_OWNER_USERNAME`, apply `cloud/schema.sql` to D1, then deploy the Worker. The owner can list Cloud accounts and assign/remove Cloud admins. The eight-logo-click shortcut is only a doorway; the Worker validates the role.

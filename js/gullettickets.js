@@ -1,6 +1,7 @@
 // One list of every Zhang Gullet ticket in this browser: GulletAI chats (GA-), Complaints Office letters (ZG-)
-// and hold-line calls (HL-). Nothing leaves the browser. The status is worked out from the ticket's age.
+// and hold-line calls (HL-). Cloud-linked accounts sync these records. The status is worked out from the ticket's age.
 import { load, save } from "./store.js";
+import { accountRecords, saveAccountRecords } from "./profile-records.js";
 
 const KEY = "octee.gullet.tickets";
 const MAX = 60;
@@ -8,14 +9,16 @@ export const KINDS = { chat: "GulletAI chat", complaint: "Complaint letter", cal
 const all = () => load(KEY, []).filter((t) => t && t.ticket);
 
 export function addTicket({ ticket, kind, title, owner }) {
-  const list = all();
+  owner = owner || "guest";
+  const list = [...new Map([...all(), ...accountRecords(KEY, "gulletTickets", owner, (t) => t.ticket, MAX)].map((t) => [t.ticket + ":" + t.owner, t])).values()];
   if (list.some((t) => t.ticket === ticket && t.owner === owner)) return;
-  save(KEY, [{ ticket, kind, title: String(title || "").slice(0, 80), owner: owner || "guest", at: Date.now() }, ...list].slice(0, MAX));
+  saveAccountRecords(KEY, "gulletTickets", owner, [{ ticket, kind, title: String(title || "").slice(0, 80), owner, at: Date.now() }, ...accountRecords(KEY, "gulletTickets", owner, (t) => t.ticket, MAX)].slice(0, MAX), (t) => t.ticket, MAX);
 }
 export function updateTicket(ticket, owner, patch) {
-  save(KEY, all().map((t) => (t.ticket === ticket && t.owner === owner ? { ...t, ...patch } : t)));
+  const mine = accountRecords(KEY, "gulletTickets", owner || "guest", (t) => t.ticket, MAX);
+  saveAccountRecords(KEY, "gulletTickets", owner || "guest", mine.map((t) => (t.ticket === ticket ? { ...t, ...patch } : t)), (t) => t.ticket, MAX);
 }
-export const ticketsFor = (owner) => all().filter((t) => t.owner === (owner || "guest")).sort((a, b) => b.at - a.at);
+export const ticketsFor = (owner) => accountRecords(KEY, "gulletTickets", owner || "guest", (t) => t.ticket, MAX).sort((a, b) => b.at - a.at);
 
 export function statusOf(t, now = Date.now()) {
   if (t.withdrawn) return "Withdrawn. Mr Gullet put it in a drawer, gently.";

@@ -61,3 +61,10 @@ CREATE TABLE IF NOT EXISTS joel_ledger (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_joel_ledger_user ON joel_ledger(user_id, id);
+CREATE TABLE IF NOT EXISTS cloud_admins (
+  user_id INTEGER PRIMARY KEY,
+  granted_by INTEGER NOT NULL,
+  granted_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (granted_by) REFERENCES users(id)
+);

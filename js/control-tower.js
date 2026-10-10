@@ -10,6 +10,7 @@ import { el, setMsg } from "./dom.js";
 import { hashPassword, randomSalt, codeHash, normalizeCode } from "./crypto.js";
 import { loadSession, saveSession, removeSession, load, save, remove } from "./store.js";
 import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions.js";
+import { cloudAdminCall } from "./cloud.js";
 
 const SESSION = "octee.tower.session";
 const DRAFT_CODES = "octee.tower.codes";
@@ -31,7 +32,7 @@ function download(filename, data) {
 
 function shell(...content) {
   back?.remove();
-  back = el("div", { class: "modal-back fag-back", role: "dialog", "aria-modal": "true", "aria-label": "FAG Fuji Airport Group, Octmiles code administration" },
+  back = el("div", { class: "modal-back fag-back", role: "dialog", "aria-modal": "true", "aria-label": "FAG Fuji Airport Group, Control Tower administration" },
     el("div", { class: "modal fag" },
       el("button", { class: "close-x", type: "button", "aria-label": "Close", onclick: () => back.remove() }, "×"),
       el("div", { class: "fag-head" },
@@ -45,6 +46,13 @@ function shell(...content) {
 }
 
 export async function openControlTower() {
+  try {
+    const cloud = await cloudAdminCall("GET", "/api/admin/me");
+    if (cloud?.role) {
+      const crew = load(DRAFT_CREW, null) || (await fetchJson("data/control-tower.json", { owner: null, admins: [] }));
+      return tower({ name: cloud.username, role: cloud.role, cloud: true }, crew);
+    }
+  } catch { /* Local Control Tower sign-in remains available. */ }
   const crew = load(DRAFT_CREW, null) || (await fetchJson("data/control-tower.json", { owner: null, admins: [] }));
   const session = loadSession(SESSION, null);
   if (!crew.owner) return setupOwner();
@@ -110,10 +118,14 @@ function login(crew) {
 /* ----- inside ----- */
 async function tower(session, crew, notice = "") {
   const published = await fetchJson("data/codes.json", { codes: [] });
+  const publishedDiscounts = await fetchJson("data/flight-discounts.json", { discounts: [] });
   let codes = load(DRAFT_CODES, null) || published.codes || [];
+  let discounts = load("octee.tower.discounts", null) || publishedDiscounts.discounts || [];
   const tabCodes = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "Codes");
-  const tabCrew = session.role === "owner" ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
+  const tabDiscounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Flight discounts");
+  const tabCrew = session.role === "owner" && !session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
   const tabAccounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Accounts");
+  const tabCloud = session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Cloud accounts") : null;
   const tabRequests = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Requests");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
@@ -123,19 +135,64 @@ async function tower(session, crew, notice = "") {
   const top = el("p", { class: "msg ok" }, notice);
   const show = (which) => {
     tabCodes.setAttribute("aria-selected", String(which === "codes"));
+    tabDiscounts.setAttribute("aria-selected", String(which === "discounts"));
     tabCrew?.setAttribute("aria-selected", String(which === "crew"));
     tabAccounts.setAttribute("aria-selected", String(which === "accounts"));
+    tabCloud?.setAttribute("aria-selected", String(which === "cloud"));
     tabRequests.setAttribute("aria-selected", String(which === "requests"));
     countRequests();
     if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
-    body.replaceChildren(which === "codes" ? codesPanel() : which === "accounts" ? accountsPanel() : crewPanel());
+    if (which === "cloud") { body.replaceChildren(el("p", { class: "note" }, "Loading Cloud accounts…")); cloudPanel().then((n) => body.replaceChildren(n)); return; }
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
+  tabDiscounts.addEventListener("click", () => show("discounts"));
   tabCrew?.addEventListener("click", () => show("crew"));
   tabAccounts.addEventListener("click", () => show("accounts"));
+  tabCloud?.addEventListener("click", () => show("cloud"));
   tabRequests.addEventListener("click", () => show("requests"));
 
   const saveCodes = (next) => { codes = next; save(DRAFT_CODES, codes); show("codes"); };
+
+  function discountsPanel() {
+    const msg = el("p", { class: "msg", role: "status" });
+    const form = el("form", { class: "card" }, el("h3", {}, "Create a flight discount"),
+      el("div", { class: "row" },
+        el("div", { class: "field" }, el("label", { for: "fd-code" }, "Code"), el("input", { id: "fd-code", maxlength: "20", placeholder: "e.g. OCTEEFIRST" })),
+        el("div", { class: "field" }, el("label", { for: "fd-percent" }, "Percent off (0–100)"), el("input", { id: "fd-percent", type: "number", min: "0", max: "100", value: "100" })),
+        el("div", { class: "field" }, el("label", { for: "fd-to" }, "Destination (airport code, optional)"), el("input", { id: "fd-to", maxlength: "8", placeholder: "FIA" }))),
+      el("div", { class: "row" },
+        el("div", { class: "field" }, el("label", { for: "fd-class" }, "Cabin (optional)"), el("select", { id: "fd-class" }, [["", "Any cabin"], ["first", "First Class"], ["business", "Business Class"], ["economy", "Economy"], ["chaos", "Chaos Class"], ["scraggy", "Scraggy Class"], ["semi", "Semi-United"]].map(([v,t]) => el("option", { value: v }, t)))),
+        el("div", { class: "field" }, el("label", { for: "fd-exp" }, "Expires (optional)"), el("input", { id: "fd-exp", type: "date" })),
+        el("div", { class: "field" }, el("label", { for: "fd-note" }, "Note"), el("input", { id: "fd-note", maxlength: "60" }))),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Create discount")), msg);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault(); const code = normalizeCode(form.querySelector("#fd-code").value), percent = Math.floor(Number(form.querySelector("#fd-percent").value));
+      if (!/^[A-Z0-9-]{4,20}$/.test(code) || !(percent >= 0 && percent <= 100)) return setMsg(msg, "Enter a 4–20 character code and a discount from 0 to 100%.", "error");
+      const hash = await codeHash(code); if (discounts.some((d) => d.hash === hash)) return setMsg(msg, "That code already exists.", "error");
+      discounts = [...discounts, { hash, percent, to: form.querySelector("#fd-to").value.trim().toUpperCase() || null, classId: form.querySelector("#fd-class").value || null, expires: form.querySelector("#fd-exp").value || null, active: true, note: form.querySelector("#fd-note").value.trim() || "Flight discount", madeBy: session.name }];
+      save("octee.tower.discounts", discounts); setMsg(msg, `Created ${code}. Record the plain code now; only its hash is stored. The Download button includes this new discount.`, "ok");
+    });
+    return el("div", {}, form, el("div", { class: "card" }, el("h3", {}, `Discounts (${discounts.length})`),
+      el("p", {}, discounts.map((d) => `${d.note || "Discount"}: ${d.percent}%${d.to ? ` to ${d.to}` : ""}${d.classId ? ` · ${d.classId}` : ""}`).join(" · ") || "No discounts yet."),
+      el("p", { class: "note" }, JSON.stringify(discounts) === JSON.stringify(publishedDiscounts.discounts || []) ? "Matches published flight-discounts.json." : "There are unpublished changes."),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => download("flight-discounts.json", { discounts }) }, "Download flight-discounts.json")),
+      el("p", { class: "hint" }, "Put the downloaded file in data/ and commit it to publish. A 100% First Class discount to FIA makes a free first class flight.")));
+  }
+
+  async function cloudPanel() {
+    const msg = el("p", { class: "msg", role: "status" });
+    try {
+      const [u, a] = await Promise.all([cloudAdminCall("GET", "/api/admin/users"), session.role === "owner" ? cloudAdminCall("GET", "/api/admin/admins") : Promise.resolve({ admins: [] })]);
+      const add = el("form", { class: "card" }, el("h3", {}, "Add Cloud account as Control Tower admin"), el("div", { class: "row" }, el("div", { class: "field" }, el("label", { for: "cloud-admin-name" }, "Existing Cloud username"), el("input", { id: "cloud-admin-name", maxlength: "20" })), el("button", { class: "btn", type: "submit" }, "Add admin")), msg);
+      if (session.role !== "owner") add.hidden = true;
+      add.addEventListener("submit", async (e) => { e.preventDefault(); try { await cloudAdminCall("POST", "/api/admin/admins", { username: add.querySelector("#cloud-admin-name").value.trim() }); setMsg(msg, "Cloud admin added.", "ok"); show("cloud"); } catch (err) { setMsg(msg, err?.body?.message || "Could not add that Cloud account.", "error"); } });
+      const admins = new Set((a.admins || []).map((x) => x.username.toLowerCase()));
+      const table = el("div", { class: "table-wrap" }, el("table", { class: "plain" }, el("thead", {}, el("tr", {}, ["Cloud username", "Created", "Role"].map((x) => el("th", {}, x)))), el("tbody", {}, (u.users || []).map((x) => el("tr", {}, el("td", {}, x.username), el("td", {}, x.createdAt?.slice(0,10) || "—"), el("td", {}, x.username.toLowerCase() === session.name.toLowerCase() && session.role === "owner" ? "Owner" : admins.has(x.username.toLowerCase()) ? "Admin" : "Account"))))));
+      const adminList = el("ul", {}, (a.admins || []).map((x) => el("li", {}, x.username, session.role === "owner" ? el("button", { class: "btn small ghost danger", type: "button", onclick: async () => { await cloudAdminCall("DELETE", "/api/admin/admins/" + encodeURIComponent(x.username)); show("cloud"); } }, "Remove admin") : "")));
+      return el("div", {}, add, el("div", { class: "card" }, el("h3", {}, `Cloud users (${(u.users || []).length})`), table), el("div", { class: "card" }, el("h3", {}, "Cloud admins"), adminList), el("p", { class: "hint" }, "Cloud roles are checked by the Worker on every request. Set CONTROL_TOWER_OWNER_USERNAME to the owner account in Cloudflare."));
+    } catch { return el("p", { class: "msg error" }, "Could not load Cloud administration. Sign in to an authorized Cloud account and ensure the Worker is deployed with the admin schema."); }
+  }
 
   function codesPanel() {
     const msg = el("p", { class: "msg", "aria-live": "polite" });
@@ -320,9 +377,9 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabAccounts, tabRequests, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabCrew),
     body,
-    el("p", { class: "hint" }, "This system only prepares files. No change takes effect for other users until the files are committed to the repository."));
+    el("p", { class: "hint" }, session.cloud ? "Cloud admin role changes take effect immediately. Flight discounts are published when their downloaded file is committed to the repository." : "This system prepares files. Changes take effect for other users when the files are committed to the repository."));
   if (!notice) top.remove();
   show("codes");
 }

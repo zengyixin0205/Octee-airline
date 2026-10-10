@@ -42,7 +42,7 @@ export function etchedAccounts() {
   }
   return etchedCache;
 }
-const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, joelTokens: 0, joelPaidTokens: 0, joelMonthlyUsage: null, joelPro: false, joelUsage: null, scraggymiles: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
+const BLANK = () => ({ octmiles: 0, lifetime: 0, tokens: 0, fujitechTenths: 0, joelTokens: 0, joelPaidTokens: 0, joelMonthlyUsage: null, joelPro: false, joelUsage: null, joelChat: [], complaints: [], gulletComplaints: [], gulletTickets: [], normalThursday: [], cargoShipments: [], flightDiscountsUsed: {}, scraggymiles: 0, history: [], trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false });
 const fromEtched = (e) => ({ ...BLANK(), ...e });
 const etchedFor = async (key) => (await etchedAccounts()).find((a) => a.username.toLowerCase() === key) || null;
 // What the Account page shows: is this account in the code, and since when?
@@ -77,6 +77,7 @@ export async function signUp(username, password, confirm) {
   users[key] = {
     username, salt, hash: await hashPassword(password, salt), createdAt: now,
     octmiles: WELCOME_BONUS, lifetime: WELCOME_BONUS,
+    fujitechTenths: 0, joelChat: [], complaints: [], gulletComplaints: [], gulletTickets: [], normalThursday: [], cargoShipments: [], flightDiscountsUsed: {},
     joelTokens: 0, joelPaidTokens: 0, joelMonthlyUsage: null, joelPro: false, joelUsage: null,
     history: [{ at: now, text: "Welcome bonus. Please do not ask what they are worth.", amount: WELCOME_BONUS }],
     trips: [], redemptions: [], codesUsed: {}, codeFails: [], rides: [], reviewBonus: false

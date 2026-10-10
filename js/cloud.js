@@ -10,6 +10,11 @@ const state = () => load(KEY, null);
 const setState = (s) => (s ? save(KEY, s) : remove(KEY));
 export const cloudState = state;
 export const cloudLinked = () => { const s = state(); return !!(s && s.token && s.key === sessionKey()); };
+export async function cloudAdminCall(method, path, body) {
+  const s = state();
+  if (!cloudLinked() || !s?.token) throw new CloudError("login");
+  return call(method, path, body, s.token);
+}
 
 export const CLOUD_MESSAGES = {
   bad_login: "Wrong cloud password. Or wrong username. The cloud lost track too.",

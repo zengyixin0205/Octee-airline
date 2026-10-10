@@ -5,13 +5,15 @@
 import { $, el, setMsg, niceDate, today } from "./dom.js";
 import { loadSession, saveSession, removeSession } from "./store.js";
 import { currentUser, updateUser } from "./auth.js";
-import { addMiles, addScraggymiles, spendTokens, tokensOf } from "./miles.js";
+import { addMiles, addScraggymiles, tierFor } from "./miles.js";
+import { fujitechTenthsOf, fmtFujitech, passengerFareTenths, spendFujitech } from "./fujitech.js";
+import { checkFlightDiscount } from "./flight-discounts.js";
 import { allTripsInBrowser } from "./auth.js";
 import { openRangeCalendar } from "./calendar.js";
 import {
-  PLACES, OA_PLACES, placeName, placeShort, itinerariesOn, seatsLeft, itineraryMiles, describeItinerary, mins, fiaGate } from "./destinations.js";
+  PLACES, OA_PLACES, placeName, placeShort, rate, itinerariesOn, seatsLeft, itineraryMiles, describeItinerary, mins, fiaGate } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
-import { OA_AIRCRAFT, OA_CLASSES, OA_SNACKS, OA_REASONS, SEATS, passCard, classTokens, OU_LEVELS, OU_SEATS, OU_SNACKS, OU_AIRCRAFT } from "./booking-data.js";
+import { OA_AIRCRAFT, OA_CLASSES, OA_SNACKS, OA_REASONS, SEATS, passCard, OU_LEVELS, OU_SEATS, OU_SNACKS, OU_AIRCRAFT } from "./booking-data.js";
 
 const DRAFT = "octee.booking.draft";
 const DAILY_LEG_LIMIT = 5;
@@ -24,7 +26,7 @@ let visited = new Set();
 let triedConfirm = false;
 
 const blank = () => ({
-  from: "FIA", to: "SIA", tripType: "return", passengers: 1, departDate: "", returnDate: "", outChoice: 0, backChoice: 0,
+  from: "FIA", to: "SIA", tripType: "return", passengers: 1, departDate: "", returnDate: "", outChoice: 0, backChoice: 0, discountCode: "", discountCheck: null,
   aircraft: "", travelClass: "", names: [], seatPref: "", snack: "", bags: "", reason: "", joelmobile: false,
   acceptCeo: false, acceptEngines: false, acceptLuggage: false,
   ou: { level: "", seat: "", snack: "", d1: false, d2: false },
@@ -49,6 +51,28 @@ const allLegs = () => [...(out() || []), ...(state.tripType === "return" ? back(
 const needsSA = () => allLegs().some((s) => s.airline === "SA") || !!(PLACES[state.to] && !PLACES[state.to].oa && !allLegs().length);
 const needsOU = () => allLegs().some((s) => s.airline === "OU");
 const hasOA = () => allLegs().some((s) => s.airline === "OA");
+const fareClassFor = (s) => s.airline === "SA" ? state.sa.travelClass : s.airline === "OU" ? state.ou.level : state.travelClass;
+const fareMilesFor = (s) => {
+  if (s.airline === "SA") return SA?.data?.ROUTES?.[s.scraggyId]?.base || scraggyMilesFor(s);
+  const stops = [s.from, ...(s.via || []), s.to];
+  return stops.slice(1).reduce((n, place, i) => n + rate(stops[i], place), 0) || (s.miles || 0);
+};
+function classIdsForFare() { return [...new Set(allLegs().map(fareClassFor).filter(Boolean))]; }
+function baseFareTenths() {
+  const u = currentUser(), platinum = !!u && tierFor(u.lifetime).name === "Platinum Wing";
+  return allLegs().reduce((n, s) => n + passengerFareTenths(fareMilesFor(s), fareClassFor(s), platinum, state.passengers), 0);
+}
+const platinumAccount = () => { const u = currentUser(); return !!u && tierFor(u.lifetime).name === "Platinum Wing"; };
+function classFareLabel(classId, airline) {
+  const fare = allLegs().filter((s) => s.airline === airline).reduce((n, s) => n + passengerFareTenths(fareMilesFor(s), classId, platinumAccount(), state.passengers), 0);
+  return fmtFujitech(fare);
+}
+const checkedDiscount = () => {
+  const d = state.discountCheck, ids = classIdsForFare();
+  return d?.ok && d.to === state.to && (!d.classId || ids.includes(d.classId)) ? d : null;
+};
+const discountTenths = () => { const d = checkedDiscount(); return d ? Math.floor(baseFareTenths() * d.percent / 100) : 0; };
+const finalFareTenths = () => Math.max(0, baseFareTenths() - discountTenths());
 // The FIA form is only for Octee Airlines flights (or while no flights are picked yet).
 const needsOA = () => { const legs = allLegs(); return !legs.length ? !needsSA() : hasOA(); };
 const formCount = () => (needsOA() ? 1 : 0) + (needsOU() ? 1 : 0) + (needsSA() ? 1 : 0);
@@ -79,8 +103,7 @@ const STEPS = {
   o2: { form: "oa", title: "2. Aircraft", validate: () => req(state.aircraft, "Choose an aircraft (or let us pick the wrong one).") },
   o3: { form: "oa", title: "3. Class", validate: () => {
     if (!state.travelClass) return ["Choose a class."];
-    const u = currentUser(), cost = classTokens(state.travelClass);
-    return u && hasOA() && cost > tokensOf(u) ? [`That class costs ${cost} Octeetokens and you have ${tokensOf(u)}. Exchange Octmiles on the Octmiles page, or choose Octee Economy.`] : [];
+    return [];
   } },
   o4: { form: "oa", title: "4. Passenger", validate: () => {
     return [...req(state.seatPref, "Choose a seat preference."), ...req(state.snack, "Choose a snack. It is a peanut."), ...req(state.bags, "Choose how many bags we will lose.")];
@@ -209,6 +232,8 @@ function stepTrip() {
   returnBtn.setAttribute("aria-labelledby", "return-label return-btn");
   returnBtn.addEventListener("click", () => openCal(state.departDate ? "arrive" : "depart", returnBtn));
   const u = currentUser();
+  const promoInput = el("input", { type: "text", id: "flight-discount", value: state.discountCode || "", maxlength: "20", autocomplete: "off", placeholder: "Optional" });
+  promoInput.addEventListener("input", () => { state.discountCode = promoInput.value.trim(); state.discountCheck = null; persist(); });
   const nameFields = Array.from({ length: state.passengers }, (_, i) => {
     const id = "name-" + i;
     const value = state.names[i] ?? (i === 0 && u ? u.username : "");
@@ -238,6 +263,8 @@ function stepTrip() {
       el("div", { class: "field", style: "justify-content:center" },
         check("oneway", "One-way only (I'm not flying back)", oneway, (v) => update({ tripType: v ? "oneway" : "return", returnDate: "", backChoice: 0 })))),
     el("div", { class: "row" }, nameFields),
+    el("div", { class: "field" }, el("label", { for: "flight-discount" }, "Do you have a flight discount code?"), promoInput,
+      el("p", { class: "hint" }, "We will check it against your route and cabin before you pay.")),
     el("p", { class: "hint" }, "No real personal details needed. A nickname is fine."),
     state.departDate ? el("div", {}, el("h3", {}, "Departure flights · ", niceDate(state.departDate)),
       itineraryPicker("out", outIts(), state.outChoice, (i) => {
@@ -254,7 +281,7 @@ function stepTrip() {
 const stepOA = {
   o2: () => el("fieldset", {}, el("legend", {}, "2. Aircraft"), radios("aircraft", OA_AIRCRAFT, state.aircraft, (v) => update({ aircraft: v }))),
   o3: () => el("fieldset", {}, el("legend", {}, "3. Class"),
-    radios("travelClass", OA_CLASSES.map((c) => ({ id: c.id, name: c.name + (c.tokens ? ` · ${c.tokens} Octeetokens` : " · free") + (c.bonus ? ` (+${c.bonus} Octmiles per flight)` : ""), blurb: c.joke })), state.travelClass, (v) => update({ travelClass: v }))),
+    radios("travelClass", OA_CLASSES.map((c) => ({ id: c.id, name: `${c.name} · ${classFareLabel(c.id, "OA")}` + (c.bonus ? ` (+${c.bonus} Octmiles per flight)` : ""), blurb: c.joke })), state.travelClass, (v) => update({ travelClass: v }))),
   o4: () => el("fieldset", {}, el("legend", {}, "4. Passenger"),
     el("p", {}, el("strong", {}, state.passengers > 1 ? "Passengers: " : "Passenger: "), state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "(add the name in step 1)", " ", el("span", { class: "tag oa" }, "from step 1")),
     el("div", { class: "row" },
@@ -277,8 +304,8 @@ const stepOU = {
     ouLegs().length ? itinView(ouLegs()) : el("p", { class: "msg error" }, "Pick your flights in step 1 first."),
     el("p", {}, el("strong", {}, "Passengers: "), (state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "(from step 1)"), " ", el("span", { class: "tag ou" }, "locked"))),
   u2: () => el("fieldset", { class: "ou-form" }, el("legend", {}, "One United form · 2. Unitation"),
-    el("p", { class: "hint" }, "How united would you like to be? All levels are free. All levels are chaos."),
-    radios("ou-level", OU_LEVELS.map((c) => ({ id: c.id, name: c.name, blurb: c.joke })), state.ou.level, (v) => updateOU({ level: v }))),
+    el("p", { class: "hint" }, "Choose a cabin tier. Platinum Wing pays the Economy fare."),
+    radios("ou-level", OU_LEVELS.map((c) => ({ id: c.id, name: `${c.name} · ${classFareLabel(c.id, "OU")}`, blurb: c.joke })), state.ou.level, (v) => updateOU({ level: v }))),
   u3: () => el("fieldset", { class: "ou-form" }, el("legend", {}, "One United form · 3. Seat & snack"),
     el("div", { class: "row" },
       select("ou-seat", "Sit me", OU_SEATS, state.ou.seat, (v) => updateOU({ seat: v }), "One United seats are shared equally. Unevenly."),
@@ -298,7 +325,7 @@ const stepSA = {
   s2: () => el("fieldset", { class: "sia-form" }, el("legend", {}, "SIA form · 2. Aircraft"),
     radios("sa-aircraft", [...SA.data.AIRCRAFT, SA.data.SURPRISE], state.sa.aircraft, (v) => updateSA({ aircraft: v }))),
   s3: () => el("fieldset", { class: "sia-form" }, el("legend", {}, "SIA form · 3. Class"),
-    radios("sa-class", SA.data.CLASSES.map((c) => ({ id: c.id, name: c.name + (c.bonus ? ` (+${c.bonus} Scraggy Points)` : ""), blurb: c.joke })),
+    radios("sa-class", SA.data.CLASSES.map((c) => ({ id: c.id, name: `${c.name} · ${classFareLabel(c.id, "SA")}` + (c.bonus ? ` (+${c.bonus} Scraggy Points)` : ""), blurb: c.joke })),
       state.sa.travelClass, (v) => updateSA({ travelClass: v, snack: "" }))),
   s4: () => {
     const snacks = state.sa.travelClass === "scraggy" ? SA.data.SNACKS.scraggy : SA.data.SNACKS.standard;
@@ -321,20 +348,38 @@ function stepReview() {
   const u = currentUser();
   const o = out(), b = back();
   const miles = (o ? itineraryMiles(o, state.travelClass) : 0) + (b ? itineraryMiles(b, state.travelClass) : 0);
-  const confirm = el("button", { class: "btn", type: "button", id: "confirm", disabled: all.length > 0 || !u }, formCount() > 1 ? `Confirm ${formCount() === 2 ? "both" : "all " + formCount()} forms (no money will be taken)` : "Confirm (no money will be taken)");
+  const baseFare = baseFareTenths(), discount = discountTenths(), discountApplied = checkedDiscount(), fare = Math.max(0, baseFare - discount);
+  const short = u ? Math.max(0, fare - fujitechTenthsOf(u)) : 0;
+  const confirm = el("button", { class: "btn", type: "button", id: "confirm", disabled: all.length > 0 || !u || short > 0 }, formCount() > 1 ? `Confirm all forms · ${fmtFujitech(fare)}` : `Confirm · ${fmtFujitech(fare)}`);
   confirm.addEventListener("click", doConfirm);
-  const why = all.length ? `Finish ${[...new Set(all.map((x) => stepLabel(x.id)))].join(", ")} first.` : !u ? "Log in to confirm and earn Octmiles." : "";
+  const why = all.length ? `Finish ${[...new Set(all.map((x) => stepLabel(x.id)))].join(", ")} first.` : !u ? "Log in to confirm and earn Octmiles." : short ? `You need ${fmtFujitech(short)} more. Exchange Octmiles on the Octmiles page.` : "";
+  const promoInput = el("input", { type: "text", id: "review-discount", value: state.discountCode || "", maxlength: "20", autocomplete: "off" });
+  promoInput.addEventListener("input", () => { state.discountCode = promoInput.value.trim(); state.discountCheck = null; persist(); });
+  const promoMsg = el("p", { class: "msg", role: "status", "aria-live": "polite" }, discountApplied ? `${discountApplied.percent}% discount applied: ${discountApplied.note}.` : state.discountCode ? "Enter a code and apply it to check this route and cabin." : "No discount code applied.");
+  const promoForm = el("form", { class: "card", onsubmit: async (e) => {
+    e.preventDefault();
+    state.discountCode = promoInput.value.trim();
+    try {
+      const check = await checkFlightDiscount(state.discountCode, { to: state.to, classIds: classIdsForFare(), used: currentUser()?.flightDiscountsUsed || {} });
+      state.discountCheck = check; persist(); render();
+    } catch (err) { setMsg(promoMsg, err.message || "Could not check that code.", "error"); }
+  } },
+    el("h3", { style: "margin-top:0" }, "Flight discount code"),
+    el("div", { class: "row" }, el("div", { class: "field" }, el("label", { for: "review-discount" }, "Check your code"), promoInput),
+      el("div", { class: "actions" }, el("button", { class: "btn small secondary", type: "submit" }, "Apply code"))), promoMsg);
   return el("fieldset", {}, el("legend", {}, "Review & confirm"),
     o ? el("div", { class: "card" }, el("h3", {}, "Departure · ", niceDate(state.departDate)), itinView(o)) : "",
     b ? el("div", { class: "card", style: "margin-top:10px" }, el("h3", {}, "Arrival (flight back) · ", niceDate(state.returnDate)), itinView(b)) : "",
     el("dl", { class: "kv", style: "margin-top:12px" },
       el("dt", {}, "Passengers"), el("dd", {}, state.names.slice(0, state.passengers).filter(Boolean).join(", ") || "—"),
-      needsOA() ? [el("dt", {}, "Octee class"), el("dd", {}, (OA_CLASSES.find((c) => c.id === state.travelClass)?.name || "—") + (hasOA() && classTokens(state.travelClass) ? ` · ${classTokens(state.travelClass)} Octeetokens` : !hasOA() && classTokens(state.travelClass) ? " · not charged (no Octee flights on this trip)" : ""))] : "",
+      needsOA() ? [el("dt", {}, "Octee class"), el("dd", {}, OA_CLASSES.find((c) => c.id === state.travelClass)?.name || "—")] : "",
       needsOU() ? [el("dt", {}, "One United"), el("dd", {}, OU_LEVELS.find((c) => c.id === state.ou.level)?.name || "—")] : "",
       needsSA() ? [el("dt", {}, "Scraggy class"), el("dd", {}, SA.data.CLASSES.find((c) => c.id === state.sa.travelClass)?.name || "—")] : "",
       el("dt", {}, "Octmiles"), el("dd", {}, `+${miles.toLocaleString("en-GB")} (Octee flights; One United earns half)`),
       needsSA() ? [el("dt", {}, "Scraggymiles"), el("dd", {}, `+${saLegs().reduce((n, x) => n + scraggyMilesFor(x), 0).toLocaleString("en-GB")} (Scraggy Airlines flights; 1 Scraggymile = 2 Octmiles)`)] : "",
-      el("dt", {}, "Payment"), el("dd", {}, "Paid in peanuts.")),
+      el("dt", {}, "Fare"), el("dd", {}, discountApplied ? [el("s", {}, fmtFujitech(baseFare)), " ", el("strong", {}, fmtFujitech(fare)), ` (${discountApplied.percent}% off)`] : fmtFujitech(fare)),
+      el("dt", {}, "Fujitech balance"), el("dd", {}, u ? fmtFujitech(fujitechTenthsOf(u)) : "Log in to see your balance")),
+    promoForm,
     all.length ? el("div", { class: "msg error missing" }, el("p", { style: "margin:0 0 4px" }, "Still missing:"),
       el("ul", {}, all.map((x) => el("li", {}, el("a", { href: "#", onclick: (e) => { e.preventDefault(); go(steps().indexOf(x.id)); } }, stepLabel(x.id)), ": ", x.p)))) : "",
     el("div", { class: "actions" }, confirm,
@@ -411,20 +456,29 @@ const gateFor = (s) => s.airline === "SA" ? s.gate : s.from === "FIA" ? fiaGate(
 // Scraggy Airlines flights earn Scraggymiles: Scraggy's own points for that route and class.
 const scraggyMilesFor = (s) => { try { return SA.data.legPoints(s.scraggyId, state.sa.travelClass) || 0; } catch { return 0; } };
 
-function doConfirm() {
+async function doConfirm() {
   triedConfirm = true;
   const msg = $("#confirm-msg");
   const all = allProblems();
   if (all.length) { setMsg(msg, "Some steps are not finished yet.", "error"); render(); return; }
   if (!currentUser()) { setMsg(msg, "Log in to confirm.", "error"); return; }
+  let promo = null;
+  try {
+    if (state.discountCode) {
+      promo = await checkFlightDiscount(state.discountCode, { to: state.to, classIds: classIdsForFare(), used: currentUser()?.flightDiscountsUsed || {} });
+      if (!promo.ok) throw new Error(promo.reason);
+    }
+  } catch (e) { setMsg(msg, e.message || "That discount code could not be checked.", "error"); return; }
+  const base = baseFareTenths();
+  const price = Math.max(0, base - (promo ? Math.floor(base * promo.percent / 100) : 0));
   const legs = [...out().map((s) => ({ ...s, direction: "out" })), ...(state.tripType === "return" ? back().map((s) => ({ ...s, direction: "back" })) : [])];
   if (legs.some((s) => s.airline !== "SA" && seatsLeft(s, browserTrips()) < state.passengers)) { setMsg(msg, "Sorry, a flight just filled up (mostly with bags). Pick another option.", "error"); return; }
   try {
     const booking = updateUser((u) => {
       const todayLegs = (u.trips || []).filter((t) => t.createdAt.slice(0, 10) === today()).reduce((n, t) => n + t.legs.length, 0);
       if (todayLegs + legs.length > DAILY_LEG_LIMIT) throw new Error("Sorry, you have flown too much today. (Max 5 flights booked per day.)");
-      const classCost = legs.some((x) => x.airline === "OA") ? classTokens(state.travelClass) : 0;
-      if (classCost) spendTokens(u, classCost, `${OA_CLASSES.find((c) => c.id === state.travelClass).name} for a booking`);
+      spendFujitech(u, price, `Passenger fare · ${placeShort(state.from)} → ${placeShort(state.to)}`);
+      if (promo) u.flightDiscountsUsed = { ...(u.flightDiscountsUsed || {}), [promo.hash]: (Number(u.flightDiscountsUsed?.[promo.hash]) || 0) + 1 };
       const oaRef = ref("OCT"), saRef = legs.some((s) => s.airline === "SA") ? ref("SCRAG") : null;
       const pickAircraft = (list, v) => v === "surprise" ? list[Math.floor(Math.random() * list.length)].id : v;
       const oaAircraft = pickAircraft(OA_AIRCRAFT.slice(0, 4), state.aircraft);
@@ -441,6 +495,7 @@ function doConfirm() {
           travelClass: s.airline === "SA" ? state.sa.travelClass : s.airline === "OU" ? state.ou.level : state.travelClass,
           seat: s.airline === "SA" ? state.sa.seat : s.airline === "OU" ? state.ou.seat : state.seatPref
         })),
+        fujitechPaidTenths: price, discount: promo ? { hash: promo.hash, percent: promo.percent, note: promo.note } : null,
         details: { snack: state.snack, bags: state.bags, reason: state.reason, joelmobile: state.joelmobile, ou: needsOU() ? { ...state.ou } : null, sa: needsSA() ? { ...state.sa } : null }
       };
       b.miles = b.legs.reduce((n, l) => n + l.miles, 0);
@@ -463,7 +518,7 @@ function showPasses(b) {
   res.hidden = false;
   res.replaceChildren(
     el("h2", {}, "You are booked (probably)"),
-    el("p", { class: "msg ok", role: "status" }, `Booking ${b.ref}${b.scraggyRef ? " + " + b.scraggyRef : ""} · +${b.miles.toLocaleString("en-GB")} Octmiles${b.scraggymiles ? ` · +${b.scraggymiles.toLocaleString("en-GB")} Scraggymiles` : ""}. Paid in peanuts.`),
+    el("p", { class: "msg ok", role: "status" }, `Booking ${b.ref}${b.scraggyRef ? " + " + b.scraggyRef : ""} · paid ${fmtFujitech(b.fujitechPaidTenths || 0)}${b.miles ? ` · +${b.miles.toLocaleString("en-GB")} Octmiles` : ""}${b.scraggymiles ? ` · +${b.scraggymiles.toLocaleString("en-GB")} Scraggymiles` : ""}.`),
     ...b.legs.map((l, i) => [i > 0 && b.legs[i - 1].direction === l.direction && b.legs[i - 1].no !== l.no ? el("p", { class: "note" }, `⏱ Change planes at ${placeName(l.from)}`) : "", passCard(b, l, SA)]).flat(),
     el("div", { class: "actions" }, el("a", { class: "btn", href: "account.html" }, "My Trips"), el("a", { class: "btn secondary", href: "book.html" }, "Book another")));
   res.scrollIntoView({ block: "start" });

@@ -17,7 +17,7 @@ export const placeName = (c) => PLACES[c]?.name || c;
 export const placeShort = (c) => PLACES[c]?.short || c;
 
 // Octmiles per stretch between two neighbouring stops
-const RATES = { "FIA-SIA": 150, "FIA-LIA": 200, "FIA-SCH": 250, "LIA-SIA": 120, "SCH-SIA": 80, "FIA-MIA": 300, "FIA-TDA": 120, "SIA-TDA": 140, "FIA-MFIA": 180, "MFIA-SIA": 110, "MFIA-TDA": 90, "SCH-TDA": 130 };
+export const RATES = { "FIA-SIA": 150, "FIA-LIA": 200, "FIA-SCH": 250, "LIA-SIA": 120, "SCH-SIA": 80, "FIA-MIA": 300, "FIA-TDA": 120, "SIA-TDA": 140, "FIA-MFIA": 180, "MFIA-SIA": 110, "MFIA-TDA": 90, "SCH-TDA": 130, "FIA-LUJ": 220, "SIA-LUJ": 160 };
 export const rate = (a, b) => RATES[[a, b].sort().join("-")] || 0;
 
 // Weekly timetable. days: 1 = Mon … 7 = Sun. stops: [airport, arrive, depart]. All Singapore time.

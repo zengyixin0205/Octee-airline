@@ -5,6 +5,7 @@ import { placeShort } from "./destinations.js";
 import { hash } from "./tripkit.js";
 import { load, save } from "./store.js";
 import { addPeanuts } from "./peanuts.js";
+import { accountRecords, saveAccountRecords } from "./profile-records.js";
 
 const KEY = "octee.complaints";
 const MAX_SAVED = 20;
@@ -33,8 +34,12 @@ $("#cp-flight").replaceChildren(
 const mad = $("#cp-mad"), madOut = $("#cp-mad-out");
 mad.addEventListener("input", () => (madOut.textContent = mad.value));
 
-const all = () => load(KEY, []).filter((c) => c && c.ticket);
-const mine = () => all().filter((c) => c.owner === owner).sort((a, b) => b.at - a.at);
+const all = () => [...new Map([...load(KEY, []).filter((c) => c && c.ticket), ...accountRecords(KEY, "complaints", owner, (c) => c.ticket, MAX_SAVED)].map((c) => [c.ticket, c])).values()];
+const mine = () => accountRecords(KEY, "complaints", owner, (c) => c.ticket, MAX_SAVED).sort((a, b) => b.at - a.at);
+const saveAll = (items) => {
+  save(KEY, items.slice(0, MAX_SAVED));
+  saveAccountRecords(KEY, "complaints", owner, items.filter((c) => c.owner === owner), (c) => c.ticket, MAX_SAVED);
+};
 
 function reply(c) {
   const cat = CATEGORIES.find((x) => x[0] === c.cat) || CATEGORIES[CATEGORIES.length - 1];
@@ -73,7 +78,7 @@ function drawList() {
       el("p", { class: "note quote", style: "margin:2px 0" }, "“" + c.text.slice(0, 160) + (c.text.length > 160 ? "…" : "") + "”")),
     el("div", { class: "actions" },
       el("button", { class: "btn small ghost", type: "button", onclick: () => { replyBox.replaceChildren(reply(c)); replyBox.scrollIntoView({ block: "center", behavior: "smooth" }); } }, "Read the reply again"),
-      el("button", { class: "btn small ghost", type: "button", onclick: () => { save(KEY, all().filter((x) => x.ticket !== c.ticket)); drawList(); } }, "Withdraw (we will pretend)")))));
+      el("button", { class: "btn small ghost", type: "button", onclick: () => { saveAll(all().filter((x) => x.ticket !== c.ticket)); drawList(); } }, "Withdraw (we will pretend)")))));
 }
 
 form.addEventListener("submit", (e) => {
@@ -88,7 +93,7 @@ form.addEventListener("submit", (e) => {
     flight: $("#cp-flight").value, cat: $("#cp-cat").value, mad: madNum, peanuts: Math.max(1, Math.round(madNum / 2)) + (text.length > 200 ? 1 : 0)
   };
   c.paid = addPeanuts(`Compensation for complaint ${c.ticket}`, c.peanuts);
-  save(KEY, [c, ...all()].slice(0, MAX_SAVED));
+  saveAll([c, ...all()].slice(0, MAX_SAVED));
   setMsg(msg, `Complaint filed. Ticket ${c.ticket}.${c.paid ? ` +${c.peanuts} peanut${c.peanuts === 1 ? "" : "s"} in your wallet.` : ""}`, "ok");
   replyBox.replaceChildren(reply(c));
   $("#cp-text").value = "";
