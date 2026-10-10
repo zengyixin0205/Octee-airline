@@ -23,3 +23,17 @@ CREATE TABLE IF NOT EXISTS attempts (
   until INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_exp ON sessions(expires_at);
+CREATE TABLE IF NOT EXISTS reviews (
+  user_id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL,
+  stars INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  date TEXT NOT NULL,
+  route TEXT NOT NULL DEFAULT '',
+  trip_ref TEXT NOT NULL DEFAULT '',
+  verified INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_upd ON reviews(updated_at);

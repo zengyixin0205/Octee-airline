@@ -3,12 +3,13 @@
 const ORIGINS = ["https://zengyixin0205.github.io", "http://localhost:8765", "http://127.0.0.1:8765"];
 const MAX_PROFILE = 300 * 1024;          // bytes of JSON per user
 const SESSION_MS = 30 * 24 * 3600 * 1000; // 30 days
+const ETCHED_URL = "https://zengyixin0205.github.io/Octee-airline/data/accounts.json";
 const enc = new TextEncoder();
 const iso = () => new Date().toISOString();
 
 const cors = (req) => {
   const o = req.headers.get("origin");
-  const h = { "access-control-allow-headers": "content-type, authorization", "access-control-allow-methods": "GET, POST, PUT, OPTIONS", "access-control-max-age": "600", vary: "origin" };
+  const h = { "access-control-allow-headers": "content-type, authorization", "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS", "access-control-max-age": "600", vary: "origin" };
   if (o && ORIGINS.includes(o)) h["access-control-allow-origin"] = o;
   return h;
 };
@@ -22,6 +23,19 @@ async function derive(password, salt) {
 const hashPassword = async (p) => { const salt = crypto.randomUUID(); return salt + "$" + (await derive(p, salt)); };
 const checkPassword = async (p, stored) => { const [salt, h] = String(stored).split("$"); if (!salt || !h) return false; const a = await derive(p, salt); return a.length === h.length && a === h; };
 const token = () => hex(crypto.getRandomValues(new Uint8Array(32)));
+
+// Accounts etched in the website's code (data/accounts.json, public). Cached for 5 minutes.
+let etchedMemo = { at: 0, list: [] };
+async function etchedList(env) {
+  if (Date.now() - etchedMemo.at < 300000) return etchedMemo.list;
+  try {
+    const r = await fetch(env.ETCHED_URL || ETCHED_URL, { cf: { cacheTtl: 60 } });
+    const j = r.ok ? await r.json() : null;
+    if (j && Array.isArray(j.accounts)) etchedMemo = { at: Date.now(), list: j.accounts.filter((a) => a && a.username && a.hash).map((a) => ({ key: String(a.username).toLowerCase(), name: String(a.username), hash: String(a.hash) })) };
+  } catch { /* keep the old list */ }
+  return etchedMemo.list;
+}
+const clip = (v, n) => String(v ?? "").slice(0, n);
 
 async function limited(db, key) {
   const r = await db.prepare("SELECT n, until FROM attempts WHERE k=?").bind(key).first();
@@ -53,6 +67,26 @@ export default {
     const db = env.DB;
     try {
       if (path === "/") return reply(req, { ok: true, service: "octee-cloud" });
+      // An etched account (in the code) joins the cloud the first time its owner logs in. The browser has already checked the
+      // password against the etched hash; the cloud checks that the name really is etched, and that nobody has claimed it yet.
+      if (req.method === "POST" && path === "/api/claim") {
+        const b = await req.json().catch(() => ({}));
+        const username = String(b.username || "").trim(), password = String(b.password || ""), key = username.toLowerCase();
+        const ip = req.headers.get("cf-connecting-ip") || "x";
+        const e = (await etchedList(env)).find((x) => x.key === key);
+        if (!e || e.hash !== String(b.proof || "")) return reply(req, { error: "bad_login" }, 401);
+        if (password.length < 8 || password.length > 200) return reply(req, { error: "bad_password" }, 400);
+        const rl = await limited(db, "reg:" + ip); if (rl) return reply(req, { error: "wait", seconds: rl }, 429);
+        if (await db.prepare("SELECT id FROM users WHERE username_key=?").bind(key).first()) return reply(req, { error: "bad_login" }, 401);
+        await fail(db, "reg:" + ip);
+        const r = await db.prepare("INSERT INTO users(username,username_key,password_hash,created_at) VALUES(?,?,?,?)").bind(e.name, key, await hashPassword(password), iso()).run();
+        return reply(req, { ok: true, username: e.name, token: await newSession(db, r.meta.last_row_id), profile: null, updatedAt: null }, 201);
+      }
+      // Reviews: everyone can read them; a cloud login writes one review each.
+      if (req.method === "GET" && path === "/api/reviews") {
+        const rows = await db.prepare("SELECT username, stars, title, body, date, route, trip_ref, verified FROM reviews ORDER BY updated_at DESC LIMIT 300").all();
+        return reply(req, { reviews: (rows.results || []).map((r) => ({ username: r.username, stars: r.stars, title: r.title, body: r.body, date: r.date, route: r.route || "", tripRef: r.trip_ref || "", verified: !!r.verified })) });
+      }
       if (req.method === "POST" && (path === "/api/register" || path === "/api/login")) {
         const b = await req.json().catch(() => ({}));
         const username = String(b.username || "").trim(), password = String(b.password || "");
@@ -62,6 +96,7 @@ export default {
           if (password.length < 8 || password.length > 200) return reply(req, { error: "bad_password" }, 400);
           const rl = await limited(db, "reg:" + ip); if (rl) return reply(req, { error: "wait", seconds: rl }, 429);
           const key = username.toLowerCase();
+          if ((await etchedList(env)).some((e) => e.key === key)) return reply(req, { error: "etched" }, 409);
           if (await db.prepare("SELECT id FROM users WHERE username_key=?").bind(key).first()) return reply(req, { error: "taken" }, 409);
           await fail(db, "reg:" + ip); // at most 5 new accounts per IP, then a 5 minute wait
           const r = await db.prepare("INSERT INTO users(username,username_key,password_hash,created_at) VALUES(?,?,?,?)").bind(username, key, await hashPassword(password), iso()).run();
@@ -89,6 +124,24 @@ export default {
           const at = iso();
           await db.prepare("INSERT INTO profiles(user_id,body,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET body=?, updated_at=?").bind(u.id, JSON.stringify(b.profile), at, JSON.stringify(b.profile), at).run();
           return reply(req, { ok: true, updatedAt: at });
+        }
+      }
+      if (path === "/api/review") {
+        if (!u) return reply(req, { error: "login" }, 401);
+        if (req.method === "DELETE") { await db.prepare("DELETE FROM reviews WHERE user_id=?").bind(u.id).run(); return reply(req, { ok: true }); }
+        if (req.method === "PUT") {
+          const text = await req.text();
+          if (text.length > 4000) return reply(req, { error: "too_big" }, 413);
+          let b; try { b = JSON.parse(text); } catch { return reply(req, { error: "bad_json" }, 400); }
+          const stars = Math.round(Number(b?.stars)), title = clip(b?.title, 60).trim(), body = clip(b?.body, 500).trim();
+          if (!(stars >= 1 && stars <= 5)) return reply(req, { error: "bad_stars" }, 400);
+          if (!title) return reply(req, { error: "bad_title" }, 400);
+          if (body.length < 20) return reply(req, { error: "bad_body" }, 400);
+          const date = /^\d{4}-\d{2}-\d{2}$/.test(String(b?.date || "")) ? b.date : iso().slice(0, 10);
+          const at = iso(), route = clip(b?.route, 60), trip = clip(b?.tripRef, 20), ver = b?.verified ? 1 : 0;
+          await db.prepare("INSERT INTO reviews(user_id,username,stars,title,body,date,route,trip_ref,verified,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET username=?, stars=?, title=?, body=?, date=?, route=?, trip_ref=?, verified=?, updated_at=?")
+            .bind(u.id, u.username, stars, title, body, date, route, trip, ver, at, u.username, stars, title, body, date, route, trip, ver, at).run();
+          return reply(req, { ok: true });
         }
       }
       if (req.method === "POST" && path === "/api/logout") {

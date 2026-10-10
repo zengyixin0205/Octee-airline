@@ -45,7 +45,7 @@ function cloudCard() {
     if (s && cloudLinked()) {
       const err = cloudLastError();
       box.replaceChildren(el("h2", { style: "margin-top:0" }, "Cloud account"),
-        el("p", {}, `Saved to the cloud as `, el("strong", {}, s.name), ". Log in with the ", el("a", { href: "login.html#cloud" }, "Cloud account tab"), " on any device and this account comes down."),
+        el("p", {}, `Saved to the cloud as `, el("strong", {}, s.name), ". Log in with the ", el("a", { href: "login.html" }, "Log in tab"), " on any device and this account comes down."),
         el("p", { class: "note" }, err ? `Last save failed (${err === "login" ? "the cloud login expired: log in to the cloud again" : "the cloud could not be reached"}). It will try again after your next change.` : s.dirty ? "Saving…" : "Everything is saved. " + (s.updatedAt ? "Last saved " + new Date(s.updatedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) + "." : "")),
         el("div", { class: "actions" }, el("button", { class: "btn small", type: "button", onclick: async (e) => { e.target.disabled = true; setMsg(msg, "Saving…", "info"); const ok = await cloudPush(true); setMsg(msg, ok ? "Saved to the cloud." : "Could not save. Try again soon.", ok ? "ok" : "error"); e.target.disabled = false; } }, "Save now"),
           el("button", { class: "btn small ghost", type: "button", onclick: async () => { await cloudLogout(); setMsg(msg, "Logged out of the cloud. This browser still has the account.", "info"); draw(); } }, "Log out of the cloud")), msg);

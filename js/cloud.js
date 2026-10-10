@@ -3,7 +3,7 @@
 // and backup codes are unchanged. Nothing here runs unless you log in to the cloud.
 import { load, save, remove } from "./store.js";
 import { CONFIG } from "./config.js";
-import { currentUser, profileOf, installProfile, sessionKey, localPasswordOk, localExists, isEtched, signUp, logIn, AuthError, notify, USERNAME_RE } from "./auth.js";
+import { currentUser, etchedAccounts, profileOf, installProfile, sessionKey, localPasswordOk, localExists, isEtched, signUp, logIn, AuthError, notify, USERNAME_RE } from "./auth.js";
 
 const KEY = "octee.cloud";           // { token, name, key, updatedAt, dirty }
 const state = () => load(KEY, null);
@@ -17,8 +17,8 @@ export const CLOUD_MESSAGES = {
   bad_username: "Usernames need 3–20 letters, numbers or underscores.",
   bad_password: "Password too short (8 or more characters). Like our legroom.",
   wait: "Too many tries. The cloud desk is closed for a few minutes. Please sit.",
-  offline: "The cloud could not be reached. You can still use a local account, and try again later.",
-  etched: "That name is etched into the code, so it already works on every device. Use the Log in tab.",
+  offline: "The cloud could not be reached. Try again later, or use the Manual sign in tab.",
+  etched: "That name is an etched account. Use the Log in tab with its password and it joins the cloud.",
   local_taken: "This browser already has a different account with that name. Log in to it first, or pick another name.",
   wrong_local: "That is not the password of the account in this browser.",
   too_big: "Your account is too big for the cloud. Joel is impressed, and sorry.",
@@ -36,6 +36,7 @@ async function call(method, path, body, token) {
   if (!res.ok) throw new CloudError(j.error || "server", { status: res.status, body: j });
   return j;
 }
+const etchedHash = async (name) => ((await etchedAccounts()).find((a) => a.username.toLowerCase() === String(name || "").trim().toLowerCase()) || {}).hash || "";
 export const cloudMessage = (e) => (e instanceof AuthError ? e.message : CLOUD_MESSAGES[e?.code] || CLOUD_MESSAGES.server);
 
 let suppress = false;
@@ -45,11 +46,19 @@ const quietNotify = () => { suppress = true; try { notify(); } finally { suppres
 // Log in: the cloud copy goes into this browser. First time for a local-only account? Then the local copy is uploaded.
 export async function cloudLogin(username, password) {
   username = String(username || "").trim();
-  const r = await call("POST", "/api/login", { username, password });
+  let r;
+  try { r = await call("POST", "/api/login", { username, password }); }
+  catch (e) {
+    // An etched account (in the code) that is not in the cloud yet: check its password here, then let it join.
+    const et = e.code === "bad_login" && (await etchedHash(username));
+    if (!et) throw e;
+    try { await logIn(username, password); } catch { throw e; }
+    r = await call("POST", "/api/claim", { username, password, proof: et });
+  }
   const name = r.username;
   if (r.profile) {
     await installProfile(name, r.profile, { password }, { quiet: true });
-  } else if (localExists(name) && (await localPasswordOk(name, password))) {
+  } else if ((localExists(name) && (await localPasswordOk(name, password))) || (await isEtched(name))) {
     await logIn(name, password); // nothing in the cloud yet: this browser's copy becomes the cloud copy
   } else {
     await signUp(name, password, password); // an empty cloud account: start fresh (with the welcome bonus)

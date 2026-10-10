@@ -2,6 +2,7 @@
 import { $, el, setMsg, niceDate, today } from "./dom.js";
 import { currentUser, updateUser } from "./auth.js";
 import { addMiles } from "./miles.js";
+import { cloudLinked } from "./cloud.js";
 import { allReviews, myReview, saveMyReview, deleteMyReview, starsText } from "./reviews-data.js";
 import { placeShort } from "./destinations.js";
 
@@ -15,7 +16,7 @@ function card(r) {
     el("p", {}, r.body),
     el("p", { class: "meta" }, r.username, " · ", niceDate(r.date), r.route ? " · " + r.route : "", " ",
       r.verified ? el("span", { class: "tag" }, "Verified Octee flyer ✈") : "",
-      r.archived ? "" : el("span", { class: "tag" }, "In this browser")));
+      r.archived || r.cloud ? "" : el("span", { class: "tag" }, "In this browser only")));
 }
 
 async function renderList() {
@@ -40,11 +41,11 @@ for (const b of document.querySelectorAll("#filters button")) {
 }
 $("#sort").addEventListener("change", (e) => { sort = e.target.value; renderList(); });
 
-function renderForm() {
+async function renderForm() {
   const box = $("#write");
   const u = currentUser();
   if (!u) { box.replaceChildren(el("p", {}, "Log in to write a review. ", el("a", { class: "btn small", href: "login.html?next=reviews.html" }, "Log in / Sign up"))); return; }
-  const mine = myReview(u.username);
+  const mine = await myReview(u.username), cloudIn = cloudLinked();
   const msg = el("p", { class: "msg", role: "status", "aria-live": "polite" });
   if (flash) setMsg(msg, flash, "ok");
   const counter = el("span", { class: "hint", id: "body-count" });
@@ -67,10 +68,10 @@ function renderForm() {
     el("div", { class: "field" }, el("label", { for: "r-body" }, "Review"), body, counter),
     el("label", { class: "check" }, el("input", { type: "checkbox", id: "r-ok" }), "This review is about Octee, not my bag"),
     el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, mine ? "Save changes" : "Post review"),
-      mine ? el("button", { class: "btn ghost", type: "button", onclick: () => { deleteMyReview(u.username); renderForm(); renderList(); } }, "Delete my review") : ""),
+      mine ? el("button", { class: "btn ghost", type: "button", onclick: async () => { await deleteMyReview(u.username); renderForm(); renderList(); } }, "Delete my review") : ""),
     msg,
-    el("p", { class: "note" }, "Reviews are saved in this browser. To show a review to everyone, the site owner adds it to data/reviews.json."));
-  form.addEventListener("submit", (e) => {
+    el("p", { class: "note" }, cloudIn ? "Your review is saved in the cloud, so everyone can read it." : "You are not logged in to the cloud, so this review stays in this browser only. Log in with a cloud account (Log in tab) to show it to everyone."));
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const st = +form.querySelector("input[name=stars]:checked")?.value;
     const title = $("#r-title").value.trim(), text = body.value.trim();
@@ -79,11 +80,11 @@ function renderForm() {
     if (text.length < 20) return setMsg(msg, "Please write at least 20 characters. Even 'one peanut' needs explaining.", "error");
     if (!$("#r-ok").checked) return setMsg(msg, "Please tick the box. Is it about Octee, or your bag?", "error");
     const trip = trips.find((t) => t.ref === $("#r-trip").value);
-    saveMyReview(u.username, { stars: st, title, body: text, date: today(), tripRef: trip?.ref || "", route: trip ? `${placeShort(trip.from)} → ${placeShort(trip.to)}` : "", verified: trips.length > 0 });
-    flash = "Thank you! Your review has been placed in the queue. The queue is also delayed."
+    const where = await saveMyReview(u.username, { stars: st, title, body: text, date: today(), tripRef: trip?.ref || "", route: trip ? `${placeShort(trip.from)} → ${placeShort(trip.to)}` : "", verified: trips.length > 0 });
+    flash = (where === "cloud" ? "Thank you! Your review is now on the page for everyone. The queue was also delayed." : "Thank you! Your review is saved in this browser only (the cloud could not be used).")
       + (u.reviewBonus ? "" : " +30 Octmiles for your first review.");
     if (!u.reviewBonus) updateUser((x) => { x.reviewBonus = true; addMiles(x, 30, "First review"); });
-    renderForm();
+    await renderForm();
     flash = null;
     renderList();
   });
@@ -93,3 +94,4 @@ function renderForm() {
 renderList();
 renderForm();
 window.addEventListener("octee:account", renderForm);
+window.addEventListener("octee:cloud", renderForm);
