@@ -4,7 +4,7 @@ import { load, save, loadSession, saveSession, removeSession } from "./store.js"
 import { proConverse } from "./joelpro.js";
 import { actionRow, stopSpeaking } from "./chatextras.js";
 import { converse, GREETING, CHIPS, resetState, setPage } from "./joelbrain.js";
-import { currentUser } from "./auth.js";
+import { currentUser, updateUser } from "./auth.js";
 import { buyJoelPro, buyJoelTokens, joelTokensOf, joelUsageMonth, JOEL_PRO_PRICE, JOEL_TOKEN_RATE, JOEL_MONTHLY_GRANT, JOEL_MIN_CALL_RESERVE, recordJoelUsage } from "./miles.js";
 import { JOEL_MODELS, JOEL_MODEL_DEFAULT } from "./joel-models.js";
 
@@ -37,7 +37,11 @@ export function mountJoelAI(box, idSuffix = "q") {
   const send = el("button", { class: "btn", type: "submit" }, "Ask");
   const chips = el("div", { class: "jai-chips", "aria-label": "Suggested questions" });
   const proBox = el("div", { class: "jai-pro" });
-  let history = loadSession(KEY, null) || [{ who: "bot", text: GREETING, links: [] }];
+  const account = currentUser();
+  const savedHistory = account?.joelChat;
+  let history = account
+    ? (Array.isArray(savedHistory) && savedHistory.length ? savedHistory.slice(-40) : [{ who: "bot", text: GREETING, links: [] }])
+    : loadSession(KEY, null) || [{ who: "bot", text: GREETING, links: [] }];
   let busy = false;
 
   const bubble = (m) => el("div", { class: "jai-msg " + m.who },
@@ -146,7 +150,7 @@ export function mountJoelAI(box, idSuffix = "q") {
       }
     }
     history.push({ who: "bot", text: res.text, links: res.links, mood: res.mood, usage: res.usage, modelName: res.modelName });
-    saveSession(KEY, history);
+    saveHistory();
     draw();
     if (res.chips) drawChips(res.chips);
     busy = false; send.disabled = false; input.focus();
@@ -158,6 +162,16 @@ export function mountJoelAI(box, idSuffix = "q") {
     document.body.append(a); a.click(); a.remove();
   }
 
+  function saveHistory() {
+    history = history.slice(-40);
+    saveSession(KEY, history);
+    // The cloud already stores the signed-in account profile. Keeping JoelAI chat
+    // there makes it follow that account to another device without a new API table.
+    if (currentUser()) {
+      try { updateUser((u) => { u.joelChat = history; }); } catch { /* the local chat remains available */ }
+    }
+  }
+
   box.replaceChildren(
     el("div", { class: "jai-head" },
       el("div", { class: "jai-avatar", "aria-hidden": "true" }, "J"),
@@ -165,7 +179,12 @@ export function mountJoelAI(box, idSuffix = "q") {
     proBox, log, chips,
     el("form", { class: "jai-form", onsubmit: (e) => { e.preventDefault(); ask(input.value); } },
       el("label", { class: "visually-hidden", for: "jai-" + idSuffix }, "Your question for JoelAI"), input, send),
-    el("p", { class: "note" }, el("button", { class: "linklike", type: "button", onclick: saveChat }, "Save this chat"), " · ", el("button", { class: "linklike", type: "button", onclick: () => { stopSpeaking(); removeSession(KEY); resetState(); history = [{ who: "bot", text: GREETING, links: [] }]; drawChips(); draw(); } }, "Start again")));
+    el("p", { class: "note" }, el("button", { class: "linklike", type: "button", onclick: saveChat }, "Save this chat"), " · ", el("button", { class: "linklike", type: "button", onclick: () => { stopSpeaking(); removeSession(KEY); resetState(); history = [{ who: "bot", text: GREETING, links: [] }]; const u = currentUser(); if (u) { try { updateUser((x) => { delete x.joelChat; }); } catch {} } drawChips(); draw(); } }, "Start again"), " · Your chat is saved with your account; a cloud-linked account syncs it across devices. Avoid passwords or private details."));
   drawPro(); draw(); drawChips();
-  window.addEventListener("octee:account", drawPro);
+  window.addEventListener("octee:account", () => {
+    const chat = currentUser()?.joelChat;
+    if (Array.isArray(chat) && chat.length) history = chat.slice(-40);
+    else history = [{ who: "bot", text: GREETING, links: [] }];
+    drawPro(); draw();
+  });
 }

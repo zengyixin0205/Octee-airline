@@ -28,11 +28,11 @@ GitHub Pages runs the handbook version of JoelAI only. JoelAI Pro needs the `api
 3. Set an AI Gateway project or team spend budget before enabling the endpoint. It is publicly reachable, and the light per-IP rate limit is not a durable spend limit.
 4. Redeploy. JoelAI Pro stays unavailable until `JOELAI_ENABLED=true` and gateway authentication are both present.
 
-JoelAI Pro uses the model's reported input and output token counts. Users unlock Pro for 10 Octeetokens, receive 10,000 JoelTokens each month, and can buy 2,500 more per Octeetoken. Purchased tokens carry over. The account wallet and history still live in browser storage, so users can edit them and balances do not sync across devices. These are game credits with no real-world value. Chat messages sent in Pro mode go to the selected model through AI Gateway.
+JoelAI Pro uses the model's reported input and output token counts. JoelAI conversations are saved with a signed-in account. Cloud-linked accounts sync them with the account profile; manual accounts keep them in this browser. Avoid entering passwords or private details in chat. Chat messages sent in model mode go to the selected model through AI Gateway.
 
 ## What is saved where
 
-There is no account database. Accounts, Octmiles, trips, JoelTokens and personal usage totals are saved **in each visitor's own browser** (`localStorage`). They don't follow you to another device. Published reviews and codes are repo data. JoelAI Pro's model request runs on the Vercel function when deployed there.
+Accounts that are not linked to Octee Cloud, along with guest activity, are saved **in each visitor's own browser** (`localStorage`). A cloud-linked account syncs its account profile—including Octmiles, trips, JoelTokens, usage totals and JoelAI chat history—to Cloudflare Worker + D1, so it follows the account to another device. Published reviews and codes are repo data. JoelAI Pro's model request runs on the Vercel function when deployed there.
 
 Things everyone sees live in `data/` and change when you commit:
 
