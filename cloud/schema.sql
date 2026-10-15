@@ -94,3 +94,24 @@ CREATE TABLE IF NOT EXISTS code_uses (hash TEXT PRIMARY KEY, n INTEGER NOT NULL 
 CREATE TABLE IF NOT EXISTS code_claims (user_id INTEGER NOT NULL, hash TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, hash), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
 -- Who may open the code viewer (besides the etched owner accounts in CODE_OWNERS). Managed from the 10-click screen.
 CREATE TABLE IF NOT EXISTS code_viewers (user_id INTEGER PRIMARY KEY, granted_by INTEGER NOT NULL, granted_at TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+
+-- Reviews: many per account (the older one-per-account table `reviews` is only read once, to copy it here).
+CREATE TABLE IF NOT EXISTS review_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  stars INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  date TEXT NOT NULL,
+  route TEXT NOT NULL DEFAULT '',
+  trip_ref TEXT NOT NULL DEFAULT '',
+  verified INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_review_posts_user ON review_posts(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_review_posts_upd ON review_posts(updated_at);
+INSERT INTO review_posts(user_id,username,stars,title,body,date,route,trip_ref,verified,created_at,updated_at)
+  SELECT user_id,username,stars,title,body,date,route,trip_ref,verified,updated_at,updated_at FROM reviews WHERE NOT EXISTS (SELECT 1 FROM review_posts);

@@ -59,6 +59,8 @@ async function perkOn(db, key, username) {
 const FLAT = { "joel-3.3pro": { price: 150, name: "Joel-3.3 Pro" }, "joel-4.3neo": { price: 400, name: "Joel-4.3 NEO" } };
 // Accounts etched into the code that may always open the code viewer and manage who else can (the names also have to be etched accounts).
 const CODE_OWNERS = ["octee"];
+// Reviews an account may write: this many a day and this many in all.
+const REVIEW_LIMITS = { day: 5, total: 50 };
 const clip = (v, n) => String(v ?? "").slice(0, n);
 
 
@@ -433,8 +435,8 @@ export default {
       }
       // Reviews: everyone can read them; a cloud login writes one review each.
       if (req.method === "GET" && path === "/api/reviews") {
-        const rows = await db.prepare("SELECT username, stars, title, body, date, route, trip_ref, verified FROM reviews ORDER BY updated_at DESC LIMIT 300").all();
-        return reply(req, { reviews: (rows.results || []).map((r) => ({ username: r.username, stars: r.stars, title: r.title, body: r.body, date: r.date, route: r.route || "", tripRef: r.trip_ref || "", verified: !!r.verified })) });
+        const rows = await db.prepare("SELECT id, username, stars, title, body, date, route, trip_ref, verified FROM review_posts ORDER BY updated_at DESC LIMIT 300").all();
+        return reply(req, { reviews: (rows.results || []).map((r) => ({ id: r.id, username: r.username, stars: r.stars, title: r.title, body: r.body, date: r.date, route: r.route || "", tripRef: r.trip_ref || "", verified: !!r.verified })) });
       }
       if (req.method === "POST" && (path === "/api/register" || path === "/api/login")) {
         const b = await req.json().catch(() => ({}));
@@ -483,10 +485,16 @@ export default {
           return reply(req, { ok: true, updatedAt: at });
         }
       }
-      if (path === "/api/review") {
+      // Reviews: an account can write many (up to REVIEW_LIMITS), edit or delete its own, one per trip.
+      if (path === "/api/review" || /^\/api\/review\/\d+$/.test(path)) {
         if (!u) return reply(req, { error: "login" }, 401);
-        if (req.method === "DELETE") { await db.prepare("DELETE FROM reviews WHERE user_id=?").bind(u.id).run(); return reply(req, { ok: true }); }
-        if (req.method === "PUT") {
+        const idm = path.match(/^\/api\/review\/(\d+)$/), rid = idm ? Number(idm[1]) : null;
+        if (req.method === "DELETE") {
+          if (rid) await db.prepare("DELETE FROM review_posts WHERE id=? AND user_id=?").bind(rid, u.id).run();
+          else await db.prepare("DELETE FROM review_posts WHERE id=(SELECT id FROM review_posts WHERE user_id=? ORDER BY id DESC LIMIT 1)").bind(u.id).run();   // older pages: delete the newest
+          return reply(req, { ok: true });
+        }
+        if (req.method === "PUT" || req.method === "POST") {
           const text = await req.text();
           if (text.length > 4000) return reply(req, { error: "too_big" }, 413);
           let b; try { b = JSON.parse(text); } catch { return reply(req, { error: "bad_json" }, 400); }
@@ -496,9 +504,17 @@ export default {
           if (body.length < 20) return reply(req, { error: "bad_body" }, 400);
           const date = /^\d{4}-\d{2}-\d{2}$/.test(String(b?.date || "")) ? b.date : iso().slice(0, 10);
           const at = iso(), route = clip(b?.route, 60), trip = clip(b?.tripRef, 20), ver = b?.verified ? 1 : 0;
-          await db.prepare("INSERT INTO reviews(user_id,username,stars,title,body,date,route,trip_ref,verified,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET username=?, stars=?, title=?, body=?, date=?, route=?, trip_ref=?, verified=?, updated_at=?")
-            .bind(u.id, u.username, stars, title, body, date, route, trip, ver, at, u.username, stars, title, body, date, route, trip, ver, at).run();
-          return reply(req, { ok: true });
+          const mine = ((await db.prepare("SELECT id, trip_ref, created_at FROM review_posts WHERE user_id=?").bind(u.id).all()).results) || [];
+          if (rid && !mine.some((r) => r.id === rid)) return reply(req, { error: "not_found" }, 404);
+          if (trip && mine.some((r) => r.trip_ref === trip && r.id !== rid)) return reply(req, { error: "trip_taken" }, 409);
+          if (rid) {
+            await db.prepare("UPDATE review_posts SET username=?, stars=?, title=?, body=?, date=?, route=?, trip_ref=?, verified=?, updated_at=? WHERE id=? AND user_id=?").bind(u.username, stars, title, body, date, route, trip, ver, at, rid, u.id).run();
+            return reply(req, { ok: true, id: rid });
+          }
+          if (mine.length >= REVIEW_LIMITS.total) return reply(req, { error: "limit_total" }, 429);
+          if (mine.filter((r) => String(r.created_at).slice(0, 10) === at.slice(0, 10)).length >= REVIEW_LIMITS.day) return reply(req, { error: "limit_day" }, 429);
+          const ins = await db.prepare("INSERT INTO review_posts(user_id,username,stars,title,body,date,route,trip_ref,verified,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)").bind(u.id, u.username, stars, title, body, date, route, trip, ver, at, at).run();
+          return reply(req, { ok: true, id: ins.meta && ins.meta.last_row_id });
         }
       }
       if (req.method === "POST" && path === "/api/logout") {
