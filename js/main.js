@@ -177,6 +177,7 @@ import("./joelfab.js");
 import("./joelmode.js");
 import("./cloud.js");
 import("./ads.js").then((m) => m.showAds()).catch(() => {});
+import("./video-ad.js").then((m) => m.showVideoAd()).catch(() => {});
 import("./apology.js").then((m) => {
   m.showBanner();
   m.watchFlights();

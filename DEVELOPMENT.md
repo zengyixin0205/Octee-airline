@@ -1264,3 +1264,7 @@ A site inside the site. Each page is only `<body class="joel" data-page="…">`;
 - Cloud: `balances.joelmiles` column (existing databases: `ALTER TABLE balances ADD COLUMN joelmiles INTEGER NOT NULL DEFAULT 0`). `applyWallet` checks every swap line in a saved profile; JoelTokens ↔ Joelmiles goes through `POST /api/joel/exchange {dir:"in"|"out", units}` because the cloud owns the JoelToken ledger.
 - Perk `freeJT` in `data/perks.json` (Control Tower > Account perks): JT bookings cost nothing for that account (Octee and Joel are on).
 - `css/joel.css` is the brown theme; `tools/stamp.mjs` fingerprints it too.
+
+## Welcome video ad
+
+`js/video-ad.js` (started from `main.js`): once per visit (session) a window plays one of `assets/video/welcome-1.mp4` / `welcome-2.mp4` (480p copies of two clips) with a tiny × in the corner (Esc or a click outside also close it). It starts muted, with a sound button. The two clips take turns from visit to visit. Control Tower > Ads > "Welcome video ad" switches it off (saved in the ads data as `video: { on: false }`). The clips are other people's YouTube videos, so a takedown request is possible: delete the files or switch it off.

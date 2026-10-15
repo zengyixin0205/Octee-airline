@@ -142,7 +142,9 @@ async function tower(session, crew, notice = "") {
   const tabCode = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Code");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
-  let ads = ((await fetchJson("data/ads.json", { ads: [] })).ads || []).map(cleanAd);
+  const adsFile = await fetchJson("data/ads.json", { ads: [] });
+  let ads = (adsFile.ads || []).map(cleanAd);
+  let videoOn = !(adsFile.video && adsFile.video.on === false);
   const publishedAccounts = (await fetchJson("data/accounts.json", { accounts: [] })).accounts || [];
   const removed = new Set();
   const body = el("div");
@@ -459,7 +461,12 @@ async function tower(session, crew, notice = "") {
         preview);
     };
     ads.forEach((a) => { a.priority = String(a.priority ?? "") });
+    const vOn = el("input", { type: "checkbox", id: "vad-on", checked: videoOn });
+    vOn.addEventListener("change", () => { videoOn = vOn.checked; changed(); });
     return el("div", {},
+      el("div", { class: "card" }, el("h3", {}, "Welcome video ad"),
+        el("p", { class: "note" }, "When a visit starts, one of the two clips (assets/video/welcome-1.mp4 and welcome-2.mp4) plays in a window with a tiny × in the corner. It shows once per visit and the clips take turns. Save to cloud below to apply this switch."),
+        el("div", { class: "field" }, el("label", { for: "vad-on" }, vOn, " Show the welcome video ad"))),
       el("div", { class: "card" }, el("h3", {}, "Ads"),
         el("p", { class: "note" }, "Each ad is a slim banner under the header. Visitors see ads that are On, between their start and end dates, on the pages you list. If several match, they take turns. Visitors can close the banner for the visit. Text only; the site marks every ad with a small “Ad” tag, since Octee is a parody."),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => {
@@ -471,9 +478,9 @@ async function tower(session, crew, notice = "") {
       el("div", { class: "actions" },
         el("button", { class: "btn", type: "button", onclick: async () => {
           const clean = ads.map(cleanAd).filter((a) => a.title);
-          if (await saveToCloud("ads", { ads: clean }, amsg, "Ads")) { ads = clean.map((a) => ({ ...a, priority: String(a.priority) })); show("ads"); body.append(el("p", { class: "msg ok" }, "Ads saved to the cloud. They are live now.")); }
+          if (await saveToCloud("ads", { ads: clean, video: { on: videoOn } }, amsg, "Ads")) { ads = clean.map((a) => ({ ...a, priority: String(a.priority) })); show("ads"); body.append(el("p", { class: "msg ok" }, "Ads saved to the cloud. They are live now.")); }
         } }, "Save to cloud"),
-        el("button", { class: "btn small ghost", type: "button", onclick: () => download("ads.json", { ads: ads.map(cleanAd).filter((a) => a.title) }) }, "Manual download: ads.json")),
+        el("button", { class: "btn small ghost", type: "button", onclick: () => download("ads.json", { ads: ads.map(cleanAd).filter((a) => a.title), video: { on: videoOn } }) }, "Manual download: ads.json")),
       amsg,
       el("p", { class: "hint" }, "Ads without a headline are not saved. Manual download is only for when the cloud has a problem: replace data/ads.json, commit and push."));
   }

@@ -1199,3 +1199,13 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .tk-attr, .tk-prop { color: #9cdcfe; }
 .tk-atrule { color: #c586c0; }
 @media (max-width: 700px) { .cv-sidewrap { width: 200px; } }
+
+/* Welcome video ad (js/video-ad.js) */
+.vad { position: fixed; inset: 0; z-index: 9000; background: rgba(20, 10, 0, .62); display: grid; place-items: center; padding: 16px; }
+.vad-card { position: relative; width: min(760px, 100%); background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,.6); }
+.vad-video { display: block; width: 100%; max-height: 72vh; background: #000; }
+.vad-x { position: absolute; top: 4px; right: 4px; z-index: 2; width: 22px; height: 22px; line-height: 20px; padding: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; font-size: 16px; cursor: pointer; }
+.vad-x:hover { background: rgba(0,0,0,.85); }
+.vad-tag { position: absolute; top: 6px; left: 8px; z-index: 2; background: rgba(0,0,0,.55); color: #fff; font: 700 .7rem var(--sans); padding: 2px 8px; border-radius: 999px; }
+.vad-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; color: #fff; font-size: .85rem; background: #111; }
+.vad-sound { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; padding: 3px 10px; cursor: pointer; font: inherit; }
