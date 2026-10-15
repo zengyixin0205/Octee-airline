@@ -34,6 +34,7 @@ A small Cloudflare Worker + D1 database. It stores a login and ONE saved JSON pr
 - The site reads the cloud copy first and falls back to the file in `data/` (`js/published.js`), and the Worker's etched-account list does the same. Every Tower panel keeps a "Manual download" button for when the cloud has a problem.
 - Run the new `published` table from `schema.sql`, then redeploy the Worker.
 - `perks` is a fifth published file: `{ "unlimitedFujitech": { "octee": true } }`. Only the Control Tower (Accounts tab) can change it. The site reads it (`js/perks.js`) and `spendFujitech` skips the deduction for accounts listed there; the earned Fujitech balance is never touched.
+- `ads` is a sixth published file: `{ "ads": [ { "title", "text", "icon", "link", "button", "image", "theme", "start", "end", "pages", "priority", "on" } ] }`, at most 30. The Worker checks it (`adOk`): plain text, links must be https:// or a page of the site, images https:// only. Public to read, owner/admin to write. Edited in the Control Tower Ads tab; shown by `js/ads.js`.
 
 ## Cloud-owned balances
 Octmiles, Octeetokens, Fujitech and Scraggymiles of a **cloud account** are kept by the Worker in the `balances` table. The browser still works the numbers out and writes a history line for each change; when it saves the account (`PUT /api/profile`) the Worker (`applyWallet` in `index.js`) reads only the **new** history lines:

@@ -1122,3 +1122,21 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .jai-wallet-box { margin: 8px 0; }
 .jai-wallet-list { margin: 4px 0 6px; padding-left: 1.2em; font-size: .85rem; }
 .jai-note { color: #8a4b00; }
+
+/* Ads (Control Tower > Ads). A slim banner under the header. */
+.ad-slot { max-width: 1100px; margin: 10px auto 0; padding: 0 16px; }
+.ad-banner { position: relative; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 44px 10px 14px; border-radius: 12px; border: 2px solid var(--octee-ink); background: var(--octee-orange); color: var(--octee-ink); }
+.ad-banner.ad-ink { background: var(--octee-ink); color: #fff; border-color: var(--octee-orange); }
+.ad-banner.ad-sky { background: #d6ebff; border-color: #2a6fb0; }
+.ad-banner.ad-cream { background: var(--octee-cream); border-color: #e6d5c3; }
+.ad-icon { font-size: 1.6rem; line-height: 1; }
+.ad-img { height: 44px; width: auto; max-width: 120px; object-fit: contain; border-radius: 6px; }
+.ad-body { flex: 1 1 240px; min-width: 0; }
+.ad-btn { white-space: nowrap; }
+.ad-tag { position: absolute; right: 38px; top: 6px; font-size: .68rem; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; }
+.ad-close { position: absolute; right: 8px; top: 4px; border: 0; background: transparent; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; padding: 2px 6px; }
+.ad-preview { margin-top: 8px; }
+.ad-edit { border: 1px solid #c7ccd1; border-radius: 6px; padding: 10px; margin: 10px 0; background: #f8f9fa; }
+.ad-edit.off { opacity: .6; }
+.modal.fag .ad-banner { color: var(--octee-ink); }
+.modal.fag .ad-banner.ad-ink { color: #fff; }

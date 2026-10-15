@@ -13,6 +13,7 @@ import { loadSession, saveSession, removeSession, load, save, remove } from "./s
 import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions.js";
 import { cloudAdminCall, cloudState } from "./cloud.js";
 import { fetchPublished, publishToCloud, isPublisher } from "./published.js";
+import { THEMES, MAX_ADS, cleanAd, adNode } from "./ads.js";
 
 const SESSION = "octee.tower.session";
 const DRAFT_CODES = "octee.tower.codes";
@@ -137,8 +138,10 @@ async function tower(session, crew, notice = "") {
   const tabAccounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Accounts");
   const tabCloud = session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Cloud accounts") : null;
   const tabRequests = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Requests");
+  const tabAds = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Ads");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
+  let ads = ((await fetchJson("data/ads.json", { ads: [] })).ads || []).map(cleanAd);
   const publishedAccounts = (await fetchJson("data/accounts.json", { accounts: [] })).accounts || [];
   const removed = new Set();
   const body = el("div");
@@ -159,10 +162,11 @@ async function tower(session, crew, notice = "") {
     tabAccounts.setAttribute("aria-selected", String(which === "accounts"));
     tabCloud?.setAttribute("aria-selected", String(which === "cloud"));
     tabRequests.setAttribute("aria-selected", String(which === "requests"));
+    tabAds.setAttribute("aria-selected", String(which === "ads"));
     countRequests();
     if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
     if (which === "cloud") { body.replaceChildren(el("p", { class: "note" }, "Loading Cloud accounts…")); cloudPanel().then((n) => body.replaceChildren(n)); return; }
-    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : crewPanel());
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabDiscounts.addEventListener("click", () => show("discounts"));
@@ -170,6 +174,7 @@ async function tower(session, crew, notice = "") {
   tabAccounts.addEventListener("click", () => show("accounts"));
   tabCloud?.addEventListener("click", () => show("cloud"));
   tabRequests.addEventListener("click", () => show("requests"));
+  tabAds.addEventListener("click", () => show("ads"));
 
   const saveCodes = (next) => { codes = next; save(DRAFT_CODES, codes); show("codes"); };
 
@@ -403,6 +408,53 @@ async function tower(session, crew, notice = "") {
         el("p", { class: "hint" }, "Requests are recorded in the browser where they are made. Press Save to cloud to make the permissions given here work on other devices at once. Manual download is only for when the cloud has a problem.")));
   }
 
+  // Ads: shown as a small banner under the header on the pages you choose. Saved to the cloud like everything else here.
+  function adsPanel() {
+    const amsg = el("p", { class: "msg", "aria-live": "polite" });
+    const changed = () => setMsg(amsg, "Changed. Press Save to cloud to make it live.", "info");
+    const field = (label, input) => el("div", { class: "field" }, el("label", {}, label), input);
+    const text = (a, key, len, ph = "") => { const i = el("input", { type: "text", maxlength: String(len), value: a[key] || "", placeholder: ph }); i.addEventListener("input", () => { a[key] = i.value; changed(); a._refresh?.(); }); return i; };
+    const date = (a, key) => { const i = el("input", { type: "date", value: a[key] || "" }); i.addEventListener("change", () => { a[key] = i.value; changed(); a._refresh?.(); }); return i; };
+    const card = (a, i) => {
+      const theme = el("select", {}, Object.entries(THEMES).map(([k, v]) => el("option", { value: k, selected: a.theme === k }, v)));
+      theme.addEventListener("change", () => { a.theme = theme.value; changed(); show("ads"); });
+      const on = el("input", { type: "checkbox", checked: a.on !== false });
+      on.addEventListener("change", () => { a.on = on.checked; changed(); show("ads"); });
+      const move = (d) => { const j = i + d; if (j < 0 || j >= ads.length) return; [ads[i], ads[j]] = [ads[j], ads[i]]; changed(); show("ads"); };
+      const preview = el("div", { class: "ad-preview-box" });
+      Object.defineProperty(a, "_refresh", { enumerable: false, configurable: true, writable: true, value: () => preview.replaceChildren(a.title ? adNode(cleanAd(a), {}) : el("p", { class: "note" }, "Add a headline to see the preview.")) });
+      a._refresh();
+      return el("div", { class: "ad-edit" + (a.on === false ? " off" : "") },
+        el("div", { class: "row" }, field("Headline", text(a, "title", 80, "Fly Octee. Eventually.")), field("Small print (optional)", text(a, "text", 200)), field("Emoji icon", text(a, "icon", 4, "✈️"))),
+        el("div", { class: "row" }, field("Link (https://… or a page like book.html)", text(a, "link", 300, "book.html")), field("Button label", text(a, "button", 24, "Learn more")), field("Image URL (https://, optional)", text(a, "image", 300))),
+        el("div", { class: "row" }, field("Colour", theme), field("Starts", date(a, "start")), field("Ends", date(a, "end")),
+          field("Priority (0–99)", text(a, "priority", 2, "0"))),
+        el("div", { class: "row" }, field("Only on these pages (blank = every page)", text(a, "pages", 200, "index.html, book.html"))),
+        el("div", { class: "actions" },
+          el("label", {}, on, " On"), el("button", { class: "btn small ghost", type: "button", onclick: () => move(-1) }, "Move up"), el("button", { class: "btn small ghost", type: "button", onclick: () => move(1) }, "Move down"),
+          el("button", { class: "btn small ghost danger", type: "button", onclick: () => { ads.splice(i, 1); changed(); show("ads"); } }, "Delete")),
+        preview);
+    };
+    ads.forEach((a) => { a.priority = String(a.priority ?? "") });
+    return el("div", {},
+      el("div", { class: "card" }, el("h3", {}, "Ads"),
+        el("p", { class: "note" }, "Each ad is a slim banner under the header. Visitors see ads that are On, between their start and end dates, on the pages you list. If several match, they take turns. Visitors can close the banner for the visit. Text only; the site marks every ad with a small “Ad” tag, since Octee is a parody."),
+        el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => {
+          if (ads.length >= MAX_ADS) return setMsg(amsg, `That is the most ads (${MAX_ADS}).`, "error");
+          ads.unshift({ id: "ad" + Date.now().toString(36), on: true, title: "", text: "", icon: "✈️", link: "", button: "", image: "", theme: "orange", start: "", end: "", pages: "", priority: "0" });
+          show("ads");
+        } }, "Add an ad"))),
+      ...ads.map(card),
+      el("div", { class: "actions" },
+        el("button", { class: "btn", type: "button", onclick: async () => {
+          const clean = ads.map(cleanAd).filter((a) => a.title);
+          if (await saveToCloud("ads", { ads: clean }, amsg, "Ads")) { ads = clean.map((a) => ({ ...a, priority: String(a.priority) })); show("ads"); body.append(el("p", { class: "msg ok" }, "Ads saved to the cloud. They are live now.")); }
+        } }, "Save to cloud"),
+        el("button", { class: "btn small ghost", type: "button", onclick: () => download("ads.json", { ads: ads.map(cleanAd).filter((a) => a.title) }) }, "Manual download: ads.json")),
+      amsg,
+      el("p", { class: "hint" }, "Ads without a headline are not saved. Manual download is only for when the cloud has a problem: replace data/ads.json, commit and push."));
+  }
+
   function crewPanel() {
     const kmsg = el("p", { class: "msg", "aria-live": "polite" });
     const msg = el("p", { class: "msg", "aria-live": "polite" });
@@ -444,7 +496,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabCrew),
     cloudBar,
     body,
     el("p", { class: "hint" }, "Changes here are drafts in this browser until you press Save to cloud. Cloud admin role changes take effect immediately."));

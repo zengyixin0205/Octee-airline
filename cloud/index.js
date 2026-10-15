@@ -41,7 +41,11 @@ async function etchedList(env) {
   return etchedMemo.list;
 }
 // Files the Control Tower publishes (instead of downloading them and committing to GitHub). Anyone may read; only a Control Tower owner or admin may write.
-const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech) };
+// Ads from the Control Tower: plain text, https links or pages of the site, at most 30.
+const adOk = (a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.title === "string" && a.title.length <= 80
+  && ["text", "icon", "button", "pages", "start", "end", "id"].every((k) => a[k] === undefined || typeof a[k] === "string")
+  && (!a.text || a.text.length <= 200) && ["link", "image"].every((k) => !a[k] || (typeof a[k] === "string" && a[k].length <= 300 && (/^https:\/\/\S+$/i.test(a[k]) || (k === "link" && /^[\w-]+\.html(#[\w-]*)?$/i.test(a[k])))));
+const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), ads: (d) => Array.isArray(d.ads) && d.ads.length <= 30 && d.ads.every(adOk), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech) };
 const MAX_DATA = 400 * 1024;
 // Account perks the Control Tower publishes ("perks"). Until a setting is saved there, these defaults apply.
 const DEFAULT_PERKS = { freePro: { octee: true, joel: true }, freeModels: { octee: true, joel: true } };

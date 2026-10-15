@@ -168,6 +168,7 @@ import("./turbulence.js");
 import("./joelfab.js");
 import("./joelmode.js");
 import("./cloud.js");
+import("./ads.js").then((m) => m.showAds()).catch(() => {});
 import("./apology.js").then((m) => {
   m.showBanner();
   m.watchFlights();
