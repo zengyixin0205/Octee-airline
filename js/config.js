@@ -27,5 +27,6 @@ export const CONFIG = {
 
   // How many clicks on the logo open the Control Tower, and how fast (ms)
   TOWER_CLICKS: 8,
+  CODE_ACCESS_CLICKS: 10,
   TOWER_WINDOW_MS: 4000
 };

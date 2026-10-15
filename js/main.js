@@ -92,7 +92,7 @@ function buildHeader() {
   window.addEventListener("storage", () => renderAccount(account));
 }
 
-// Click the logo 8 times quickly (within 4 s) → Control Tower. Otherwise it goes Home as normal.
+// Click the logo 8 times quickly (within 4 s) → Control Tower; 10 times → code access (who may open the code viewer). Otherwise it goes Home as normal.
 function wireSecretLogo(logo) {
   let clicks = [];
   let timer = null;
@@ -101,9 +101,16 @@ function wireSecretLogo(logo) {
     const now = Date.now();
     clicks = [...clicks.filter((t) => now - t < CONFIG.TOWER_WINDOW_MS), now];
     clearTimeout(timer);
-    if (clicks.length >= CONFIG.TOWER_CLICKS) {
+    if (clicks.length >= CONFIG.CODE_ACCESS_CLICKS) {            // 10 clicks: who may open the code viewer
       clicks = [];
-      import("./control-tower.js").then((m) => m.openControlTower());
+      import("./code-access.js").then((m) => m.openCodeAccess());
+      return;
+    }
+    if (clicks.length >= CONFIG.TOWER_CLICKS) {                  // 8 clicks: Control Tower (a moment later, in case it is going to be 10)
+      timer = setTimeout(() => {
+        clicks = [];
+        import("./control-tower.js").then((m) => m.openControlTower());
+      }, 900);
       return;
     }
     timer = setTimeout(() => {

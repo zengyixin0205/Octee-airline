@@ -25,3 +25,21 @@ for (const page of readdirSync(root).filter((f) => f.endsWith(".html"))) {
   if (h !== before) { writeFileSync(join(root, page), h); changed++; }
 }
 console.log(`stamped ${changed} pages, ${jsFiles.length} scripts, css ${cssHash}`);
+
+// The list of files the code viewer (Control Tower > Code) shows: data/source-index.json. Text files only.
+import { readdirSync as rd, statSync } from "node:fs";
+const TEXT = /\.(html|js|mjs|css|json|md|txt|sql|svg|toml|ya?ml)$/i;
+const SKIP_DIR = new Set([".git", "node_modules", "assets", ".github"]);
+const files = [];
+(function walk(dir, rel) {
+  for (const e of rd(join(root, dir), { withFileTypes: true })) {
+    const r = rel ? rel + "/" + e.name : e.name;
+    if (e.isDirectory()) { if (!SKIP_DIR.has(e.name)) walk(join(dir, e.name), r); }
+    else if (TEXT.test(e.name) && r !== "data/source-index.json" && !e.name.startsWith("_") && !e.name.startsWith(".")) files.push({ path: r, size: statSync(join(root, r)).size });
+  }
+})("", "");
+files.sort((a, b) => a.path.localeCompare(b.path));
+const indexText = JSON.stringify({ files }) + "\n";
+let oldIndex = ""; try { oldIndex = readFileSync(join(root, "data/source-index.json"), "utf8"); } catch { /* new */ }
+if (oldIndex !== indexText) writeFileSync(join(root, "data/source-index.json"), indexText);
+console.log(`source index: ${files.length} files`);

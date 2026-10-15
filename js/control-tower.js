@@ -139,6 +139,7 @@ async function tower(session, crew, notice = "") {
   const tabCloud = session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Cloud accounts") : null;
   const tabRequests = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Requests");
   const tabAds = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Ads");
+  const tabCode = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Code");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
   let ads = ((await fetchJson("data/ads.json", { ads: [] })).ads || []).map(cleanAd);
@@ -163,10 +164,11 @@ async function tower(session, crew, notice = "") {
     tabCloud?.setAttribute("aria-selected", String(which === "cloud"));
     tabRequests.setAttribute("aria-selected", String(which === "requests"));
     tabAds.setAttribute("aria-selected", String(which === "ads"));
+    tabCode.setAttribute("aria-selected", String(which === "code"));
     countRequests();
     if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
     if (which === "cloud") { body.replaceChildren(el("p", { class: "note" }, "Loading Cloud accounts…")); cloudPanel().then((n) => body.replaceChildren(n)); return; }
-    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : crewPanel());
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "code" ? codePanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabDiscounts.addEventListener("click", () => show("discounts"));
@@ -175,6 +177,7 @@ async function tower(session, crew, notice = "") {
   tabCloud?.addEventListener("click", () => show("cloud"));
   tabRequests.addEventListener("click", () => show("requests"));
   tabAds.addEventListener("click", () => show("ads"));
+  tabCode.addEventListener("click", () => show("code"));
 
   const saveCodes = (next) => { codes = next; save(DRAFT_CODES, codes); show("codes"); };
 
@@ -235,6 +238,7 @@ async function tower(session, crew, notice = "") {
         } }, "Random"))),
       el("div", { class: "row" },
         el("div", { class: "field" }, el("label", { for: "nc-miles" }, "Octmiles (1–5,000)"), el("input", { type: "number", id: "nc-miles", min: "1", max: "5000", value: "500" })),
+        el("div", { class: "field" }, el("label", { for: "nc-max" }, "Max uses, all accounts together (blank = no limit)"), el("input", { type: "number", id: "nc-max", min: "1", max: "100000", value: "10" })),
         el("div", { class: "field" }, el("label", { for: "nc-exp" }, "Expires (optional)"), el("input", { type: "date", id: "nc-exp" })),
         el("div", { class: "field" }, el("label", { for: "nc-note" }, "Note (only in the file)"), el("input", { type: "text", id: "nc-note", maxlength: "60", placeholder: "Internal reference" }))),
       el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Create code")), msg, made);
@@ -244,23 +248,38 @@ async function tower(session, crew, notice = "") {
       const miles = +form.querySelector("#nc-miles").value;
       if (!/^[A-Z0-9-]{4,20}$/.test(code)) return setMsg(msg, "Codes are 4–20 letters, numbers or dashes.", "error");
       if (!(miles >= 1 && miles <= 5000)) return setMsg(msg, "Octmiles must be 1–5,000.", "error");
+      const maxRaw = form.querySelector("#nc-max").value.trim(), max = maxRaw === "" ? null : Number(maxRaw);
+      if (max !== null && !(Number.isInteger(max) && max >= 1 && max <= 100000)) return setMsg(msg, "Max uses must be a whole number from 1 to 100,000, or blank for no limit.", "error");
       const hash = await codeHash(code);
       if (codes.some((c) => c.hash === hash)) return setMsg(msg, "That code already exists.", "error");
-      saveCodes([...codes, { hash, octmiles: miles, expires: form.querySelector("#nc-exp").value || null, active: true,
+      saveCodes([...codes, { hash, octmiles: miles, ...(max ? { maxUses: max } : {}), expires: form.querySelector("#nc-exp").value || null, active: true,
         note: form.querySelector("#nc-note").value.trim() || null, madeBy: session.name, made: new Date().toISOString().slice(0, 10) }]);
-      body.prepend(el("p", { class: "msg ok" }, `Code ${code} created (${miles} Octmiles). Record it now: only a hash is stored, so it cannot be displayed again. Press Save to cloud to publish the code.`));
+      body.prepend(el("p", { class: "msg ok" }, `Code ${code} created (${miles} Octmiles${max ? `, ${max} uses in total` : ", no use limit"}). Record it now: only a hash is stored, so it cannot be displayed again. Press Save to cloud to publish the code.`));
     });
     const changed = JSON.stringify(codes) !== JSON.stringify(published.codes || []);
+    const panelNode = { n: null };
+    cloudAdminCall("GET", "/api/admin/code-uses").then((r) => {
+      for (const td of (panelNode.n || document).querySelectorAll("td[data-used]")) {
+        const c = codes.find((x) => x.hash === td.dataset.used);
+        if (c && c.maxUses) td.textContent = `${(r.uses || {})[c.hash] || 0} of ${c.maxUses}`;
+      }
+    }).catch(() => { for (const td of (panelNode.n || document).querySelectorAll("td[data-used]")) if (td.textContent === "…") td.textContent = "?"; });
     const cmsg = el("p", { class: "msg", "aria-live": "polite" });
-    return el("div", {},
+    return (panelNode.n = el("div", {},
       form,
       el("div", { class: "card", style: "margin-top:12px" },
         el("h3", {}, `Codes (${codes.length})`),
         codes.length ? el("div", { class: "table-wrap" }, el("table", { class: "plain" },
-          el("thead", {}, el("tr", {}, ["Note", "Octmiles", "Expires", "Made by", "On", ""].map((h) => el("th", {}, h)))),
+          el("thead", {}, el("tr", {}, ["Note", "Octmiles", "Expires", "Max uses", "Used", "Unlimited", "Made by", "On", ""].map((h) => el("th", {}, h)))),
           el("tbody", {}, codes.map((c, i) => el("tr", {},
             el("td", {}, c.note || el("span", { class: "note" }, "#" + c.hash.slice(0, 8))),
-            el("td", {}, String(c.octmiles)), el("td", {}, c.expires || "never"), el("td", {}, c.madeBy || "—"),
+            el("td", {}, String(c.octmiles)), el("td", {}, c.expires || "never"),
+            el("td", {}, c.repeat && c.noLimit ? "—" : el("input", { type: "number", min: "1", max: "100000", value: c.maxUses || "", placeholder: "none", style: "width:5.5em", "aria-label": "Maximum uses",
+              onchange: (e) => { const v = e.target.value.trim() === "" ? null : Math.floor(Number(e.target.value)); saveCodes(codes.map((x, k) => { if (k !== i) return x; const y = { ...x }; if (v >= 1) y.maxUses = Math.min(100000, v); else delete y.maxUses; return y; })); } })),
+            el("td", { "data-used": c.hash }, c.maxUses ? "…" : "—"),
+            el("td", {}, el("input", { type: "checkbox", checked: !!(c.repeat && c.noLimit), "aria-label": "Unlimited: usable again and again, not counted in the 5 codes a day",
+              onchange: (e) => saveCodes(codes.map((x, k) => { if (k !== i) return x; const y = { ...x }; if (e.target.checked) { y.repeat = true; y.noLimit = true; delete y.maxUses; } else { delete y.repeat; delete y.noLimit; } return y; })) })),
+            el("td", {}, c.madeBy || "—"),
             el("td", {}, el("input", { type: "checkbox", checked: c.active !== false, "aria-label": "Code switched on",
               onchange: (e) => saveCodes(codes.map((x, k) => (k === i ? { ...x, active: e.target.checked } : x))) })),
             el("td", {}, el("button", { class: "btn small ghost danger", type: "button", onclick: () => saveCodes(codes.filter((_, k) => k !== i)) }, "Delete"))))))) : el("p", { class: "note" }, "No codes yet."),
@@ -270,7 +289,8 @@ async function tower(session, crew, notice = "") {
           el("button", { class: "btn small ghost", type: "button", onclick: () => download("codes.json", { codes }) }, "Manual download: codes.json"),
           el("button", { class: "btn small ghost", type: "button", onclick: () => { remove(DRAFT_CODES); codes = published.codes || []; show("codes"); } }, "Discard changes")),
         cmsg,
-        el("p", { class: "hint" }, "Save to cloud publishes the codes at once, on every device. Manual download is only for when the cloud has a problem: put the file in the website's data/ folder, commit and push.")));
+        el("p", { class: "hint" }, "Save to cloud publishes the codes at once, on every device. Manual download is only for when the cloud has a problem: put the file in the website's data/ folder, commit and push."),
+        el("p", { class: "hint" }, "Max uses is how many times the code can be used in total, by all accounts together (each account still once). Used-up codes stop working. It is counted by the cloud, so a limited code only works for accounts logged in to the cloud. Unlimited codes can be used again and again by anyone and do not use up one of the 5 codes a day."))));
   }
 
   // Accounts "etched in the code": data/accounts.json. An account in that file can log in on any device and
@@ -455,6 +475,15 @@ async function tower(session, crew, notice = "") {
       el("p", { class: "hint" }, "Ads without a headline are not saved. Manual download is only for when the cloud has a problem: replace data/ads.json, commit and push."));
   }
 
+  // Code: the read-only code viewer. It needs a cloud account that may open it (the owner, or one added with 10 logo clicks).
+  function codePanel() {
+    const cmsg = el("p", { class: "msg", "aria-live": "polite" });
+    return el("div", { class: "card" }, el("h3", {}, "Code viewer"),
+      el("p", { class: "note" }, "Every file of the website in a Visual Studio Code style viewer: file explorer, tabs, line numbers, colours, search across all files and Ctrl+P to jump to a file. It is read only. You must be logged in to Octee Cloud with an account that may use it: the owner, or accounts added by clicking the logo 10 times."),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: async () => { setMsg(cmsg, "Opening…", "info"); (await import("./code-viewer.js")).openCodeViewer(); } }, "Open the code viewer")),
+      cmsg);
+  }
+
   function crewPanel() {
     const kmsg = el("p", { class: "msg", "aria-live": "polite" });
     const msg = el("p", { class: "msg", "aria-live": "polite" });
@@ -496,7 +525,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabCode, tabCrew),
     cloudBar,
     body,
     el("p", { class: "hint" }, "Changes here are drafts in this browser until you press Save to cloud. Cloud admin role changes take effect immediately."));

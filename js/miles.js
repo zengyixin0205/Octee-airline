@@ -229,6 +229,8 @@ export const CODE_MESSAGES = {
   permission: (n) => `You have used this code ${n} times since reaching the top tier. A message has been sent to the control tower. An admin or the owner must give permission before it works again.`,
   too_many: "Too many wrong codes. Please wait an hour and think about what you've done.",
   login: "Log in to use a code.",
+  used_up: "This code has been used up. Someone boarded first.",
+  cloud_needed: "This code has a limited number of uses, so it only works with an Octee Cloud account. Log in to the cloud first (login page, Log in tab).",
   offline: "The code list is delayed. Please try again (or check you're online)."
 };
 
@@ -265,6 +267,17 @@ export async function redeemCode(input) {
   if (problem) {
     updateUser((x) => { x.codeFails = [...(x.codeFails || []).filter((t) => t > hourAgo), Date.now()]; });
     return { ok: false, message: CODE_MESSAGES[problem] };
+  }
+  // A code with a usage limit ("maxUses"): the cloud counts every account's uses together, so claim one before anything is added.
+  if (c.maxUses >= 1) {
+    const cl = await import("./cloud.js");
+    if (!cl.cloudLinked()) return { ok: false, message: CODE_MESSAGES.cloud_needed };
+    try { await cl.cloudAdminCall("POST", "/api/code/claim", { hash }); }
+    catch (e) {
+      if (e && e.code === "used_up") return { ok: false, message: CODE_MESSAGES.used_up };
+      if (e && e.code === "already") return { ok: false, message: CODE_MESSAGES.already };
+      return { ok: false, message: CODE_MESSAGES.offline };
+    }
   }
   // "atTopTier": what the code gives instead when the account is already in the highest tier.
   const top = c.atTopTier && !nextTier(u.lifetime) ? c.atTopTier : null;

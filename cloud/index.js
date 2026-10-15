@@ -57,6 +57,8 @@ async function perkOn(db, key, username) {
 }
 // Joel models with a flat JoelToken price (they report no token usage). Mirrors js/joel-models.js.
 const FLAT = { "joel-3.3pro": { price: 150, name: "Joel-3.3 Pro" }, "joel-4.3neo": { price: 400, name: "Joel-4.3 NEO" } };
+// Accounts etched into the code that may always open the code viewer and manage who else can (the names also have to be etched accounts).
+const CODE_OWNERS = ["octee"];
 const clip = (v, n) => String(v ?? "").slice(0, n);
 
 
@@ -101,7 +103,7 @@ const histKey = (e) => JSON.stringify([e && e.at, e && e.text, wint2(e?.amount),
 const wint2 = (v) => Math.trunc(Number(v) || 0);
 // Check the new history lines of a saved account against the cloud's balance. Returns the cloud's balance after them.
 async function applyWallet(env, db, u, bal, prevProf, nextProf) {
-  const b = { ...bal, state: { ...bal.state, codes: { ...bal.state.codes }, uses: { ...bal.state.uses }, days: { ...bal.state.days } } };
+  const b = { ...bal, state: { ...bal.state, codes: { ...bal.state.codes }, uses: { ...bal.state.uses }, days: { ...bal.state.days }, claimed: { ...(bal.state.claimed || {}) } } };
   const seen = new Map();
   for (const e of (prevProf && Array.isArray(prevProf.history)) ? prevProf.history : []) seen.set(histKey(e), (seen.get(histKey(e)) || 0) + 1);
   const fresh = [];
@@ -142,6 +144,11 @@ async function applyWallet(env, db, u, bal, prevProf, nextProf) {
       if (!c && /^[12]\d{3}[13579]$/.test(text.slice(5)) ) c = { octmiles: Number(digits.slice(0, 3)), active: true };
       if (!c || c.active === false || (c.expires && new Date(c.expires + "T23:59:59") < new Date())) continue;
       if (!c.repeat && b.state.codes[hash]) continue;
+      const limited = wint(c.maxUses) >= 1;                                                       // a code with a usage limit needs a use claimed first (POST /api/code/claim)
+      if (limited) {
+        const cl = await db.prepare("SELECT n FROM code_claims WHERE user_id=? AND hash=?").bind(u.id, hash).first();
+        if (((cl && cl.n) || 0) <= ((b.state.claimed || {})[hash] || 0)) continue;
+      }
       const top = c.atTopTier && b.lifetime >= WALLET.topTier ? c.atTopTier : null;
       if (top && c.freeTopUses != null) {
         perms = perms || ((await publishedData(env, db, "permissions")) || {}).crew || {};
@@ -151,6 +158,7 @@ async function applyWallet(env, db, u, bal, prevProf, nextProf) {
       const wantM = top ? wint(top.octmiles) : wint(c.octmiles), wantT = top ? wint(top.tokens) : 0;
       if (dM !== wantM || dT !== wantT || dF || dS) continue;
       b.state.codes[hash] = true;
+      if (limited) b.state.claimed = { ...(b.state.claimed || {}), [hash]: ((b.state.claimed || {})[hash] || 0) + 1 };
       credit(dM, dT, 0, 0, true);
     } else if (text === "JOELMOBILE ride (you were helped)") {
       if (dM === WALLET.rideMiles && !dT && !dF && !dS && today.ride + dM <= WALLET.rideDay) { today.ride += dM; credit(dM, 0, 0, 0, true); }
@@ -226,9 +234,65 @@ export default {
         if (isCloudOwner) return "owner";
         return (await db.prepare("SELECT user_id FROM cloud_admins WHERE user_id=?").bind(u.id).first()) ? "admin" : null;
       };
+      // ---- code viewer access and code usage limits ----
+      const codeOwner = !!u && (isCloudOwner || CODE_OWNERS.includes(u.username.toLowerCase()));
+      const codeRole = async () => {
+        if (!u) return null;
+        if (codeOwner) return "owner";
+        return (await db.prepare("SELECT user_id FROM code_viewers WHERE user_id=?").bind(u.id).first()) ? "viewer" : null;
+      };
+      if (path === "/api/code/me" && req.method === "GET") {
+        if (!u) return reply(req, { error: "login" }, 401);
+        const role = await codeRole();
+        return role ? reply(req, { role, username: u.username }) : reply(req, { error: "forbidden" }, 403);
+      }
+      if (path === "/api/code/viewers" || path.startsWith("/api/code/viewers/")) {
+        if (!u) return reply(req, { error: "login" }, 401);
+        if (!codeOwner) return reply(req, { error: "owner_only" }, 403);
+        if (path === "/api/code/viewers" && req.method === "GET") {
+          const rows = await db.prepare("SELECT users.username, code_viewers.granted_at FROM code_viewers JOIN users ON users.id=code_viewers.user_id ORDER BY users.username").all();
+          return reply(req, { owners: CODE_OWNERS, viewers: rows.results || [] });
+        }
+        if (path === "/api/code/viewers" && req.method === "POST") {
+          const b = await req.json().catch(() => ({})), name = clip(b.username, 20).trim();
+          const target = await db.prepare("SELECT id, username FROM users WHERE username_key=?").bind(name.toLowerCase()).first();
+          if (!target) return reply(req, { error: "no_user", message: "That Cloud account does not exist." }, 404);
+          if (CODE_OWNERS.includes(target.username.toLowerCase())) return reply(req, { error: "owner" }, 400);
+          await db.prepare("INSERT INTO code_viewers(user_id,granted_by,granted_at) VALUES(?,?,?) ON CONFLICT(user_id) DO NOTHING").bind(target.id, u.id, iso()).run();
+          return reply(req, { ok: true });
+        }
+        const del = path.match(/^\/api\/code\/viewers\/([^/]+)$/);
+        if (del && req.method === "DELETE") {
+          const target = await db.prepare("SELECT id FROM users WHERE username_key=?").bind(decodeURIComponent(del[1]).toLowerCase()).first();
+          if (target) await db.prepare("DELETE FROM code_viewers WHERE user_id=?").bind(target.id).run();
+          return reply(req, { ok: true });
+        }
+      }
+      // A code with a usage limit: claim one use before the Octmiles are added. The cloud counts every account's uses together.
+      if (path === "/api/code/claim" && req.method === "POST") {
+        if (!u) return reply(req, { error: "login" }, 401);
+        const b = await req.json().catch(() => ({})), hash = clip(b.hash, 64);
+        if (!/^[0-9a-f]{64}$/.test(hash)) return reply(req, { error: "bad_data" }, 400);
+        const c = (((await publishedData(env, db, "codes")) || {}).codes || []).find((x) => x && x.hash === hash);
+        const max = c ? wint(c.maxUses) : 0;
+        if (!c || c.active === false || (c.expires && new Date(c.expires + "T23:59:59") < new Date())) return reply(req, { error: "not_real" }, 404);
+        if (max < 1) return reply(req, { ok: true, limited: false });
+        const bal = await getBalances(db, env, u), done = (bal.state.claimed || {})[hash] || 0;
+        if (!c.repeat && (bal.state.codes[hash] || done >= 1)) return reply(req, { error: "already" }, 409);
+        const cl = await db.prepare("SELECT n FROM code_claims WHERE user_id=? AND hash=?").bind(u.id, hash).first();
+        if (((cl && cl.n) || 0) > done) return reply(req, { ok: true, limited: true });              // an earlier claim that was never credited
+        const r = await db.prepare("INSERT INTO code_uses(hash,n) VALUES(?,1) ON CONFLICT(hash) DO UPDATE SET n=n+1 WHERE n<?").bind(hash, max).run();
+        if (!r.meta || !r.meta.changes) return reply(req, { error: "used_up" }, 410);
+        await db.prepare("INSERT INTO code_claims(user_id,hash,n) VALUES(?,?,1) ON CONFLICT(user_id,hash) DO UPDATE SET n=n+1").bind(u.id, hash).run();
+        return reply(req, { ok: true, limited: true });
+      }
       if (path.startsWith("/api/admin/")) {
         const role = await adminRole();
         if (!role) return reply(req, { error: u ? "forbidden" : "login" }, u ? 403 : 401);
+        if (path === "/api/admin/code-uses" && req.method === "GET") {
+          const rows = await db.prepare("SELECT hash, n FROM code_uses").all();
+          return reply(req, { uses: Object.fromEntries((rows.results || []).map((x) => [x.hash, x.n])) });
+        }
         if (path === "/api/admin/me" && req.method === "GET") return reply(req, { role, username: u.username });
         if (path === "/api/admin/users" && req.method === "GET") {
           const rows = await db.prepare("SELECT id, username, created_at FROM users ORDER BY created_at DESC LIMIT 500").all();
@@ -363,6 +427,7 @@ export default {
           const at = iso(), body = JSON.stringify(b.data);
           await db.prepare("INSERT INTO published(name,body,updated_at,updated_by) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET body=?, updated_at=?, updated_by=?").bind(name, body, at, u.username, body, at, u.username).run();
           if (name === "accounts") etchedMemo = { at: 0, list: [] };
+          delete dataMemo[name];
           return reply(req, { ok: true, updatedAt: at });
         }
       }

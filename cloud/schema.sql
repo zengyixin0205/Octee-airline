@@ -88,3 +88,9 @@ CREATE TABLE IF NOT EXISTS balances (
   updated_at TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Code usage limits: how many times a limited code has been used by all accounts together, and who has claimed a use.
+CREATE TABLE IF NOT EXISTS code_uses (hash TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS code_claims (user_id INTEGER NOT NULL, hash TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, hash), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
+-- Who may open the code viewer (besides the etched owner accounts in CODE_OWNERS). Managed from the 10-click screen.
+CREATE TABLE IF NOT EXISTS code_viewers (user_id INTEGER PRIMARY KEY, granted_by INTEGER NOT NULL, granted_at TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);
