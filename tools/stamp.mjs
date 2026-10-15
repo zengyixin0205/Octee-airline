@@ -12,6 +12,7 @@ const fp = (f) => createHash("sha1").update(readFileSync(join(root, f))).digest(
 const jsFiles = readdirSync(join(root, "js")).filter((f) => f.endsWith(".js")).sort();
 const hashes = Object.fromEntries(jsFiles.map((f) => [f, fp("js/" + f)]));
 const cssHash = fp("css/styles.css");
+const joelCssHash = fp("css/joel.css");
 const map = JSON.stringify({ imports: Object.fromEntries(jsFiles.map((f) => [`./js/${f}`, `./js/${f}?v=${hashes[f]}`])) });
 const BLOCK = /<!--stamp-->[\s\S]*?<!--\/stamp-->\n?/;
 let changed = 0;
@@ -21,6 +22,7 @@ for (const page of readdirSync(root).filter((f) => f.endsWith(".html"))) {
   h = h.replace(BLOCK, "");
   h = h.replace(/(src="js\/([a-z0-9-]+\.js))(\?v=[0-9a-f]+)?"/g, (m, a, name) => (hashes[name] ? `${a}?v=${hashes[name]}"` : m));
   h = h.replace(/href="css\/styles\.css(\?v=[0-9a-f]+)?"/g, `href="css/styles.css?v=${cssHash}"`);
+  h = h.replace(/href="css\/joel\.css(\?v=[0-9a-f]+)?"/g, `href="css/joel.css?v=${joelCssHash}"`);
   if (/<script type="module"/.test(h)) h = h.replace(/(<script type="module")/, `<!--stamp--><script type="importmap">${map}</script><!--/stamp-->\n$1`);
   if (h !== before) { writeFileSync(join(root, page), h); changed++; }
 }

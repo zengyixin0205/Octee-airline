@@ -50,5 +50,16 @@ export const PAGES = [
   ["entertainment.html", "Hangman: Destination Edition", "hangman guess airport fia letters game", "Guess the airport. The answer is always FIA."],
   ["whackajoel.html", "Whack-a-Joel", "whack joel hammer cupboard game sorry mole", "Hit Joel with a hammer when he pops up."],
   ["apology.html", "Our Apology", "apology sorry apologise letter", "A long, sincere apology."],
+  ["joel.html", "JoelTEH", "joelteh joel area site inside menu jtp jtia jtbc", "A site inside the site, all Joel, all brown."],
+  ["joel-jtp.html", "JTP: Joel Teh Police", "jtp joel teh police wanted report case number press release arrest", "Report Joel, check a case, read the press releases."],
+  ["joel-jtia.html", "JTIA: Joel Teh International Airport", "jtia joel teh international airport departures gates terminal", "Home base of JoelTEH Airlines."],
+  ["joel-cupboard.html", "Joel's Cupboard (expanded)", "joel cupboard expanded shelves sandwich other cupboard here not there", "The cupboard with shelves."],
+  ["joel-airlines.html", "JoelTEH Airlines (JT)", "jt joelteh airlines flight book joelmiles codeshare fuji mt fuji mfia fia jtia", "Fly JT in Joelmiles, with Octee, One United and Scraggy connections."],
+  ["joel-bank.html", "Joelmiles Bank", "joelmiles bank exchange swap octmiles octeetokens fujitech scraggymiles joeltokens rate", "Swap every Octee currency into Joelmiles and back."],
+  ["joel-jtbc.html", "JTBC", "jtbc broadcasting tv radio schedule on air", "Joel Teh Broadcasting Corporation."],
+  ["joel-museum.html", "Museum of Joel", "museum joel exhibits sandwich umbrella", "Eight exhibits about one person."],
+  ["joel-baggage.html", "JT Baggage", "jt baggage allowance belt tag bag", "JT bag allowances and a belt finder."],
+  ["joel-hotels.html", "JTIA Hotels", "jtia hotel stay night book joelmiles sleep", "Hotels at JTIA, paid in Joelmiles."],
+  ["joel-lostfound.html", "JT Lost Property", "jt lost property found report lost jtia", "Lost something at JTIA?"],
   ["login.html", "Log in / Sign up", "login log in sign up account register password", "Log in. Or sign up and be welcomed."]
 ];

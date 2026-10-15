@@ -127,8 +127,8 @@ function login(crew) {
 /* ----- inside ----- */
 async function tower(session, crew, notice = "") {
   const published = await fetchJson("data/codes.json", { codes: [] });
-  const publishedPerks = await fetchJson("data/perks.json", { unlimitedFujitech: {}, freePro: {}, freeModels: {} });
-  const perksDraft = { unlimitedFujitech: { ...(publishedPerks.unlimitedFujitech || {}) }, freePro: { ...(publishedPerks.freePro || {}) }, freeModels: { ...(publishedPerks.freeModels || {}) } };
+  const publishedPerks = await fetchJson("data/perks.json", { unlimitedFujitech: {}, freePro: {}, freeModels: {}, freeJT: {} });
+  const perksDraft = { unlimitedFujitech: { ...(publishedPerks.unlimitedFujitech || {}) }, freePro: { ...(publishedPerks.freePro || {}) }, freeModels: { ...(publishedPerks.freeModels || {}) }, freeJT: { ...(publishedPerks.freeJT || {}) } };
   const publishedDiscounts = await fetchJson("data/flight-discounts.json", { discounts: [] });
   let codes = load(DRAFT_CODES, null) || published.codes || [];
   let discounts = load("octee.tower.discounts", null) || publishedDiscounts.discounts || [];
@@ -307,6 +307,7 @@ async function tower(session, crew, notice = "") {
     };
     const pro = flag("freePro", "octee", "perk-pro"), proJoel = flag("freePro", "joel", "perk-pro-joel");
     const mods = flag("freeModels", "octee", "perk-models-octee"), modsJoel = flag("freeModels", "joel", "perk-models-joel");
+    const jtO = flag("freeJT", "octee", "perk-jt-octee"), jtJ = flag("freeJT", "joel", "perk-jt-joel");
     return el("div", { class: "card", style: "margin-bottom:12px" },
       el("h3", {}, "Account perks"),
       el("p", { class: "note" }, "When this is on, the Octee account books flights and cargo without spending Fujitech. The Fujitech it has earned is never reduced and still shows at the top of the site. Only this panel can change it."),
@@ -314,7 +315,9 @@ async function tower(session, crew, notice = "") {
         el("div", { class: "field" }, el("label", { for: "perk-pro" }, pro, " Octee: JoelAI Pro and GulletAI Pro free")),
         el("div", { class: "field" }, el("label", { for: "perk-pro-joel" }, proJoel, " Joel: JoelAI Pro and GulletAI Pro free")),
         el("div", { class: "field" }, el("label", { for: "perk-models-octee" }, mods, " Octee: Joel-3.3 Pro and Joel-4.3 NEO free")),
-        el("div", { class: "field" }, el("label", { for: "perk-models-joel" }, modsJoel, " Joel: Joel-3.3 Pro and Joel-4.3 NEO free"))),
+        el("div", { class: "field" }, el("label", { for: "perk-models-joel" }, modsJoel, " Joel: Joel-3.3 Pro and Joel-4.3 NEO free")),
+        el("div", { class: "field" }, el("label", { for: "perk-jt-octee" }, jtO, " Octee: JoelTEH Airlines (JT) flights free")),
+        el("div", { class: "field" }, el("label", { for: "perk-jt-joel" }, jtJ, " Joel: JoelTEH Airlines (JT) flights free"))),
       el("div", { class: "actions" },
         el("button", { class: "btn", type: "button", onclick: () => saveToCloud("perks", perksDraft, pmsg, "The setting") }, "Save to cloud"),
         el("button", { class: "btn small ghost", type: "button", onclick: () => download("perks.json", perksDraft) }, "Manual download: perks.json")),

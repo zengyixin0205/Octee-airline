@@ -19,6 +19,7 @@ const PAGES = [
   ["fia.html", "FIA Airport"],
   ["joelmobile.html", "JOELMOBILE"],
   ["cupboard.html", "Joel's Cupboard"],
+  ["joel.html", "JoelTEH"],
   ["oneunited.html", "One United"],
   ["reviews.html", "Reviews"],
   ["departures.html", "Departures"],

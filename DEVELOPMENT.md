@@ -1252,3 +1252,15 @@ GitHub Pages lets browsers keep js/css for about 10 minutes, so a fresh page cou
 - Cloud-owned balances: `balances` table + `applyWallet()`/`getBalances()` in `cloud/index.js` (checked on every `PUT /api/profile`; reply `corrected:true` + `profile` makes `js/cloud.js` take the cloud's copy and show a notice). `profileOf()` in `js/auth.js` now sends the NEWEST 60 history lines (the cloud diffs them to find new changes). Tests: a new account is seeded with the welcome bonus; a saved profile seeds its own balances; etched accounts seed from `accounts.json`.
 
 - JoelAI update: Joel-2.2 / 2.4 are `kind: "short"` handbook tiers (the answer is cut to its first paragraph(s) and sentences by `shorten()` in `js/joelai-ui.js`); they replaced the server-model idea. `planAnswer()` (`js/joelroute.js`, called before `routeAnswer` in `js/joelbrain.js`) plans a trip: place(s) and number of days are read from the question, the outbound and return flights come from `nextDates`, the fare from `passengerFareTenths`, Octmiles from `itineraryMiles`; the first paragraph is a one-line summary so the short tiers keep it.
+
+## JoelTEH (joel.html and joel-*.html)
+
+A site inside the site. Each page is only `<body class="joel" data-page="…">`; `js/joel-shell.js` builds the brown frame (own header and menu; the logo is the button "Go back to home, or not", which always goes to index.html) and asks `js/joel-pages.js` for the page body. Not logged in = a login gate (same Octee account).
+
+- `js/joel-pages.js`: home, JTP (wanted poster, press releases, report Joel, case lookup; cases kept in `jtCases`), JTIA (today's JT board), cupboard (expanded; the original `cupboard.html` links here), JTBC, museum, baggage, lost property (`jtLost`).
+- `js/joel-trade.js`: JoelTEH Airlines booking, the Joelmiles Bank and the hotels (`jtTrips`, `jtStays`).
+- `js/jt-data.js`: JT (call sign JT, home base JTIA). Own flights JT 001–022 between JTIA, FIA and MFIA; every Octee/One United/Scraggy stretch also carries a JT number (OA 124 = JT 524, OU 13 = JT 613, SA109 = JT 7109) so trips like JTIA → FIA → SIA are one booking. FIA ↔ MFIA is Octee only, so JT never flies it on its own planes. Prices: JTIA flights 800/1,200, partner stretches 2,000–5,000 Joelmiles, Business ×1.5, First ×2, up to 4 passengers, no refunds.
+- `js/joelmiles.js`: the currency. Rates are in `JM_IN`/`JM_OUT`/`JT_IN`/`JT_OUT` and must match `WALLET` in `cloud/index.js`. In: 1 Octmile = 5, 1 Scraggymile = 10, 1 Octeetoken = 50, 0.1 Fujitech = 6, 50 JoelTokens = 1. Out costs about a sixth more (6, 12, 60, 7; JoelTokens 40 back). At most 5,000 Joelmiles in per day.
+- Cloud: `balances.joelmiles` column (existing databases: `ALTER TABLE balances ADD COLUMN joelmiles INTEGER NOT NULL DEFAULT 0`). `applyWallet` checks every swap line in a saved profile; JoelTokens ↔ Joelmiles goes through `POST /api/joel/exchange {dir:"in"|"out", units}` because the cloud owns the JoelToken ledger.
+- Perk `freeJT` in `data/perks.json` (Control Tower > Account perks): JT bookings cost nothing for that account (Octee and Joel are on).
+- `css/joel.css` is the brown theme; `tools/stamp.mjs` fingerprints it too.
