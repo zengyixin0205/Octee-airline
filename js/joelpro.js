@@ -5,6 +5,8 @@ import { converse, getState, SECRET } from "./joelbrain.js";
 import { MORE } from "./joelguide.js";
 import { PAGES } from "./siteindex.js";
 import { pickRand } from "./joelkb.js";
+import { JT_FLIGHTS, JT_OWN_PRICE, jtItineraries, priceOf, routeOf, describe, shortOf, JT_AIRPORTS } from "./jt-data.js";
+import { JM_IN, JM_OUT, JT_IN, JT_OUT } from "./joelmiles.js";
 import { PLACES, OA_FLIGHTS, MFIA_NOTE, placeName, placeShort, daysText, nextDates, itinerariesOn, describeItinerary, fiaGate, fiaTerminalOf, FIA_TERMINALS, normalize, DAY_NAMES } from "./destinations.js";
 
 const FOLLOW = {
@@ -65,6 +67,54 @@ export function timetableFacts(text, todayIso = new Date().toISOString().slice(0
   return out;
 }
 
+// ---- JoelTEH facts: JT flight numbers, JTIA routes with prices, and Joelmiles sums ----
+const CUR = { octmile: ["octmiles", "Octmiles"], octmiles: ["octmiles", "Octmiles"], scraggymile: ["scraggy", "Scraggymiles"], scraggymiles: ["scraggy", "Scraggymiles"], octeetoken: ["tokens", "Octeetokens"], octeetokens: ["tokens", "Octeetokens"], token: ["tokens", "Octeetokens"], tokens: ["tokens", "Octeetokens"], fujitech: ["fujitech", "Fujitech"], joeltoken: ["jt", "JoelTokens"], joeltokens: ["jt", "JoelTokens"] };
+const nf = (n) => Math.round(n).toLocaleString("en-GB");
+export function joelTehFacts(text, todayIso = new Date().toISOString().slice(0, 10)) {
+  const raw = String(text || ""), low = raw.toLowerCase(), out = [];
+  // Joelmiles sums: "3 octeetokens in joelmiles", "convert 2 fujitech to joelmiles", "500 joelmiles to octmiles"
+  const toJ = low.match(/(\d+(?:\.\d+)?)\s*([a-z]+)\b[^.?!]{0,25}\bjoel ?miles?\b/) || low.match(/\bjoel ?miles?\b[^.?!\d]{0,25}(\d+(?:\.\d+)?)\s*([a-z]+)/), fromJ = low.match(/(\d+(?:\.\d+)?)\s*joel ?miles?\b[^.?!]{0,25}?\b(octmiles?|scraggymiles?|octeetokens?|tokens?|fujitech|joeltokens?)\b/);
+  if (fromJ && CUR[fromJ[2]]) {
+    const n = Number(fromJ[1]), [k, label] = CUR[fromJ[2]];
+    if (k === "jt") out.push(`${nf(n)} Joelmiles sell for ${nf(n * JT_OUT)} JoelTokens (cloud account and JoelAI Pro needed).`);
+    else if (k === "fujitech") out.push(`${nf(n)} Joelmiles buy ${(Math.floor(n / JM_OUT.fujitech) / 10).toLocaleString("en-GB")} Fujitech (7 Joelmiles per 0.1).`);
+    else out.push(`${nf(n)} Joelmiles buy ${nf(Math.floor(n / JM_OUT[k]))} ${label} (${JM_OUT[k]} Joelmiles each).`);
+  } else if (toJ && CUR[toJ[2]]) {
+    const n = Number(toJ[1]), [k, label] = CUR[toJ[2]];
+    if (k === "jt") out.push(`${nf(n)} JoelTokens buy ${nf(Math.floor(n / JT_IN))} Joelmiles (${JT_IN} each, cloud account needed).`);
+    else if (k === "fujitech") out.push(`${n} Fujitech swap into ${nf(n * 10 * JM_IN.fujitech)} Joelmiles (6 per 0.1 Fujitech).`);
+    else out.push(`${nf(n)} ${label} swap into ${nf(n * JM_IN[k])} Joelmiles (${JM_IN[k]} each).`);
+  }
+  // JT flight numbers: own planes (JT 001) and partner numbers (JT 5124 = OA 124)
+  const nos = [...new Set([...low.matchAll(/\bjt ?(\d{3,4})\b/g)].map((m) => m[1]))].slice(0, 3);
+  for (const d of nos) {
+    const own = JT_FLIGHTS.find((f) => f.no === "JT " + d.padStart(3, "0"));
+    if (own) out.push(`JT ${own.no.slice(3)}: ${own.from} ${own.dep} → ${own.to} ${own.arr}, ${own.days.length === 7 ? "every day" : "weekends (Fri to Sun)"}, ${nf(JT_OWN_PRICE[`${own.from}-${own.to}`])} Joelmiles economy.`);
+    else if (/^[567]\d+$/.test(d)) { const al = { 5: "OA", 6: "OU", 7: "SA" }[d[0]], rest = d.slice(1).replace(/^0+(?=\d)/, ""); out.push(`JT ${d} is the JT number of ${al} ${rest}. Search it on the JoelTEH Airlines page.`); }
+    else out.push(`JT ${d}: I cannot find that number.`);
+  }
+  // routes with JTIA, FIA or MFIA: cheapest/first JT trip on the next days
+  if (!nos.length && /\bjtia\b|joel teh international|\bjt\b/.test(low)) {
+    const codes = [];
+    for (const [code, p] of Object.entries({ ...PLACES, JTIA: { short: "JTIA", aliases: ["jtia", "joel teh international"] } })) {
+      const names = [code, p.short, ...(p.aliases || [])].map((n) => n.toLowerCase());
+      let at = -1; for (const n of names) { const i = low.indexOf(n); if (i >= 0 && (at < 0 || i < at)) at = i; }
+      if (at >= 0 && code !== "LUJ") codes.push({ code, at });
+    }
+    const cs = codes.sort((a, b) => a.at - b.at).map((c) => c.code).filter((c, i, a) => !(c === "FIA" && a.includes("MFIA") && !/\bfia\b/.test(low.replace(/mt fuji|mount fuji|mfia/g, ""))));
+    if (cs.length >= 2) {
+      const [a, b] = cs;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(todayIso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + i); const iso = d.toISOString().slice(0, 10);
+        const its = jtItineraries(a, b, iso, []);
+        if (its.length) { const it = its[0]; out.push(`${shortOf(a)} to ${shortOf(b)} with JT on ${iso}: ${routeOf(it)}, ${describe(it)}, ${it.map((s) => `${s.no} ${s.dep}-${s.arr}`).join(" then ")}, ${nf(priceOf(it))} Joelmiles economy (Business ×1.5, First ×2).`); break; }
+      }
+      if (!out.length) out.push(`I cannot find a JT trip from ${shortOf(a)} to ${shortOf(b)} in the next week.`);
+    } else if (/\bjtia\b/.test(low)) out.push(`JT flies from JTIA to ${JT_AIRPORTS.slice(1).map(shortOf).join(" and ")} on its own planes, and anywhere Octee, One United or Scraggy go with a JT number. Name two places and I will find a trip.`);
+  }
+  return out;
+}
+
 export async function proConverse(text) {
   const res = await converse(text);
   if (SECRET.test(String(text).toLowerCase()) || res.error) return res;
@@ -72,6 +122,8 @@ export async function proConverse(text) {
   const extra = [];
   if (topic && MORE[topic] && !res.text.includes(MORE[topic].slice(0, 40))) extra.push(MORE[topic]);
   const facts = timetableFacts(text);
+  const jtf = joelTehFacts(text);
+  if (jtf.length) extra.push("From JoelTEH: " + jtf.join(" "));
   if (facts.length && !facts.every((f) => res.text.includes(f.slice(0, 30)))) extra.push("From the timetable: " + facts.map((f) => (/[.!?]$/.test(f) ? f : f + ".")).join(" "));
   const here = getState().page;
   const pool = PAGES.filter((p) => p[0] !== here && p[0] !== "allpages.html" && !res.links.some((l) => l[1] === p[0]));
