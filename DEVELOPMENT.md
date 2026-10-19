@@ -1295,3 +1295,6 @@ The "Ad" tag is now part of the banner row (not floating on top of the button) a
 
 ## Custom ad colours and gradients
 `js/ads.js`: theme `custom` ("Custom colours / gradient"). Fields on the ad: `bg`, `bg2`, `bg3` (#rrggbb), `fg` (text), `bd` (border), `grad` (`off`/`two`/`three`), `angle` (0-360). Only `#rrggbb` is accepted (`hex()`), so nothing else reaches the inline style. Blank text colour is picked automatically for contrast; the button takes the text colour. The Control Tower (Ads tab) shows colour pickers with hex boxes, a fill/angle control and Sunset/Ocean/Candy presets when Custom is chosen. The Worker passes the extra ad fields through, so no Worker update is needed.
+
+## Duty Free: "would not run" safety net
+Joel mode no longer closes anything in `.shop`, `.flare-hero`, `.df-guide` or `.df-scan` (it could hide the things you bought). If an item throws, Duty Free now says so on the page. A line under Your purchases ("Try me build 3") shows the new code is loaded; if it is missing, the browser is serving an old copy (hard refresh).

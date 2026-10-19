@@ -4,7 +4,7 @@ import { currentUser, updateUser } from "./auth.js";
 import { peanutsOf, fmtPeanuts, spendPeanuts } from "./peanuts.js";
 import { tokensOf, fmtTokens, spendTokens } from "./miles.js";
 import { scanVerdict, scanAllowed } from "./dutyscan.js";
-import { tryItem, stopAll, CHARGE, HINTS } from "./dutyuse.js";
+import { tryItem, stopAll, CHARGE, HINTS, BUILD } from "./dutyuse.js";
 
 const TOKEN_X = 3;                       // token price = peanut price x 3
 const ITEMS = [
@@ -69,7 +69,9 @@ const chargeOf = (id) => { const u = currentUser(), c = u && u.dfCharge && u.dfC
 const say = (t, kind) => { const m = $("#app .msg"); if (m) setMsg(m, t, kind); };
 const hooks = { charge: chargeOf, say, setCharge: (id, v) => { updateUser((x) => { x.dfCharge = { ...(x.dfCharge || {}), [id]: v }; }); draw(); } };
 function useItem(it) {
-  const used = tryItem(it.id, hooks, it.use === "FLARE" ? "" : it.use);
+  let used = false;
+  try { used = tryItem(it.id, hooks, it.use === "FLARE" ? "" : it.use); }
+  catch (e) { console.error(e); say(`"${it.name}" would not run here (${e && e.message || e}). Try a hard refresh (Cmd+Shift+R on a Mac, Ctrl+Shift+R on Windows), then tell Claude this message.`, "error"); return; }
   if (used) { updateUser((x) => { const n = ((x.dutyfree || {})[it.id] || 0) - 1; x.dutyfree = { ...(x.dutyfree || {}), [it.id]: Math.max(0, n) }; }); draw(); say(it.use, "ok"); }
 }
 function recharge(k, it, price, unit) {
@@ -156,7 +158,8 @@ function draw() {
         el("div", { class: "actions" },
           it ? el("button", { class: "btn small", type: "button", onclick: () => useItem(it) }, "Try me") : null,
           ch && left < ch.full ? el("button", { class: "btn small ghost", type: "button", disabled: have >= rprice ? null : true, onclick: () => recharge(k, it, rprice, unit) }, `Recharge · ${rprice} ${unit}`) : null)); }))
-      : el("p", { class: "note" }, "You have bought nothing. This is the most you can take on board."),
+      : el("p", { class: "note" }, u ? "You have bought nothing. This is the most you can take on board." : "Log in to buy things and use them. Your purchases live on your account."),
+    el("p", { class: "note df-build" }, BUILD + " (if you can read this, the new Duty Free is loaded)"),
     el("p", { class: "note" }, "All sales are final. All goods stay on the ground. Get more peanuts in the ", el("a", { href: "peanuts.html" }, "Peanut Wallet"), "; Octeetokens come from codes and Octmiles."));
 }
 stopAll();

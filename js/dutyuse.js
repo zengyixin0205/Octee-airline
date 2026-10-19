@@ -3,6 +3,7 @@
 // All of it is drawn on top of the page and stops with Esc. Nothing here touches the account except the charge of the two rechargeable items.
 import { el } from "./dom.js";
 
+export const BUILD = "Try me build 3";
 export const CHARGE = { extinguisher: { full: 12, price: 1, unit: "s of foam" }, flare: { full: 60, price: 1, unit: "s of glow" } };
 const R = Math.random;
 const calm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };

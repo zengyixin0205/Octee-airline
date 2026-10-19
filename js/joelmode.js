@@ -21,6 +21,7 @@ function candidates() {
   return [...document.querySelectorAll(sel)].filter((n) => {
     if (n.closest(".jai-modal, .modal-back, .joel-mode-pill, .joel-mode-say, .joel-fab-wrap, .joel-closed-note, .crush-404, .jm-toggle, .jpop")) return false;
     if (n.classList.contains("joel-closed") || n.closest(".joel-closed")) return false;
+    if (n.closest(".shop, .flare-hero, .df-guide, .df-scan")) return false;   // never close the things you bought
     if (n.querySelector(".jm-toggle, .joel-closed-note, #jai-q, .joel-fab, [data-joel-keep]")) return false;
     if (n.contains(document.activeElement) && document.activeElement !== document.body) return false;
     const r = n.getBoundingClientRect();
