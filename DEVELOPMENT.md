@@ -1300,7 +1300,7 @@ The "Ad" tag is now part of the banner row (not floating on top of the button) a
 Joel mode no longer closes anything in `.shop`, `.flare-hero`, `.df-guide` or `.df-scan` (it could hide the things you bought). If an item throws, Duty Free now says so on the page. A line under Your purchases ("Try me build 3") shows the new code is loaded; if it is missing, the browser is serving an old copy (hard refresh).
 
 ## Ad size
-Ads are edge to edge (same width as the header and the apology bar, no side borders, square corners) and about 58% of the apology bar's height (35 px against 61 px on a desktop). The block of CSS is at the end of `css/styles.css` ("Ads: edge to edge"). The Control Tower preview keeps its rounded box.
+Ads are edge to edge (same width as the header and the apology bar, no side borders, square corners) and two thirds of the apology bar height (41 px against 61 px on a desktop). The block of CSS is at the end of `css/styles.css` ("Ads: edge to edge"). The Control Tower preview keeps its rounded box.
 
 ## Octmiles for peanuts
 `js/peanuts.js` `exchangeOctmilesForPeanuts(n)`: 25 Octmiles = 1 peanut, whole peanuts, one way. New "Peanuts" card on `octmiles.html` (`#peanut-exchange`). Octmiles for Fujitech (50 Octmiles = 5.5 Fujitech) and Octeetokens (10 Octmiles = 1 token) already existed on the same page. Duty Free's guide links to the new card.

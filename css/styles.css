@@ -1278,7 +1278,7 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 
 /* Ads: edge to edge, about two thirds of the height of the apology bar */
 .ad-slot { max-width: none; margin: 0; padding: 0; }
-.ad-banner { border-radius: 0; border-width: 0 0 2px 0; padding: 4px 48px 4px 16px; gap: 4px 12px; font-size: .88rem; line-height: 1.25; min-height: 0; }
+.ad-banner { border-radius: 0; border-width: 0 0 2px 0; padding: 7px 48px 7px 16px; gap: 4px 12px; font-size: .88rem; line-height: 1.25; min-height: 0; }
 .ad-banner .ad-icon { font-size: 1.1rem; }
 .ad-banner .ad-img { height: 26px; max-width: 90px; }
 .ad-banner .ad-body { flex: 1 1 200px; }
