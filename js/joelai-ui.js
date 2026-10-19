@@ -54,7 +54,7 @@ export function mountJoelAI(box, idSuffix = "q") {
   let busy = false;
 
   const bubble = (m) => el("div", { class: "jai-msg " + m.who },
-    el("span", { class: "jai-who" }, m.who === "bot" ? "JoelAI" : "You", m.mood && m.mood !== "calm" ? el("span", { class: "jai-mood" }, "feeling " + m.mood) : ""),
+    el("span", { class: "jai-who" }, m.who === "bot" && m.links?.some((l) => l[1] === "oliver.html") ? el("img", { class: "jai-avatar", src: "assets/img/oliver-scraggy.png", alt: "Oliver Chng" }) : "", m.who === "bot" ? "JoelAI" : "You", m.mood && m.mood !== "calm" ? el("span", { class: "jai-mood" }, "feeling " + m.mood) : ""),
     ...String(m.text).split("\n\n").map((t) => el("p", {}, t)),
     m.usage ? el("p", { class: "jai-usage" }, `${m.usage.inputTokens.toLocaleString("en-GB")} input + ${m.usage.outputTokens.toLocaleString("en-GB")} output = ${m.usage.totalTokens.toLocaleString("en-GB")} tokens · ${m.modelName}`) : "",
     m.handbook ? el("div", { class: "jai-handbook", style: "margin-top:8px;padding:8px 10px;border-left:3px solid var(--line,#ccc);background:rgba(0,0,0,.04);font-size:.92em" }, el("strong", {}, "From the handbook"), ...String(m.handbook).split("\n\n").map((t) => el("p", { style: "margin:4px 0" }, t))) : "",

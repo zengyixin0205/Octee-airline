@@ -1268,3 +1268,11 @@ A site inside the site. Each page is only `<body class="joel" data-page="…">`;
 ## Welcome video ad
 
 `js/video-ad.js` (started from `main.js`): once per visit (session) a window plays one of `assets/video/welcome-1.mp4` / `welcome-2.mp4` (480p copies of two clips) with a tiny × in the corner (Esc or a click outside also close it). It starts muted, with a sound button. The two clips take turns from visit to visit. Control Tower > Ads > "Welcome video ad" switches it off (saved in the ads data as `video: { on: false }`). The clips are other people's YouTube videos, so a takedown request is possible: delete the files or switch it off.
+
+## Oliver Chng (oliver.html)
+
+Head of Scraggy Complaints. `js/oliver.js`: a profile with the Scraggy picture (`assets/img/oliver-scraggy.png`, copied from the Scraggy Airlines site), and a complaint desk: an OC- ticket and a letter signed by Oliver. Complaints are kept in the account field `scraggyComplaints` (via `profile-records.js`), so a cloud account has them saved to the cloud. He is a character only: no photo, no school or contact details. JoelAI shows his small round avatar on answers that link to his page (`joelai-ui.js`).
+
+## Apology banner
+
+The "flight is late" apology banner now goes away by itself after 5 seconds on each page (the apology stays unread in My Apologies). The random "Joel is sorry" banner also stays 5 seconds.

@@ -20,6 +20,7 @@ const PAGES = [
   ["joelmobile.html", "JOELMOBILE"],
   ["cupboard.html", "Joel's Cupboard"],
   ["joel.html", "JoelTEH"],
+  ["oliver.html", "Oliver Chng"],
   ["oneunited.html", "One United"],
   ["reviews.html", "Reviews"],
   ["departures.html", "Departures"],

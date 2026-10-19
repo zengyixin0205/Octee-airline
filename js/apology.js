@@ -145,12 +145,14 @@ export function watchAmbient() {
     ambientOn = true;
     showBanner();
     clearTimeout(ambientTimer);
-    ambientTimer = setTimeout(() => { ambientOn = false; showBanner(); }, 6000);     // stays 6 seconds, unless you dismiss it
+    ambientTimer = setTimeout(() => { ambientOn = false; showBanner(); }, 5000);     // stays 5 seconds, unless you dismiss it
   }, 1000);
 }
 
 // ---------- the banner (on every page) ----------
 let bar = null;
+const autoHidden = new Set();
+let fadeKey = "", fadeTimer = null;
 export function showBanner() {
   const hidden = loadSession(HIDE, []) || [];
   const unread = apologies().filter((a) => !a.read && !hidden.includes(a.id));
@@ -171,6 +173,8 @@ export function showBanner() {
     return;
   }
   const a = unread[0];
+  const key = unread.map((x) => x.id).join(",");
+  if (autoHidden.has(key)) { bar?.remove(); bar = null; return; }          // already showed its 5 seconds on this page
   const more = unread.length > 1 ? ` (and ${unread.length - 1} more apolog${unread.length - 1 === 1 ? "y" : "ies"})` : "";
   const next = el("div", { class: "apology-bar", role: "status", "aria-live": "polite" },
     el("span", { class: "apology-icon", "aria-hidden": "true" }, "✉"),
@@ -184,6 +188,10 @@ export function showBanner() {
     header ? header.after(next) : document.body.prepend(next);
   }
   bar = next;
+  if (fadeKey !== key) {                                                    // the delay apology goes away by itself after 5 seconds (it is still unread in My Apologies)
+    fadeKey = key; clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(() => { autoHidden.add(key); showBanner(); }, 5000);
+  }
 }
 
 // ---------- the letter ----------

@@ -1209,3 +1209,8 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .vad-tag { position: absolute; top: 6px; left: 8px; z-index: 2; background: rgba(0,0,0,.55); color: #fff; font: 700 .7rem var(--sans); padding: 2px 8px; border-radius: 999px; }
 .vad-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; color: #fff; font-size: .85rem; background: #111; }
 .vad-sound { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; padding: 3px 10px; cursor: pointer; font: inherit; }
+
+/* Oliver Chng (js/oliver.js) and his small avatar in JoelAI */
+.oc-profile { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.oc-icon { width: 96px; height: 96px; border-radius: 50%; object-fit: contain; background: #fff1a8; border: 3px solid var(--octee-orange); padding: 4px; }
+.jai-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: contain; background: #fff1a8; border: 2px solid var(--octee-orange); vertical-align: middle; margin-right: 6px; }

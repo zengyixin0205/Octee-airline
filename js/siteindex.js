@@ -61,5 +61,6 @@ export const PAGES = [
   ["joel-baggage.html", "JT Baggage", "jt baggage allowance belt tag bag", "JT bag allowances and a belt finder."],
   ["joel-hotels.html", "JTIA Hotels", "jtia hotel stay night book joelmiles sleep", "Hotels at JTIA, paid in Joelmiles."],
   ["joel-lostfound.html", "JT Lost Property", "jt lost property found report lost jtia", "Lost something at JTIA?"],
+  ["oliver.html", "Oliver Chng", "oliver chng head of scraggy complaints scraggy complain letter ticket", "Complain about Scraggy to Oliver, who likes Scraggy."],
   ["login.html", "Log in / Sign up", "login log in sign up account register password", "Log in. Or sign up and be welcomed."]
 ];
