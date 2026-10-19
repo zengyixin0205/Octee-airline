@@ -1282,3 +1282,6 @@ The "Ad" tag is now part of the banner row (not floating on top of the button) a
 
 ## Octee Flare (Duty Free signature product)
 `js/dutyfree.js`: a "signature product" hero card for the Octee Flare (3 peanuts, 9 Octeetokens), allowed on board. Bought flares appear in Your purchases with "Light it", which opens a full-screen orange "I AM LOST" glow (Esc or button closes it). New category "Helpful" (`allowed:true` items: breadcrumbs, lanyard, compass). The Security Scan allows "flare" (`js/dutyscan.js`); JoelAI's duty free answer and the site search mention it.
+
+## Duty Free: Try me
+`js/dutyuse.js`: every purchase has a "Try me" button. A full-screen canvas ("stage") sits on top of the page; Esc or the pill at the top stops it. Fire extinguisher: ten fires, aim with the mouse, hold Space to spray (12 s of foam). Octee Flare: big editable words, 60 s of glow. Both are never used up: their charge is kept in `user.dfCharge` and "Recharge" costs 1 peanut (3 Octeetokens). Every other item is used up when tried (count goes down by one) and has a small toy or sound (35 in all). Sounds use WebAudio and only start after a click.

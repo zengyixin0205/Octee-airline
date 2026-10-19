@@ -1238,3 +1238,16 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .flare-small { font: 700 .85rem var(--sans); letter-spacing: .08em; }
 @keyframes flare-pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .flare-glow { animation: none; } }
+
+/* Duty Free "Try me" effects */
+.dfx-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9990; pointer-events: none; }
+.dfx-hud { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 9991; background: rgba(20,20,20,.85); color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 6px 16px; font: 700 .9rem var(--sans); cursor: pointer; }
+.dfx-flash { position: fixed; inset: 0; background: #fff; z-index: 9995; pointer-events: none; animation: dfx-flash .9s ease-out forwards; }
+@keyframes dfx-flash { 0% { opacity: 1; } 10% { opacity: .2; } 20% { opacity: .9; } 100% { opacity: 0; } }
+@keyframes dfx-shake { 0%,100% { transform: translate(0); } 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-4px, -3px); } 80% { transform: translate(4px, 4px); } }
+@keyframes dfx-slip { 0% { transform: rotate(0); } 30% { transform: rotate(7deg) translateX(30px); } 70% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
+@keyframes dfx-boing { 0%,100% { transform: translateY(0); } 15% { transform: translateY(-60px); } 30% { transform: translateY(0); } 50% { transform: translateY(-40px); } 65% { transform: translateY(0); } 80% { transform: translateY(-20px); } }
+body.dfx-shake { animation: dfx-shake .12s linear 4; } body.dfx-shake2 { animation: dfx-shake .08s linear infinite; }
+body.dfx-slip { animation: dfx-slip 1s ease-in-out 1; } body.dfx-boing { animation: dfx-boing 1.4s ease-out 1; }
+.flare-in { background: rgba(255,255,255,.8); color: #2b1a0e; border: 2px solid #2b1a0e; border-radius: 8px; padding: 4px 8px; font: 700 1rem var(--sans); }
+@media (prefers-reduced-motion: reduce) { body.dfx-shake, body.dfx-shake2, body.dfx-slip, body.dfx-boing { animation: none; } }

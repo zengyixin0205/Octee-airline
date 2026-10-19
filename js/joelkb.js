@@ -196,7 +196,7 @@ export const KB = [
     re: /\b(duty ?free|souvenirs?|scissors|extinguisher|a cloud in a jar|flares?)\b/,
     reply: () => ({ text: P(
       "Our signature product is the Octee Flare (3 peanuts): a bright orange glow-beacon for when you are lost in the airport. Buy it, press \"Light it\" in Your purchases, hold it up, and staff in orange come. It is a light, not a fire, so you can take it on board. Duty Free also has helpful things (breadcrumbs, a lanyard, a compass that points to Gate B3) and nine things you cannot take on board: water (1 peanut), very large scissors (3), a family fire extinguisher (4), a small cloud in a jar (5), 1.5 litres of shampoo (2), an umbrella with the rain (3), a piece of runway (6), a sandwich Joel made (2) and the only seatbelt buckle (5).",
-      "You can pay in peanuts, or in Octeetokens at three times the price. Purchases go into \"Your purchases\", where you can \"Use it\". You still may not take it on board. All sales are final."),
+      "You can pay in peanuts, or in Octeetokens at three times the price. Purchases go into \"Your purchases\", where you can press \"Try me\": the fire extinguisher sets the page on fire (aim with the mouse, hold Space to spray), the Flare shows your words in big letters, and every other item does a little something. Most are used up; the extinguisher and the Flare hold a charge and can be recharged for 1 peanut. You still may not take it on board. All sales are final."),
       links: L(["Duty Free", "dutyfree.html"], ["Peanut Wallet", "peanuts.html"]), chips: ["How do I earn peanuts?"] }) },
   { id: "auction", keys: ["auction", "bid", "bidding", "bags", "lots", "sold"], sample: "How does the auction work?",
     re: /\b(auction|bid|bidding|lots?)\b/,

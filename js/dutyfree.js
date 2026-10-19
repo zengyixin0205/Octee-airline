@@ -4,6 +4,7 @@ import { currentUser, updateUser } from "./auth.js";
 import { peanutsOf, fmtPeanuts, spendPeanuts } from "./peanuts.js";
 import { tokensOf, fmtTokens, spendTokens } from "./miles.js";
 import { scanVerdict, scanAllowed } from "./dutyscan.js";
+import { tryItem, stopAll, CHARGE } from "./dutyuse.js";
 
 const TOKEN_X = 3;                       // token price = peanut price x 3
 const ITEMS = [
@@ -59,27 +60,24 @@ function scanner() {
     el("div", { class: "actions" }, el("label", { class: "visually-hidden", for: "df-scan" }, "Item to scan"), inp, el("button", { class: "btn small", type: "submit" }, "Scan it")), out);
 }
 
-// Light your Flare: a full-screen orange glow to hold up when you are lost. Esc or the button puts it out.
-function lightFlare() {
-  if (document.querySelector(".flare-ov")) return;
-  const spots = ["Gate B3 (it has moved)", "the duty free (you are already in it)", "a bench that looks like every other bench", "the corridor with the long moving walkway", "just past the sign that points at the sign"];
-  const where = spots[Math.floor(Math.random() * spots.length)];
-  const out = () => { ov.remove(); document.removeEventListener("keydown", onKey); };
-  const onKey = (e) => { if (e.key === "Escape") out(); };
-  const ov = el("div", { class: "flare-ov", role: "dialog", "aria-modal": "true", "aria-label": "Octee Flare" },
-    el("div", { class: "flare-glow", "aria-hidden": "true" }),
-    el("div", { class: "flare-card" },
-      el("p", { class: "flare-small" }, "OCTEE FLARE · LIT"),
-      el("h2", {}, "I AM LOST"),
-      el("p", {}, "Terminal FIA. Please hold me up."),
-      el("p", { class: "flare-small" }, `Staff in orange have been told. They were already looking. Last seen near ${where}. Estimated help: 4 minutes (it is 11).`),
-      el("button", { class: "btn", type: "button", onclick: out }, "Put the Flare out")));
-  document.body.append(ov); document.addEventListener("keydown", onKey); ov.querySelector("button").focus();
-}
 const root = $("#app");
 let pay = "peanuts", cat = "All", find = "";                      // peanuts | tokens
 const priceOf = (it) => (pay === "tokens" ? it.cost * TOKEN_X : it.cost);
 
+
+const chargeOf = (id) => { const u = currentUser(), c = u && u.dfCharge && u.dfCharge[id]; return typeof c === "number" ? c : (CHARGE[id] ? CHARGE[id].full : 0); };
+const say = (t, kind) => { const m = $("#app .msg"); if (m) setMsg(m, t, kind); };
+const hooks = { charge: chargeOf, say, setCharge: (id, v) => { updateUser((x) => { x.dfCharge = { ...(x.dfCharge || {}), [id]: v }; }); draw(); } };
+function useItem(it) {
+  const used = tryItem(it.id, hooks, it.use === "FLARE" ? "" : it.use);
+  if (used) { updateUser((x) => { const n = ((x.dutyfree || {})[it.id] || 0) - 1; x.dutyfree = { ...(x.dutyfree || {}), [it.id]: Math.max(0, n) }; }); draw(); say(it.use, "ok"); }
+}
+function recharge(k, it, price, unit) {
+  try {
+    updateUser((x) => { pay === "tokens" ? spendTokens(x, price, "Duty Free: recharge " + it.name) : spendPeanuts(x, price, "Duty Free: recharge " + it.name); x.dfCharge = { ...(x.dfCharge || {}), [k]: CHARGE[k].full }; });
+    draw(); say(`Recharged: ${it.name} for ${price} ${unit}. Full again.`, "ok");
+  } catch (e) { say(e.message, "error"); }
+}
 
 function buyItem(it, msg, pay, unit) {
   const price = pay === "tokens" ? it.cost * TOKEN_X : it.cost;
@@ -135,10 +133,16 @@ function draw() {
         !u ? el("p", { class: "note", style: "margin:4px 0 0" }, "Log in to buy.") : !can ? el("p", { class: "note", style: "margin:4px 0 0" }, `You need ${price - have} more ${unit}.`) : null);
     })),
     el("h2", {}, "Your purchases"),
-    owned.length ? el("div", { class: "shop" }, owned.map((k) => { const it = ITEMS.find((x) => x.id === k);
-      return el("div", { class: "card shop-item" }, el("h3", { style: "margin:0" }, `${own[k]} × ${it ? it.name : k}`), el("p", { class: "note", style: "margin:4px 0 8px" }, (it && it.allowed ? "Yours. Allowed on board." : "Yours. Not allowed on board.")),
-        it ? el("button", { class: "btn small ghost", type: "button", onclick: () => (it.use === "FLARE" ? lightFlare() : setMsg($("#app .msg"), it.use, "ok")) }, it.use === "FLARE" ? "Light it" : "Use it") : null); }))
+    owned.length ? el("div", { class: "shop" }, owned.map((k) => { const it = ITEMS.find((x) => x.id === k), ch = CHARGE[k], left = chargeOf(k);
+      const rprice = ch ? (pay === "tokens" ? ch.price * TOKEN_X : ch.price) : 0;
+      return el("div", { class: "card shop-item" }, el("h3", { style: "margin:0" }, `${own[k]} × ${it ? it.name : k}`),
+        el("p", { class: "note", style: "margin:4px 0 4px" }, it && it.allowed ? "Yours. Allowed on board." : "Yours. Not allowed on board."),
+        ch ? el("p", { class: "note df-charge", style: "margin:0 0 6px" }, `Charge: ${left.toFixed(left % 1 ? 1 : 0)} of ${ch.full} ${ch.unit}`) : null,
+        el("div", { class: "actions" },
+          it ? el("button", { class: "btn small", type: "button", onclick: () => useItem(it) }, "Try me") : null,
+          ch && left < ch.full ? el("button", { class: "btn small ghost", type: "button", disabled: have >= rprice ? null : true, onclick: () => recharge(k, it, rprice, unit) }, `Recharge · ${rprice} ${unit}`) : null)); }))
       : el("p", { class: "note" }, "You have bought nothing. This is the most you can take on board."),
     el("p", { class: "note" }, "All sales are final. All goods stay on the ground. Get more peanuts in the ", el("a", { href: "peanuts.html" }, "Peanut Wallet"), "; Octeetokens come from codes and Octmiles."));
 }
+stopAll();
 draw();
