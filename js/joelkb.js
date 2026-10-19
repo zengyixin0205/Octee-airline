@@ -193,9 +193,9 @@ export const KB = [
       "Tell it where you are going and you get a booking and a very detailed route that is not the route. Joel has questions about where. He will ask them while driving."),
       links: L(["JOELMOBILE", "joelmobile.html"], ["Peanut Wallet", "peanuts.html"]), chips: ["Who is Joel?"] }) },
   { id: "dutyfree", keys: ["duty", "free", "shop", "buy", "souvenir", "purchases"], sample: "What can I buy at Duty Free?",
-    re: /\b(duty ?free|souvenirs?|scissors|extinguisher|a cloud in a jar)\b/,
+    re: /\b(duty ?free|souvenirs?|scissors|extinguisher|a cloud in a jar|flares?)\b/,
     reply: () => ({ text: P(
-      "Duty Free sells nine things you cannot take on board: water (1 peanut), very large scissors (3), a family fire extinguisher (4), a small cloud in a jar (5), 1.5 litres of shampoo (2), an umbrella with the rain (3), a piece of runway (6), a sandwich Joel made (2) and the only seatbelt buckle (5).",
+      "Our signature product is the Octee Flare (3 peanuts): a bright orange glow-beacon for when you are lost in the airport. Buy it, press \"Light it\" in Your purchases, hold it up, and staff in orange come. It is a light, not a fire, so you can take it on board. Duty Free also has helpful things (breadcrumbs, a lanyard, a compass that points to Gate B3) and nine things you cannot take on board: water (1 peanut), very large scissors (3), a family fire extinguisher (4), a small cloud in a jar (5), 1.5 litres of shampoo (2), an umbrella with the rain (3), a piece of runway (6), a sandwich Joel made (2) and the only seatbelt buckle (5).",
       "You can pay in peanuts, or in Octeetokens at three times the price. Purchases go into \"Your purchases\", where you can \"Use it\". You still may not take it on board. All sales are final."),
       links: L(["Duty Free", "dutyfree.html"], ["Peanut Wallet", "peanuts.html"]), chips: ["How do I earn peanuts?"] }) },
   { id: "auction", keys: ["auction", "bid", "bidding", "bags", "lots", "sold"], sample: "How does the auction work?",

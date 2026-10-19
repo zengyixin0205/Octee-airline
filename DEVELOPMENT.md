@@ -1279,3 +1279,6 @@ The "flight is late" apology banner now goes away by itself after 5 seconds on e
 
 ## Ad banner look
 The "Ad" tag is now part of the banner row (not floating on top of the button) and the × is centred on the right. Twelve colour themes (`THEMES` in `js/ads.js`, CSS `.ad-banner.ad-*`); the Worker does not check the theme, so no deploy is needed. The ad button gets a contrasting colour per theme.
+
+## Octee Flare (Duty Free signature product)
+`js/dutyfree.js`: a "signature product" hero card for the Octee Flare (3 peanuts, 9 Octeetokens), allowed on board. Bought flares appear in Your purchases with "Light it", which opens a full-screen orange "I AM LOST" glow (Esc or button closes it). New category "Helpful" (`allowed:true` items: breadcrumbs, lanyard, compass). The Security Scan allows "flare" (`js/dutyscan.js`); JoelAI's duty free answer and the site search mention it.

@@ -1227,3 +1227,14 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .oc-profile { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .oc-icon { width: 96px; height: 96px; border-radius: 50%; object-fit: contain; background: #fff1a8; border: 3px solid var(--octee-orange); padding: 4px; }
 .jai-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: contain; background: #fff1a8; border: 2px solid var(--octee-orange); vertical-align: middle; margin-right: 6px; }
+
+/* Octee Flare (Duty Free signature product) */
+.flare-hero { border: 3px solid var(--octee-orange); background: linear-gradient(135deg, #fff1de, #ffd9a8); position: relative; }
+.flare-badge { display: inline-block; background: var(--octee-orange); color: var(--octee-ink); font: 700 .72rem var(--sans); letter-spacing: .08em; text-transform: uppercase; padding: 2px 10px; border-radius: 999px; }
+.flare-ov { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 16px; background: #ff7a00; }
+.flare-glow { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, #fff3b0 0%, #ffb347 35%, #ff7a00 70%); animation: flare-pulse 1.6s ease-in-out infinite; }
+.flare-card { position: relative; text-align: center; color: #2b1a0e; max-width: 520px; }
+.flare-card h2 { font-size: clamp(3rem, 14vw, 6.5rem); margin: 6px 0; line-height: 1; letter-spacing: .04em; color: #2b1a0e; }
+.flare-small { font: 700 .85rem var(--sans); letter-spacing: .08em; }
+@keyframes flare-pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .flare-glow { animation: none; } }

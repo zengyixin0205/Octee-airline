@@ -37,7 +37,7 @@ export const PAGES = [
   ["safety.html", "Safety Demo", "safety demo quiz seatbelt life jacket oxygen brace", "Six cards and a quiz. No buckle."],
   ["safetycard.html", "Safety Card", "safety card print printable seat pocket", "A printable card for your seat pocket."],
   ["radio.html", "Octee Radio", "radio music songs station listen fm announcement", "Delay FM and other stations."],
-  ["dutyfree.html", "Duty Free", "duty free shop buy souvenir perfume", "Things you cannot take on board."],
+  ["dutyfree.html", "Duty Free", "duty free shop buy souvenir perfume flare lost signature", "Things you cannot take on board, and the Octee Flare for when you are lost."],
   ["auction.html", "Lost Property Auction", "auction bid bags lost property winning", "Bid on bags you cannot open."],
   ["creditcard.html", "Octee Credit Card", "credit card payment apply purchase bank", "Always approved, always declined."],
   ["cockpit.html", "The Cockpit", "cockpit pilot dials buttons captain controls", "Dials, buttons and one marked Do not."],

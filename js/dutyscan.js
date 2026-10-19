@@ -2,6 +2,7 @@
 // Everything is refused, except peanuts. The reason depends on the words.
 // The Security Scan: type anything. It is never allowed. The reason depends on the words.
 export const SCAN = [
+  [/\bflares?\b/, "The Octee Flare is a light, not a fire. It is allowed on board, and it is our signature product. Hold it up when you are lost."],
   [/\b(?:knife|knives|chainsaw|saws?|sword|blade|scissor|axe|saw|razor|dagger|needle|sharp)/, "It is sharp. The airport has a rule about sharp things, and the rule is also sharp."],
   [/\b(?:water|juice|drink|soup|milk|liquid|shampoo|perfume|paint|oil|sauce|cola|tea|coffee)/, "Liquids over 100 ml stay on the ground. Yours is over 100 ml. Everything is over 100 ml, at the gate."],
   [/\b(?:fire|match|lighter|flame|candle|firework|spark|bomb|dynamite|gas|petrol|explosive)/, "It is on fire, or it could be. Fire is for the ground. The ground is for fire."],
@@ -17,4 +18,4 @@ export const SCAN = [
 export const SCAN_ANY = ["It is not on the list. That is why it is not allowed. Things that are not on the list are on the other list.", "It is allowed, in theory, in a better world. This one is not that one.", "The scanner went 'hmm'. A scanner that goes 'hmm' is a scanner that says no.", "We could not find a reason, and in that case the reason is the lack of one."];
 export const scanVerdict = (t) => { const w = String(t || "").toLowerCase(); const hit = SCAN.find(([re]) => re.test(w)); return hit ? hit[1] : SCAN_ANY[Math.floor(Math.random() * SCAN_ANY.length)]; };
 
-export const scanAllowed = (t) => /peanut|nut/i.test(String(t || ""));
+export const scanAllowed = (t) => /peanut|nut|\bflares?\b/i.test(String(t || ""));

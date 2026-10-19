@@ -7,6 +7,10 @@ import { scanVerdict, scanAllowed } from "./dutyscan.js";
 
 const TOKEN_X = 3;                       // token price = peanut price x 3
 const ITEMS = [
+  { id: "flare", cat: "Helpful", allowed: true, sig: true, name: "Octee Flare", cost: 3, note: "Our signature product. A bright orange glow-beacon (a light, not a fire) for when you are lost in the airport. Hold it up and someone in orange comes. Eventually.", use: "FLARE" },
+  { id: "breadcrumbs", cat: "Helpful", allowed: true, name: "Resealable breadcrumbs (airport grade)", cost: 2, note: "Drop one every ten steps. Pigeons will fix the rest.", use: "You drop a crumb at every corner. By Gate B3 you have none left, a pigeon is following you, and it also looks lost." },
+  { id: "lanyard", cat: "Helpful", allowed: true, name: "Lanyard that says 'I am not lost'", cost: 1, note: "Wear it and people stop asking. They also stop helping.", use: "You put it on. A man in a hi-vis jacket nods at you with respect. You are, for the record, still lost." },
+  { id: "compass", cat: "Helpful", allowed: true, name: "A compass that points to Gate B3", cost: 3, note: "Always points to Gate B3. Gate B3 has not been announced.", use: "You hold it flat. The needle swings and settles on Gate B3. You walk. Gate B3 walks too, a little to the left." },
   { id: "water", cat: "Liquid", name: "1 litre of water (sealed, airside)", cost: 1, note: "Must be drunk before the gate. The gate is not announced.", use: "You drink it. It is gone. The gate has still not been announced." },
   { id: "scissors", cat: "Sharp", name: "Very large scissors", cost: 3, note: "Ideal for cutting the queue. Not allowed on any aircraft, or near one.", use: "You cut the queue. The queue is now two queues. Both are slower." },
   { id: "extinguisher", cat: "Fire", name: "Fire extinguisher (family size)", cost: 4, note: "For emergencies that are on board. You cannot bring it on board.", use: "There is no fire. You feel prepared anyway. It is the best feeling you have had at the airport." },
@@ -40,6 +44,7 @@ const ITEMS = [
   { id: "horn", name: "A foghorn", cost: 5, cat: "Loud", note: "From a ship. The ship misses it.", why: "It would wake the whole cabin and the one on the next runway.", use: "You press it once. Birds leave the building. The building is also thinking about it." },
   { id: "bucket", name: "A bucket (from the cupboard, used)", cost: 2, cat: "Liquid", note: "Joel's. He has asked for it back. He has not asked kindly.", why: "It is a bucket. It has done things. Please stop asking.", use: "You hold it up. From the cupboard, very faintly, a voice says 'sorry'." }
 ];
+const FLARE = ITEMS.find((i) => i.id === "flare");
 const CATS = [...new Set(ITEMS.map((i) => i.cat || "Other"))];
 const shown = () => ITEMS.filter((i) => (cat === "All" || (i.cat || "Other") === cat) && (!find.trim() || (i.name + " " + i.note).toLowerCase().includes(find.trim().toLowerCase())));
 function scanner() {
@@ -53,9 +58,46 @@ function scanner() {
   } }, el("h3", { style: "margin:0 0 4px" }, "The Security Scan"), el("p", { class: "note", style: "margin:0 0 6px" }, "Wondering if you can take something on board? Type it in. The answer is no. The reason changes."),
     el("div", { class: "actions" }, el("label", { class: "visually-hidden", for: "df-scan" }, "Item to scan"), inp, el("button", { class: "btn small", type: "submit" }, "Scan it")), out);
 }
+
+// Light your Flare: a full-screen orange glow to hold up when you are lost. Esc or the button puts it out.
+function lightFlare() {
+  if (document.querySelector(".flare-ov")) return;
+  const spots = ["Gate B3 (it has moved)", "the duty free (you are already in it)", "a bench that looks like every other bench", "the corridor with the long moving walkway", "just past the sign that points at the sign"];
+  const where = spots[Math.floor(Math.random() * spots.length)];
+  const out = () => { ov.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") out(); };
+  const ov = el("div", { class: "flare-ov", role: "dialog", "aria-modal": "true", "aria-label": "Octee Flare" },
+    el("div", { class: "flare-glow", "aria-hidden": "true" }),
+    el("div", { class: "flare-card" },
+      el("p", { class: "flare-small" }, "OCTEE FLARE · LIT"),
+      el("h2", {}, "I AM LOST"),
+      el("p", {}, "Terminal FIA. Please hold me up."),
+      el("p", { class: "flare-small" }, `Staff in orange have been told. They were already looking. Last seen near ${where}. Estimated help: 4 minutes (it is 11).`),
+      el("button", { class: "btn", type: "button", onclick: out }, "Put the Flare out")));
+  document.body.append(ov); document.addEventListener("keydown", onKey); ov.querySelector("button").focus();
+}
 const root = $("#app");
 let pay = "peanuts", cat = "All", find = "";                      // peanuts | tokens
 const priceOf = (it) => (pay === "tokens" ? it.cost * TOKEN_X : it.cost);
+
+
+function buyItem(it, msg, pay, unit) {
+  const price = pay === "tokens" ? it.cost * TOKEN_X : it.cost;
+  try {
+    updateUser((x) => { pay === "tokens" ? spendTokens(x, price, "Duty Free: " + it.name) : spendPeanuts(x, price, "Duty Free: " + it.name); x.dutyfree = { ...(x.dutyfree || {}), [it.id]: ((x.dutyfree || {})[it.id] || 0) + 1 }; });
+    const no = "DF-" + String(Math.floor(Math.random() * 9000) + 1000);
+    draw(); setMsg($("#app .msg"), `Bought: ${it.name} for ${price} ${unit}. Receipt ${no}. It is in "Your purchases" below.${it.allowed ? " You may take it on board." : " It may not be taken on board."}`, "ok");
+  } catch (e) { setMsg(msg, e.message, "error"); }
+}
+function flareHero(u, have, unit, msg) {
+  const f = FLARE, price = priceOf(f), can = u && have >= price;
+  return el("div", { class: "card flare-hero" },
+    el("span", { class: "flare-badge" }, "Our signature product"),
+    el("h2", { style: "margin:4px 0" }, "Octee Flare"),
+    el("p", {}, "Lost in the airport? Light the Flare. A bright orange glow, a big I AM LOST, and staff in orange who were already looking for you. It is a light, not a fire, so it is the one thing in Duty Free you ", el("strong", {}, "can"), " take on board."),
+    el("button", { class: "btn", type: "button", disabled: can ? null : true, onclick: () => buyItem(f, msg, pay, unit) }, `Buy the Flare · ${price} ${unit}`),
+    !u ? el("p", { class: "note", style: "margin:4px 0 0" }, "Log in to buy.") : !can ? el("p", { class: "note", style: "margin:4px 0 0" }, `You need ${price - have} more ${unit}.`) : null);
+}
 
 function draw() {
   const u = currentUser();
@@ -71,17 +113,18 @@ function draw() {
     el("div", { class: "card wallet-top" }, u ? el("p", { style: "margin:0" }, `You have ${fmtPeanuts(peanutsOf(u))} and ${fmtTokens(tokensOf(u))}. Duty Free does not give change. It gives receipts, and your goods.`)
       : el("p", { style: "margin:0" }, el("a", { href: "login.html" }, "Log in"), " (or ", el("a", { href: "login.html" }, "sign up"), ", you get Octeetokens as a welcome bonus) to buy things. Browsing is free."), payBox),
     msg,
+    flareHero(u, have, unit, msg),
     scanner(),
     el("div", { class: "actions df-filters" },
       el("label", {}, "Show ", el("select", { "aria-label": "Category", onchange: (e) => { cat = e.target.value; draw(); } }, ["All", ...CATS].map((c) => el("option", { value: c, selected: c === cat ? true : null }, c)))),
       el("label", {}, "Find ", el("input", { type: "search", id: "df-find", value: find, placeholder: "e.g. anchor", "aria-label": "Find an item", oninput: (e) => { find = e.target.value; const pos = e.target.selectionStart; draw(); const n = $("#df-find"); n.focus(); n.setSelectionRange(pos, pos); } })),
       el("span", { class: "note" }, `${shown().length} of ${ITEMS.length} things you cannot carry`)),
-    el("div", { class: "shop" }, shown().map((it) => {
+    el("div", { class: "shop" }, shown().filter((i) => !i.sig).map((it) => {
       const price = priceOf(it), can = u && have >= price;
       return el("div", { class: "card shop-item" },
         el("h3", { style: "margin:0" }, it.name),
         el("p", { class: "note", style: "margin:2px 0" }, el("span", { class: "tag" }, it.cat || "Other")),
-        el("p", { class: "note", style: "margin:4px 0 8px" }, it.note, el("br"), el("strong", {}, "Not permitted on board."), it.why ? el("span", {}, " Why: " + it.why) : ""),
+        el("p", { class: "note", style: "margin:4px 0 8px" }, it.note, el("br"), el("strong", {}, it.allowed ? "Allowed on board." : "Not permitted on board."), it.why ? el("span", {}, " Why: " + it.why) : ""),
         el("button", { class: "btn small", type: "button", disabled: can ? null : true, onclick: () => {
           try {
             updateUser((x) => { pay === "tokens" ? spendTokens(x, price, "Duty Free: " + it.name) : spendPeanuts(x, price, "Duty Free: " + it.name); x.dutyfree = { ...(x.dutyfree || {}), [it.id]: ((x.dutyfree || {})[it.id] || 0) + 1 }; });
@@ -93,8 +136,8 @@ function draw() {
     })),
     el("h2", {}, "Your purchases"),
     owned.length ? el("div", { class: "shop" }, owned.map((k) => { const it = ITEMS.find((x) => x.id === k);
-      return el("div", { class: "card shop-item" }, el("h3", { style: "margin:0" }, `${own[k]} × ${it ? it.name : k}`), el("p", { class: "note", style: "margin:4px 0 8px" }, "Yours. Not allowed on board."),
-        it ? el("button", { class: "btn small ghost", type: "button", onclick: () => setMsg($("#app .msg"), it.use, "ok") }, "Use it") : null); }))
+      return el("div", { class: "card shop-item" }, el("h3", { style: "margin:0" }, `${own[k]} × ${it ? it.name : k}`), el("p", { class: "note", style: "margin:4px 0 8px" }, (it && it.allowed ? "Yours. Allowed on board." : "Yours. Not allowed on board.")),
+        it ? el("button", { class: "btn small ghost", type: "button", onclick: () => (it.use === "FLARE" ? lightFlare() : setMsg($("#app .msg"), it.use, "ok")) }, it.use === "FLARE" ? "Light it" : "Use it") : null); }))
       : el("p", { class: "note" }, "You have bought nothing. This is the most you can take on board."),
     el("p", { class: "note" }, "All sales are final. All goods stay on the ground. Get more peanuts in the ", el("a", { href: "peanuts.html" }, "Peanut Wallet"), "; Octeetokens come from codes and Octmiles."));
 }
