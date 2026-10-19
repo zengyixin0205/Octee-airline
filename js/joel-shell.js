@@ -74,5 +74,6 @@ async function start() {
     main.append(el("div", { class: "jl-card" }, el("h2", {}, "This part of JoelTEH fell over"), el("p", { class: "jl-note" }, String(e && e.message || e))));
   }
   import("./joelfab.js").catch(() => {});
+  import("./version.js").then((m) => m.showVersion()).catch(() => {});
 }
 start();

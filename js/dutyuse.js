@@ -7,6 +7,23 @@ export const CHARGE = { extinguisher: { full: 12, price: 1, unit: "s of foam" },
 const R = Math.random;
 const calm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 
+
+// What each item does and what to press (shown in the Duty Free guide and on each purchase).
+export const HINTS = {
+  extinguisher: "Move the mouse to aim at the flames and HOLD Space to spray. Put all ten out before the foam runs out, or the page burns to dust (Error 400). Esc gives up, and the page burns too.",
+  flare: "Type your own words in the box (it says I AM LOST). Hold your screen up so staff can see it. Esc or the button puts it out. It burns for up to 60 seconds, then needs a recharge.",
+  sparkler: "Move the mouse. Sparks follow it for 9 seconds.", cloud: "Move the mouse. The cloud follows it and rains.", shampoo: "Move the mouse to blow bubbles.",
+  umbrella: "Move the mouse and keep the rain off the cursor.", fireworks: "Aim with the mouse. Click, or tap Space, to fire.", glitter: "Just watch. It lasts 7 seconds.",
+  marbles: "Just watch them roll.", volcano: "Just watch, from a safe distance.", paint: "Click anywhere to splash paint.",
+  breadcrumbs: "Move the mouse. Crumbs drop behind it and a pigeon follows.", candle: "Move the mouse. It burns for 5 seconds.", cooker: "Just watch the peanuts pop.",
+  lightning: "Brace yourself. One flash, one thunder (sound on).", anchor: "Move the mouse first. The anchor drops where the cursor is.", chainsaw: "Move the mouse to carry it around for 2.5 seconds (sound on).",
+  banana: "Nothing to press. The page slips.", pogo: "Nothing to press. The page bounces.", magnet: "Move the mouse close to the buttons and watch them come.",
+  jetpack: "Nothing to press. It flies to the top of the page.", scissors: "Click to cut a dashed line across the page.", bowling: "Just watch it roll.",
+  bat: "Move the mouse to place the bat. It swings once.", compass: "Wait four seconds. The needle settles on Gate B3 (probably).",
+  whistle: "A loud sound. Mind your volume.", horn: "A very loud sound. Mind your volume.", duck: "A squeak.", buckle: "A click.", bucket: "A clang.", water: "A gulp (sound on).", sandwich: "A crunch (sound on).",
+  runway: "A thump.", lanyard: "A cheerful ding.", eel: "A quiet, dignified noise.", skate: "It slides the page sideways."
+};
+
 // ---- sound ----
 let AC = null;
 const ac = () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); return AC; } catch { return null; } };
@@ -112,11 +129,23 @@ function extinguisher(h) {
       if (hiss) hiss.stop();
       h.setCharge("extinguisher", Math.max(0, rem));
       if (msg === "won") { tone(660, 0.15, "triangle", 0.12); tone(880, 0.3, "triangle", 0.12, 0, 0.15); h.say("The fire is out. The page is saved and slightly foamy. Nobody thanked you. The fire has left a one-star review.", "ok"); }
-      else if (msg === "empty") h.say("The extinguisher ran dry with the page still smouldering. Recharge it and try again.", "info");
-      else h.say("You gave up. The page is still a little on fire. It has been told.", "info");
+      else dust(msg === "empty" ? "The foam ran out with the page still burning." : "You gave up with the page still burning.");
     }
   });
   return false;
+}
+
+// The page you did not save: it burns to dust, error 400.
+function dust(why) {
+  if (document.querySelector(".dfx-dust")) return;
+  noise(1.5, 0.12, 300, "lowpass"); tone(120, 1.2, "sawtooth", 0.08, 40);
+  const ov = el("div", { class: "dfx-dust", role: "alertdialog", "aria-modal": "true", "aria-label": "Error 400" },
+    el("div", { class: "dfx-dust-card" },
+      el("p", { class: "dfx-dust-code" }, "Error 400"),
+      el("h2", {}, "The page burnt to dust."),
+      el("p", {}, why + " Nothing is left but a little ash and a very small Joel, shrugging."),
+      el("button", { class: "btn", type: "button", onclick: () => location.reload() }, "Rebuild the page")));
+  document.body.append(ov); ov.querySelector("button").focus();
 }
 
 // ---- the Octee Flare: the words on your screen ----

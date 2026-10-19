@@ -1285,3 +1285,10 @@ The "Ad" tag is now part of the banner row (not floating on top of the button) a
 
 ## Duty Free: Try me
 `js/dutyuse.js`: every purchase has a "Try me" button. A full-screen canvas ("stage") sits on top of the page; Esc or the pill at the top stops it. Fire extinguisher: ten fires, aim with the mouse, hold Space to spray (12 s of foam). Octee Flare: big editable words, 60 s of glow. Both are never used up: their charge is kept in `user.dfCharge` and "Recharge" costs 1 peanut (3 Octeetokens). Every other item is used up when tried (count goes down by one) and has a small toy or sound (35 in all). Sounds use WebAudio and only start after a click.
+
+## Version tab, convenient mode, Joel pop-ups, burnt page, Duty Free guide
+- `js/version.js`: a small "Version 3.3" tab on the right edge of every page. The number, and an on/off switch, are set in the Control Tower (Ads tab, "Site version") and saved with the ads as `version: { on, text }` (the Worker passes extra top-level fields, like `video`).
+- `js/convenient.js`: Convenient mode (switch in the footer and next to the Joel button). Offers "fly to FIA conveniently?" once per visit (book.html?from=SIA&to=FIA&date=tomorrow), a shortcut bar, "Do it for me" on booking and complaints, bigger confirm buttons.
+- `js/joelmode.js`: Joel mode now also opens a pop-up praising Joel. Closing the first one opens ten more; Esc does not close them. "Joel, stop" turns Joel mode off and says "Joel has stopped, the messages haven't, close yourself" while any pop-ups remain.
+- Fire extinguisher: if the foam runs out or you press Esc with fires left, the page "burns to dust" (Error 400, Rebuild the page reloads).
+- Duty Free has a "How to use your things" guide and a "How:" hint on every purchase (`HINTS` in `js/dutyuse.js`).

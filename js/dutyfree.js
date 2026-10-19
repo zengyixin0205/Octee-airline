@@ -4,7 +4,7 @@ import { currentUser, updateUser } from "./auth.js";
 import { peanutsOf, fmtPeanuts, spendPeanuts } from "./peanuts.js";
 import { tokensOf, fmtTokens, spendTokens } from "./miles.js";
 import { scanVerdict, scanAllowed } from "./dutyscan.js";
-import { tryItem, stopAll, CHARGE } from "./dutyuse.js";
+import { tryItem, stopAll, CHARGE, HINTS } from "./dutyuse.js";
 
 const TOKEN_X = 3;                       // token price = peanut price x 3
 const ITEMS = [
@@ -97,6 +97,19 @@ function flareHero(u, have, unit, msg) {
     !u ? el("p", { class: "note", style: "margin:4px 0 0" }, "Log in to buy.") : !can ? el("p", { class: "note", style: "margin:4px 0 0" }, `You need ${price - have} more ${unit}.`) : null);
 }
 
+function guide() {
+  return el("details", { class: "card df-guide" },
+    el("summary", {}, el("strong", {}, "How to use your things (instructions)")),
+    el("ol", { class: "df-guide-list" },
+      el("li", {}, el("strong", {}, "Buy: "), "pay with peanuts (or Octeetokens at three times the price). Your purchases appear at the bottom of this page."),
+      el("li", {}, el("strong", {}, "Try me: "), "press the Try me button on a purchase. Most items do something on your screen and are then used up. Esc stops any effect."),
+      el("li", {}, el("strong", {}, "Fire extinguisher: "), "the page catches fire. Move the mouse to aim and HOLD Space to spray. Put out all ten fires before the foam (12 seconds) runs out. If you don't, the page burns to dust and you get Error 400 (press Rebuild the page)."),
+      el("li", {}, el("strong", {}, "Octee Flare: "), "lights a big orange screen with your words on it (type your own, or leave I AM LOST). Hold your screen up. It burns for up to 60 seconds."),
+      el("li", {}, el("strong", {}, "Recharging: "), "the extinguisher and the Flare are never used up. When their charge is low a Recharge button appears: 1 peanut (3 Octeetokens), much cheaper than buying a new one."),
+      el("li", {}, el("strong", {}, "Sound: "), "some items make noise, and it only starts after you click. Turn your volume down first, especially for the whistle and the foghorn."),
+      el("li", {}, el("strong", {}, "On board: "), "nothing here goes on the plane, except the Flare and the helpful things (breadcrumbs, lanyard, compass). Ask the Security Scan above if you are not sure.")));
+}
+
 function draw() {
   const u = currentUser();
   const msg = el("p", { class: "msg", role: "status", "aria-live": "polite" });
@@ -111,6 +124,7 @@ function draw() {
     el("div", { class: "card wallet-top" }, u ? el("p", { style: "margin:0" }, `You have ${fmtPeanuts(peanutsOf(u))} and ${fmtTokens(tokensOf(u))}. Duty Free does not give change. It gives receipts, and your goods.`)
       : el("p", { style: "margin:0" }, el("a", { href: "login.html" }, "Log in"), " (or ", el("a", { href: "login.html" }, "sign up"), ", you get Octeetokens as a welcome bonus) to buy things. Browsing is free."), payBox),
     msg,
+    guide(),
     flareHero(u, have, unit, msg),
     scanner(),
     el("div", { class: "actions df-filters" },
@@ -137,6 +151,7 @@ function draw() {
       const rprice = ch ? (pay === "tokens" ? ch.price * TOKEN_X : ch.price) : 0;
       return el("div", { class: "card shop-item" }, el("h3", { style: "margin:0" }, `${own[k]} × ${it ? it.name : k}`),
         el("p", { class: "note", style: "margin:4px 0 4px" }, it && it.allowed ? "Yours. Allowed on board." : "Yours. Not allowed on board."),
+        it && HINTS[it.id] ? el("p", { class: "note df-hint", style: "margin:0 0 4px" }, el("strong", {}, "How: "), HINTS[it.id]) : null,
         ch ? el("p", { class: "note df-charge", style: "margin:0 0 6px" }, `Charge: ${left.toFixed(left % 1 ? 1 : 0)} of ${ch.full} ${ch.unit}`) : null,
         el("div", { class: "actions" },
           it ? el("button", { class: "btn small", type: "button", onclick: () => useItem(it) }, "Try me") : null,

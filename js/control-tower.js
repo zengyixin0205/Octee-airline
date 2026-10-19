@@ -14,6 +14,7 @@ import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions
 import { cloudAdminCall, cloudState } from "./cloud.js";
 import { fetchPublished, publishToCloud, isPublisher } from "./published.js";
 import { THEMES, MAX_ADS, cleanAd, adNode } from "./ads.js";
+import { cleanVersion } from "./version.js";
 
 const SESSION = "octee.tower.session";
 const DRAFT_CODES = "octee.tower.codes";
@@ -145,6 +146,7 @@ async function tower(session, crew, notice = "") {
   const adsFile = await fetchJson("data/ads.json", { ads: [] });
   let ads = (adsFile.ads || []).map(cleanAd);
   let videoOn = !(adsFile.video && adsFile.video.on === false);
+  let ver = cleanVersion(adsFile.version);
   const publishedAccounts = (await fetchJson("data/accounts.json", { accounts: [] })).accounts || [];
   const removed = new Set();
   const body = el("div");
@@ -461,12 +463,20 @@ async function tower(session, crew, notice = "") {
         preview);
     };
     ads.forEach((a) => { a.priority = String(a.priority ?? "") });
+    const vOnTab = el("input", { type: "checkbox", id: "ver-on", checked: ver.on });
+    vOnTab.addEventListener("change", () => { ver = { ...ver, on: vOnTab.checked }; changed(); });
+    const vText = el("input", { type: "text", id: "ver-text", maxlength: "12", value: ver.text });
+    vText.addEventListener("input", () => { ver = { ...ver, text: vText.value }; changed(); });
     const vOn = el("input", { type: "checkbox", id: "vad-on", checked: videoOn });
     vOn.addEventListener("change", () => { videoOn = vOn.checked; changed(); });
     return el("div", {},
       el("div", { class: "card" }, el("h3", {}, "Welcome video ad"),
         el("p", { class: "note" }, "When a visit starts, one of the two clips (assets/video/welcome-1.mp4 and welcome-2.mp4) plays in a window with a tiny × in the corner. It shows once per visit and the clips take turns. Save to cloud below to apply this switch."),
         el("div", { class: "field" }, el("label", { for: "vad-on" }, vOn, " Show the welcome video ad"))),
+      el("div", { class: "card" }, el("h3", {}, "Site version"),
+        el("p", { class: "note" }, "A small tab at the side of every page. Change the number, or switch it off. Save to cloud below to apply (it is saved together with the ads)."),
+        el("div", { class: "field" }, el("label", { for: "ver-on" }, vOnTab, " Show the version tab")),
+        el("div", { class: "field" }, el("label", { for: "ver-text" }, "Version "), vText)),
       el("div", { class: "card" }, el("h3", {}, "Ads"),
         el("p", { class: "note" }, "Each ad is a slim banner under the header. Visitors see ads that are On, between their start and end dates, on the pages you list. If several match, they take turns. Visitors can close the banner for the visit. Text only; the site marks every ad with a small “Ad” tag, since Octee is a parody."),
         el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => {
@@ -478,9 +488,9 @@ async function tower(session, crew, notice = "") {
       el("div", { class: "actions" },
         el("button", { class: "btn", type: "button", onclick: async () => {
           const clean = ads.map(cleanAd).filter((a) => a.title);
-          if (await saveToCloud("ads", { ads: clean, video: { on: videoOn } }, amsg, "Ads")) { ads = clean.map((a) => ({ ...a, priority: String(a.priority) })); show("ads"); body.append(el("p", { class: "msg ok" }, "Ads saved to the cloud. They are live now.")); }
+          if (await saveToCloud("ads", { ads: clean, video: { on: videoOn }, version: cleanVersion(ver) }, amsg, "Ads")) { ads = clean.map((a) => ({ ...a, priority: String(a.priority) })); show("ads"); body.append(el("p", { class: "msg ok" }, "Ads saved to the cloud. They are live now.")); }
         } }, "Save to cloud"),
-        el("button", { class: "btn small ghost", type: "button", onclick: () => download("ads.json", { ads: ads.map(cleanAd).filter((a) => a.title), video: { on: videoOn } }) }, "Manual download: ads.json")),
+        el("button", { class: "btn small ghost", type: "button", onclick: () => download("ads.json", { ads: ads.map(cleanAd).filter((a) => a.title), video: { on: videoOn }, version: cleanVersion(ver) }) }, "Manual download: ads.json")),
       amsg,
       el("p", { class: "hint" }, "Ads without a headline are not saved. Manual download is only for when the cloud has a problem: replace data/ads.json, commit and push."));
   }

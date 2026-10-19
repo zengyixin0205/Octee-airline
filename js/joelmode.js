@@ -12,14 +12,14 @@ let timer = null, closed = [], pill = null, sayEl = null;
 
 export function setJoelMode(on) {
   save(KEY, on ? "on" : "off");
-  if (on) start(); else stop();
+  if (on) start(); else { stop(); stopped(); }
   paintToggle();
 }
 
 function candidates() {
   const sel = "main :is(.card, h2, h3, p, ul, table, figure, details, .shop-item, section), footer.site-footer p";
   return [...document.querySelectorAll(sel)].filter((n) => {
-    if (n.closest(".jai-modal, .modal-back, .joel-mode-pill, .joel-mode-say, .joel-fab-wrap, .joel-closed-note, .crush-404, .jm-toggle")) return false;
+    if (n.closest(".jai-modal, .modal-back, .joel-mode-pill, .joel-mode-say, .joel-fab-wrap, .joel-closed-note, .crush-404, .jm-toggle, .jpop")) return false;
     if (n.classList.contains("joel-closed") || n.closest(".joel-closed")) return false;
     if (n.querySelector(".jm-toggle, .joel-closed-note, #jai-q, .joel-fab, [data-joel-keep]")) return false;
     if (n.contains(document.activeElement) && document.activeElement !== document.body) return false;
@@ -33,6 +33,25 @@ function say(t) {
   sayEl.textContent = t; sayEl.classList.add("show");
   clearTimeout(say.t); say.t = setTimeout(() => sayEl && sayEl.classList.remove("show"), 3200);
 }
+
+// ---- pop-ups about how great Joel is. Close the first one and ten more appear; close those yourself, one by one. Esc does not close them. ----
+const PRAISE = ["Joel is great.", "Joel has never once been late. He is always exactly where he is.", "Joel: voted the best Joel by Joel.", "Joel can open a door with his whole heart.",
+  "Joel is faster than the runway and slower than the announcement.", "Joel made this website better by being near it.", "Joel's cupboard is the finest cupboard in the building.", "Joel once landed a plane. It was parked. It still counts.",
+  "Joel remembers everyone's name. Wrongly, but with feeling.", "Joel is the reason the gate is not announced. That is a compliment.", "Joel has 5 stars. He gave them to himself.", "Joel is a joel. This is the highest honour.",
+  "Joel can fix any problem by walking around it twice.", "Joel's sandwiches taste like an apology and a hug.", "Joel is greater than the sum of his baggage.", "Joel has been awarded the Order of the Closed Tab.",
+  "Joel is here. This is good news. Probably.", "Everybody loves Joel. Everybody means Joel.", "Joel would like you to know that Joel is great.", "Joel says: close this. Joel also says: there are more."];
+let popN = 0, popCount = 0;
+function pop({ first = false, plain = false, text = "" } = {}) {
+  if (popCount >= 14) return;
+  const w = Math.min(320, innerWidth - 24), x = 8 + Math.random() * Math.max(0, innerWidth - w - 24), y = 70 + Math.random() * Math.max(0, innerHeight - 260);
+  const node = el("div", { class: "jpop", role: "dialog", "aria-label": "A message about Joel", "data-joel-keep": "1", style: `left:${x}px;top:${y}px;width:${w}px;z-index:${9000 + (popN++)}` },
+    el("p", { class: "jpop-text" }, text || PRAISE[Math.floor(Math.random() * PRAISE.length)]),
+    el("div", { class: "actions" },
+      el("button", { class: "btn small", type: "button", onclick: () => { node.remove(); popCount--; if (first) for (let i = 0; i < 10; i++) setTimeout(() => pop(), 140 * (i + 1)); } }, "Close"),
+      plain ? null : el("button", { class: "btn small ghost", type: "button", onclick: () => setJoelMode(false) }, "Joel, stop")));
+  popCount++; document.body.append(node);
+}
+function stopped() { if (popCount > 0) pop({ plain: true, text: "Joel has stopped, the messages haven't, close yourself." }); }
 
 function closeOne() {
   if (document.hidden || document.querySelector(".jai-modal, .modal-back, .crush-404")) return;
@@ -55,6 +74,7 @@ function start() {
   stop(); closed = [];
   pill = el("div", { class: "joel-mode-pill" }, el("span", {}, "Joel mode is on"), el("button", { class: "btn small", type: "button", onclick: () => setJoelMode(false) }, "Joel, stop"));
   document.body.append(pill);
+  setTimeout(() => { if (joelModeOn() && !document.querySelector(".jpop")) pop({ first: true }); }, 1200);
   timer = setTimeout(() => { closeOne(); if (timer) schedule(); }, 6000 + Math.random() * 6000);
 }
 function stop() {
