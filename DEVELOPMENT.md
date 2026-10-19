@@ -1292,3 +1292,6 @@ The "Ad" tag is now part of the banner row (not floating on top of the button) a
 - `js/joelmode.js`: Joel mode now also opens a pop-up praising Joel. Closing the first one opens ten more; Esc does not close them. "Joel, stop" turns Joel mode off and says "Joel has stopped, the messages haven't, close yourself" while any pop-ups remain.
 - Fire extinguisher: if the foam runs out or you press Esc with fires left, the page "burns to dust" (Error 400, Rebuild the page reloads).
 - Duty Free has a "How to use your things" guide and a "How:" hint on every purchase (`HINTS` in `js/dutyuse.js`).
+
+## Custom ad colours and gradients
+`js/ads.js`: theme `custom` ("Custom colours / gradient"). Fields on the ad: `bg`, `bg2`, `bg3` (#rrggbb), `fg` (text), `bd` (border), `grad` (`off`/`two`/`three`), `angle` (0-360). Only `#rrggbb` is accepted (`hex()`), so nothing else reaches the inline style. Blank text colour is picked automatically for contrast; the button takes the text colour. The Control Tower (Ads tab) shows colour pickers with hex boxes, a fill/angle control and Sunset/Ocean/Candy presets when Custom is chosen. The Worker passes the extra ad fields through, so no Worker update is needed.

@@ -1269,3 +1269,9 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 .conv-do-card { border: 2px dashed var(--octee-orange); }
 .jpop { position: fixed; background: #fffbe9; color: #2b1a0e; border: 3px solid #b9791a; border-radius: 12px; padding: 12px 14px; box-shadow: 0 8px 28px rgba(0,0,0,.4); }
 .jpop-text { font: 700 1.05rem var(--serif); margin: 0 0 8px; }
+
+.ad-banner.ad-custom .ad-btn { background: var(--adb); color: var(--adf); border: 2px solid var(--adb); }
+.ad-banner.ad-custom .ad-close { background: rgba(127,127,127,.3); }
+.ad-custom-box { border: 1px dashed #c7ccd1; border-radius: 8px; padding: 8px 10px; margin: 8px 0; background: #fff; }
+.ad-custom-box input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid #999; border-radius: 6px; background: none; vertical-align: middle; }
+.ad-custom-box .hexin { width: 90px; font-family: var(--mono, monospace); }

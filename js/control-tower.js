@@ -13,7 +13,7 @@ import { loadSession, saveSession, removeSession, load, save, remove } from "./s
 import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions.js";
 import { cloudAdminCall, cloudState } from "./cloud.js";
 import { fetchPublished, publishToCloud, isPublisher } from "./published.js";
-import { THEMES, MAX_ADS, cleanAd, adNode } from "./ads.js";
+import { THEMES, MAX_ADS, GRADS, PRESETS, hex, cleanAd, adNode } from "./ads.js";
 import { cleanVersion } from "./version.js";
 
 const SESSION = "octee.tower.session";
@@ -442,6 +442,29 @@ async function tower(session, crew, notice = "") {
     const field = (label, input) => el("div", { class: "field" }, el("label", {}, label), input);
     const text = (a, key, len, ph = "") => { const i = el("input", { type: "text", maxlength: String(len), value: a[key] || "", placeholder: ph }); i.addEventListener("input", () => { a[key] = i.value; changed(); a._refresh?.(); }); return i; };
     const date = (a, key) => { const i = el("input", { type: "date", value: a[key] || "" }); i.addEventListener("change", () => { a[key] = i.value; changed(); a._refresh?.(); }); return i; };
+    // A colour picker plus a hex box that stay in step with each other.
+    const colour = (a, key, label, fallback) => {
+      const pick = el("input", { type: "color", value: hex(a[key]) || fallback, "aria-label": label });
+      const box = el("input", { type: "text", class: "hexin", maxlength: "7", value: hex(a[key]) || "", placeholder: fallback, "aria-label": label + " (hex code)" });
+      pick.addEventListener("input", () => { a[key] = pick.value; box.value = pick.value; changed(); a._refresh?.(); });
+      box.addEventListener("input", () => { const h = hex(box.value); if (h) { a[key] = h; pick.value = h; } else if (!box.value.trim()) a[key] = ""; changed(); a._refresh?.(); });
+      return el("div", { class: "field" }, el("label", {}, label), pick, " ", box);
+    };
+    const customBox = (a) => {
+      if (a.theme !== "custom") return "";
+      const grad = el("select", {}, Object.entries(GRADS).map(([k, v]) => el("option", { value: k, selected: (a.grad || "off") === k }, v)));
+      grad.addEventListener("change", () => { a.grad = grad.value; changed(); show("ads"); });
+      const angle = el("input", { type: "range", min: "0", max: "360", step: "5", value: a.angle || "90", "aria-label": "Gradient angle" });
+      const angleOut = el("span", { class: "note" }, (a.angle || "90") + "°");
+      angle.addEventListener("input", () => { a.angle = angle.value; angleOut.textContent = angle.value + "°"; changed(); a._refresh?.(); });
+      const g = a.grad || "off";
+      return el("div", { class: "ad-custom-box" },
+        el("div", { class: "row" }, colour(a, "bg", g === "off" ? "Background" : "Colour 1", "#ff7a00"), g !== "off" ? colour(a, "bg2", "Colour 2", "#ff5f7e") : "", g === "three" ? colour(a, "bg3", "Colour 3", "#a24bd6") : "",
+          colour(a, "fg", "Text (blank = automatic)", "#1d1d1d"), colour(a, "bd", "Border (blank = text colour)", "#1d1d1d")),
+        el("div", { class: "row" }, field("Fill", grad), g !== "off" ? field("Angle", el("span", {}, angle, " ", angleOut)) : ""),
+        el("div", { class: "actions" }, el("span", { class: "note" }, "Starting points: "),
+          ...Object.entries(PRESETS).map(([name, p]) => el("button", { class: "btn small ghost", type: "button", onclick: () => { Object.assign(a, p); changed(); show("ads"); } }, name))));
+    };
     const card = (a, i) => {
       const theme = el("select", {}, Object.entries(THEMES).map(([k, v]) => el("option", { value: k, selected: a.theme === k }, v)));
       theme.addEventListener("change", () => { a.theme = theme.value; changed(); show("ads"); });
@@ -456,6 +479,7 @@ async function tower(session, crew, notice = "") {
         el("div", { class: "row" }, field("Link (https://… or a page like book.html)", text(a, "link", 300, "book.html")), field("Button label", text(a, "button", 24, "Learn more")), field("Image URL (https://, optional)", text(a, "image", 300))),
         el("div", { class: "row" }, field("Colour", theme), field("Starts", date(a, "start")), field("Ends", date(a, "end")),
           field("Priority (0–99)", text(a, "priority", 2, "0"))),
+        customBox(a),
         el("div", { class: "row" }, field("Only on these pages (blank = every page)", text(a, "pages", 200, "index.html, book.html"))),
         el("div", { class: "actions" },
           el("label", {}, on, " On"), el("button", { class: "btn small ghost", type: "button", onclick: () => move(-1) }, "Move up"), el("button", { class: "btn small ghost", type: "button", onclick: () => move(1) }, "Move down"),
