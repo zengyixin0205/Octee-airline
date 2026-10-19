@@ -1129,17 +1129,30 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 .ad-banner.ad-ink { background: var(--octee-ink); color: #fff; border-color: var(--octee-orange); }
 .ad-banner.ad-sky { background: #d6ebff; border-color: #2a6fb0; }
 .ad-banner.ad-cream { background: var(--octee-cream); border-color: #e6d5c3; }
+.ad-banner.ad-mint { background: #c9f2dc; border-color: #1f8a5b; }
+.ad-banner.ad-rose { background: #ffd3e0; border-color: #c2416b; }
+.ad-banner.ad-lilac { background: #e3d6ff; border-color: #6a4bc2; }
+.ad-banner.ad-lemon { background: #fff4a8; border-color: #b59a00; }
+.ad-banner.ad-teal { background: #0f6b73; border-color: #8fe3ea; color: #fff; }
+.ad-banner.ad-sunset { background: linear-gradient(90deg, #ff9a3c, #ff5f7e 55%, #a24bd6); border-color: #5b1f6b; color: #fff; }
+.ad-banner.ad-grape { background: #2d1650; border-color: #c59bff; color: #fff; }
+.ad-banner.ad-lime { background: #d9f56a; border-color: #5a7d00; }
+.ad-banner .ad-btn { background: var(--octee-ink); color: #fff; border: 2px solid var(--octee-ink); }
+.ad-banner.ad-orange .ad-btn, .ad-banner.ad-sky .ad-btn, .ad-banner.ad-cream .ad-btn { background: #fff; color: var(--octee-ink); }
+.ad-banner.ad-ink .ad-btn, .ad-banner.ad-teal .ad-btn, .ad-banner.ad-sunset .ad-btn, .ad-banner.ad-grape .ad-btn { background: #ffd34d; color: #1d1d1d; border-color: #ffd34d; }
+.ad-banner.ad-teal .ad-close, .ad-banner.ad-sunset .ad-close, .ad-banner.ad-grape .ad-close, .ad-banner.ad-ink .ad-close { background: rgba(255,255,255,.2); }
 .ad-icon { font-size: 1.6rem; line-height: 1; }
 .ad-img { height: 44px; width: auto; max-width: 120px; object-fit: contain; border-radius: 6px; }
 .ad-body { flex: 1 1 240px; min-width: 0; }
 .ad-btn { white-space: nowrap; }
-.ad-tag { position: absolute; right: 38px; top: 6px; font-size: .68rem; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; }
-.ad-close { position: absolute; right: 8px; top: 4px; border: 0; background: transparent; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; padding: 2px 6px; }
+.ad-tag { position: static; order: 9; margin-left: auto; align-self: center; font-size: .68rem; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; opacity: .75; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; line-height: 1.5; }
+.ad-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(0,0,0,.12); color: inherit; font-size: 1.3rem; line-height: 1; cursor: pointer; padding: 0; display: grid; place-items: center; }
+.ad-close:hover { background: rgba(0,0,0,.28); }
 .ad-preview { margin-top: 8px; }
 .ad-edit { border: 1px solid #c7ccd1; border-radius: 6px; padding: 10px; margin: 10px 0; background: #f8f9fa; }
 .ad-edit.off { opacity: .6; }
 .modal.fag .ad-banner { color: var(--octee-ink); }
-.modal.fag .ad-banner.ad-ink { color: #fff; }
+.modal.fag .ad-banner.ad-ink, .modal.fag .ad-banner.ad-teal, .modal.fag .ad-banner.ad-sunset, .modal.fag .ad-banner.ad-grape { color: #fff; }
 
 /* Code viewer (Control Tower > Code): a Visual Studio Code look. */
 .cv { position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; background: #1e1e1e; color: #d4d4d4; font: 13px/1.4 system-ui, sans-serif; }

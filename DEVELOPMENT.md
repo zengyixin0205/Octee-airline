@@ -1276,3 +1276,6 @@ Head of Scraggy Complaints. `js/oliver.js`: a profile with the Scraggy picture (
 ## Apology banner
 
 The "flight is late" apology banner now goes away by itself after 5 seconds on each page (the apology stays unread in My Apologies). The random "Joel is sorry" banner also stays 5 seconds.
+
+## Ad banner look
+The "Ad" tag is now part of the banner row (not floating on top of the button) and the × is centred on the right. Twelve colour themes (`THEMES` in `js/ads.js`, CSS `.ad-banner.ad-*`); the Worker does not check the theme, so no deploy is needed. The ad button gets a contrasting colour per theme.

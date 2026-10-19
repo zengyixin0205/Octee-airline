@@ -4,7 +4,7 @@
 import { el } from "./dom.js";
 import { fetchPublished } from "./published.js";
 
-export const THEMES = { orange: "Orange", ink: "Dark", sky: "Sky blue", cream: "Cream" };
+export const THEMES = { orange: "Orange", ink: "Dark", sky: "Sky blue", cream: "Cream", mint: "Mint green", rose: "Rose pink", lilac: "Lilac", lemon: "Lemon yellow", teal: "Teal", sunset: "Sunset", grape: "Grape (dark purple)", lime: "Lime" };
 export const MAX_ADS = 30;
 export const safeLink = (v) => { const s = String(v || "").trim(); return /^https:\/\/[^\s]+$/i.test(s) || /^[a-z0-9_\-]+\.html(#[\w\-]*)?$/i.test(s) ? s : ""; };
 export const safeImage = (v) => { const s = String(v || "").trim(); return /^https:\/\/[^\s]+$/i.test(s) ? s : ""; };
