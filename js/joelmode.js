@@ -19,7 +19,7 @@ export function setJoelMode(on) {
 function candidates() {
   const sel = "main :is(.card, h2, h3, p, ul, table, figure, details, .shop-item, section), footer.site-footer p";
   return [...document.querySelectorAll(sel)].filter((n) => {
-    if (n.closest(".jai-modal, .modal-back, .joel-mode-pill, .joel-mode-say, .joel-fab-wrap, .joel-closed-note, .crush-404, .jm-toggle, .jpop")) return false;
+    if (n.closest(".jai-modal, .modal-back, .joel-mode-pill, .joel-mode-say, .joel-fab-wrap, .joel-closed-note, .crush-404, .jm-toggle, .jpop, .jerr, .jdist, .jcur, .jbig")) return false;
     if (n.classList.contains("joel-closed") || n.closest(".joel-closed")) return false;
     if (n.closest(".shop, .flare-hero, .df-guide, .df-scan")) return false;   // never close the things you bought
     if (n.querySelector(".jm-toggle, .joel-closed-note, #jai-q, .joel-fab, [data-joel-keep]")) return false;
@@ -43,16 +43,64 @@ const PRAISE = ["Joel is great.", "Joel has never once been late. He is always e
   "Joel is here. This is good news. Probably.", "Everybody loves Joel. Everybody means Joel.", "Joel would like you to know that Joel is great.", "Joel says: close this. Joel also says: there are more."];
 let popN = 0, popCount = 0;
 function pop({ first = false, plain = false, text = "" } = {}) {
-  if (popCount >= 14) return;
-  const w = Math.min(320, innerWidth - 24), x = 8 + Math.random() * Math.max(0, innerWidth - w - 24), y = 70 + Math.random() * Math.max(0, innerHeight - 260);
+  if (popCount >= 40) return;
+  const w = Math.min(240, innerWidth - 24), x = 8 + Math.random() * Math.max(0, innerWidth - w - 24), y = 70 + Math.random() * Math.max(0, innerHeight - 260);
   const node = el("div", { class: "jpop", role: "dialog", "aria-label": "A message about Joel", "data-joel-keep": "1", style: `left:${x}px;top:${y}px;width:${w}px;z-index:${9000 + (popN++)}` },
     el("p", { class: "jpop-text" }, text || PRAISE[Math.floor(Math.random() * PRAISE.length)]),
     el("div", { class: "actions" },
-      el("button", { class: "btn small", type: "button", onclick: () => { node.remove(); popCount--; if (first) for (let i = 0; i < 10; i++) setTimeout(() => pop(), 140 * (i + 1)); } }, "Close"),
+      el("button", { class: "btn small", type: "button", onclick: () => { node.remove(); popCount--; checkFinale(); } }, "Close"),
       plain ? null : el("button", { class: "btn small ghost", type: "button", onclick: () => setJoelMode(false) }, "Joel, stop")));
   popCount++; document.body.append(node);
 }
 function stopped() { if (popCount > 0) pop({ plain: true, text: "Joel has stopped, the messages haven't, close yourself." }); }
+
+// ---- Joel mode v2: 20 praise pop-ups (one a second). When the last one is closed, 50 errors appear and vanish one by one over 5 seconds.
+// Then 10 random disturbances. Easter eggs (only while Joel mode is on): type "joel", or the Konami code. ----
+let praiseLeft = 0, praiseTimer = null, finaleDone = false, disturbTimers = [];
+function startPraise(n = 20) { praiseLeft += n; finaleDone = false; if (!praiseTimer) praiseNext(); }
+function praiseNext() {
+  praiseTimer = null;
+  if (!joelModeOn() || praiseLeft <= 0) return;
+  praiseLeft--; pop();
+  if (praiseLeft > 0) praiseTimer = setTimeout(praiseNext, 1000);
+}
+function checkFinale() {
+  if (praiseLeft === 0 && !praiseTimer && popCount === 0 && !finaleDone && joelModeOn()) { finaleDone = true; finale(); }
+}
+function finale() {
+  const boxes = Array.from({ length: 50 }, (_, i) => errorBox(i));
+  boxes.forEach((b, i) => setTimeout(() => b.remove(), (i + 1) * 100));
+}
+function errorBox(i) {
+  const w = 210, x = Math.random() * Math.max(0, innerWidth - w - 8), y = Math.random() * Math.max(0, innerHeight - 70);
+  const n = el("div", { class: "jerr", role: "alert", style: `left:${x}px;top:${y}px;z-index:${9800 + i}` }, el("strong", {}, "Error"), " Joel ate the error.");
+  document.body.append(n); return n;
+}
+const DIST = [
+  () => { const n = el("div", { class: "jdist", style: "bottom:14px;left:-60px" }, "🥪"); document.body.append(n); const a = n.animate([{ transform: "translateX(0)" }, { transform: `translateX(${innerWidth + 120}px)` }], { duration: 4000 }); a.onfinish = () => n.remove(); say("Joel walks past carrying a sandwich. He is not sharing it."); },
+  () => { const n = el("div", { class: "jdist", style: "top:40%;right:12px;font-size:3rem" }, "🚪"); document.body.append(n); const a = n.animate([{ transform: "scaleX(1)" }, { transform: "scaleX(.1)", offset: 0.3 }, { transform: "scaleX(1)" }], { duration: 700 }); a.onfinish = () => n.remove(); say("SLAM. The cupboard door. Joel is in there. Joel is fine."); },
+  () => { const n = el("div", { class: "jcur" }, "Joel"); document.body.append(n); const mv = (e) => { n.style.left = e.clientX + 14 + "px"; n.style.top = e.clientY + 14 + "px"; }; addEventListener("mousemove", mv); setTimeout(() => { removeEventListener("mousemove", mv); n.remove(); }, 3000); say("Your cursor is now Joel. It is a little slower."); },
+  () => { const n = el("div", { class: "jbig" }, "JOEL"); document.body.append(n); const a = n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 1000, fill: "forwards" }); a.onfinish = () => n.remove(); },
+  () => { const n = el("div", { class: "jdist", style: "bottom:4px;right:-60px" }, "🐦"); document.body.append(n); const a = n.animate([{ transform: "translateX(0)" }, { transform: `translateX(-${innerWidth + 120}px)` }], { duration: 3000 }); a.onfinish = () => n.remove(); say("A pigeon runs across the bottom of the page. It has a crumb."); }
+];
+function startDisturbances() {
+  if (reduce()) return;
+  let t = 2500;
+  for (let i = 0; i < 10; i++) {
+    disturbTimers.push(setTimeout(() => { if (joelModeOn() && !document.hidden) DIST[Math.floor(Math.random() * DIST.length)](); }, t));
+    t += 2500 + Math.random() * 5000;
+  }
+}
+// Easter eggs (only while Joel mode is on). Typing in a form does not count.
+const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+let eggBuf = "", konami = [];
+function egg(e) {
+  if (!joelModeOn() || (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  eggBuf = (eggBuf + k).slice(-8); konami = [...konami, k].slice(-10);
+  if (eggBuf.endsWith("joel")) { eggBuf = ""; pop({ plain: true, text: "Joel says hi. Joel has been waiting for you since 1987. Joel is very patient." }); }
+  if (konami.join(",") === KONAMI.join(",")) { konami = []; pop({ plain: true, text: "KONAMI CODE! Joel has summoned 20 more. You are welcome." }); startPraise(20); }
+}
 
 function closeOne() {
   if (document.hidden || document.querySelector(".jai-modal, .modal-back, .crush-404")) return;
@@ -75,11 +123,14 @@ function start() {
   stop(); closed = [];
   pill = el("div", { class: "joel-mode-pill" }, el("span", {}, "Joel mode is on"), el("button", { class: "btn small", type: "button", onclick: () => setJoelMode(false) }, "Joel, stop"));
   document.body.append(pill);
-  setTimeout(() => { if (joelModeOn() && !document.querySelector(".jpop")) pop({ first: true }); }, 1200);
+  startPraise(20); startDisturbances(); document.removeEventListener("keydown", egg); document.addEventListener("keydown", egg);
   timer = setTimeout(() => { closeOne(); if (timer) schedule(); }, 6000 + Math.random() * 6000);
 }
 function stop() {
   clearTimeout(timer); timer = null;
+  clearTimeout(praiseTimer); praiseTimer = null; praiseLeft = 0;
+  disturbTimers.forEach(clearTimeout); disturbTimers = [];
+  document.removeEventListener("keydown", egg);
   restoreAll(); pill?.remove(); pill = null;
 }
 
