@@ -1298,3 +1298,6 @@ The "Ad" tag is now part of the banner row (not floating on top of the button) a
 
 ## Duty Free: "would not run" safety net
 Joel mode no longer closes anything in `.shop`, `.flare-hero`, `.df-guide` or `.df-scan` (it could hide the things you bought). If an item throws, Duty Free now says so on the page. A line under Your purchases ("Try me build 3") shows the new code is loaded; if it is missing, the browser is serving an old copy (hard refresh).
+
+## Ad size
+Ads are edge to edge (same width as the header and the apology bar, no side borders, square corners) and about 58% of the apology bar's height (35 px against 61 px on a desktop). The block of CSS is at the end of `css/styles.css` ("Ads: edge to edge"). The Control Tower preview keeps its rounded box.
