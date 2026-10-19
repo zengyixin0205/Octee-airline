@@ -4,6 +4,7 @@ import { TIERS, tierFor, nextTier, REWARDS, redeemReward, TOKEN_RATE, TOKEN_PRIC
 import { CONFIG } from "./config.js";
 import { JOEL_PRO_PRICE, JOEL_TOKEN_RATE, JOEL_MONTHLY_GRANT } from "./miles.js";
 import { codeBoxCard } from "./code-box.js";
+import { PEANUT_MILES, exchangeOctmilesForPeanuts, peanutsOf, fmtPeanuts } from "./peanuts.js";
 import { FUJITECH_MILES_PER_EXCHANGE, FUJITECH_TENTHS_PER_EXCHANGE, fujitechTenthsOf, fmtFujitech, exchangeOctmilesForFujitech } from "./fujitech.js";
 
 // The JoelAI Pro numbers on this page come from miles.js, so the page and the code cannot disagree.
@@ -34,6 +35,24 @@ function renderTokens(u) {
     el("div", { class: "actions" }, el("button", { class: "btn small secondary", type: "button", id: "buy-code",
       onclick: () => act(() => buyExtraCode(), "One more code unlocked for today.") }, `Get one more code today (${TOKEN_PRICES.extraCode} Octeetokens)`)),
     msg);
+}
+
+function renderPeanuts(u) {
+  const card = $("#peanut-card");
+  if (!u) { card.replaceChildren(el("p", {}, "Log in to exchange Octmiles for peanuts.")); return; }
+  const max = Math.floor((u.octmiles || 0) / PEANUT_MILES);
+  const amount = el("input", { type: "number", id: "peanut-amount", min: "1", max: String(Math.max(1, max)), step: "1", value: "1", inputmode: "numeric" });
+  const hint = el("p", { class: "hint" }), msg = el("p", { class: "msg", id: "peanut-msg", role: "status", "aria-live": "polite" });
+  const show = () => { const n = Math.max(0, Math.floor(Number(amount.value) || 0)); hint.textContent = `${fmtMiles(n * PEANUT_MILES)} Octmiles = ${fmtPeanuts(n)}. You can buy up to ${max} with your Octmiles.`; };
+  amount.addEventListener("input", show); show();
+  card.replaceChildren(
+    el("p", { class: "big-rating", style: "font-size:3rem" }, fmtPeanuts(peanutsOf(u))),
+    el("p", {}, "Peanuts to spend in Duty Free, the Peanut Shop and the Auction"),
+    el("form", { onsubmit: (e) => { e.preventDefault(); try { const n = Math.floor(Number(amount.value)); exchangeOctmilesForPeanuts(n); render(); setMsg($("#peanut-msg"), `Exchanged. +${fmtPeanuts(n)}.`, "ok"); } catch (err) { setMsg(msg, err.message, "error"); } } },
+      el("div", { class: "field" }, el("label", { for: "peanut-amount" }, `Peanuts to buy (${PEANUT_MILES} Octmiles each)`), amount, hint),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit", disabled: max < 1 }, "Exchange for peanuts"))),
+    msg,
+    el("p", { class: "note" }, "One way only: peanuts cannot be turned back into Octmiles. Peanuts are not allowed on board, apart from these ones."));
 }
 
 function renderFujitech(u) {
@@ -89,6 +108,7 @@ function render() {
   const u = currentUser();
   renderTokens(u);
   renderFujitech(u);
+  renderPeanuts(u);
   renderScraggy(u);
   if (!u) {
     $("#balance").replaceChildren(el("p", {}, "Log in to see your Octmiles. ", el("a", { class: "btn small", href: "login.html?next=octmiles.html" }, "Log in / Sign up")));

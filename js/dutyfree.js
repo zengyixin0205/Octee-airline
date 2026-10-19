@@ -109,7 +109,8 @@ function guide() {
       el("li", {}, el("strong", {}, "Octee Flare: "), "lights a big orange screen with your words on it (type your own, or leave I AM LOST). Hold your screen up. It burns for up to 60 seconds."),
       el("li", {}, el("strong", {}, "Recharging: "), "the extinguisher and the Flare are never used up. When their charge is low a Recharge button appears: 1 peanut (3 Octeetokens), much cheaper than buying a new one."),
       el("li", {}, el("strong", {}, "Sound: "), "some items make noise, and it only starts after you click. Turn your volume down first, especially for the whistle and the foghorn."),
-      el("li", {}, el("strong", {}, "On board: "), "nothing here goes on the plane, except the Flare and the helpful things (breadcrumbs, lanyard, compass). Ask the Security Scan above if you are not sure.")));
+      el("li", {}, el("strong", {}, "On board: "), "nothing here goes on the plane, except the Flare and the helpful things (breadcrumbs, lanyard, compass). Ask the Security Scan above if you are not sure."),
+      el("li", {}, el("strong", {}, "Short of peanuts? "), "exchange Octmiles for peanuts (25 Octmiles = 1 peanut) on the ", el("a", { href: "octmiles.html#peanut-exchange" }, "Octmiles page"), ".")));
 }
 
 function draw() {

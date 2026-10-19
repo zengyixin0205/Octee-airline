@@ -22,6 +22,21 @@ export function addPeanuts(text, n) {
   updateUser((u) => { u.peanuts = peanutsOf(u) + n; log(u, text, n); });
   return true;
 }
+// Octmiles can be exchanged for peanuts: 25 Octmiles = 1 peanut. Works on whole peanuts only.
+export const PEANUT_MILES = 25;
+export function exchangeOctmilesForPeanuts(n) {
+  n = Math.floor(Number(n));
+  if (!Number.isSafeInteger(n) || n < 1) throw new Error("Choose at least 1 peanut to buy.");
+  return updateUser((u) => {
+    const miles = n * PEANUT_MILES;
+    if ((u.octmiles || 0) < miles) throw new Error(`You need ${miles - (u.octmiles || 0)} more Octmiles.`);
+    u.octmiles -= miles;
+    u.peanuts = peanutsOf(u) + n;
+    u.history.unshift({ at: new Date().toISOString(), text: "Exchanged Octmiles for peanuts", amount: -miles, peanuts: n });
+    log(u, "Exchanged Octmiles for peanuts", n);
+    return n;
+  });
+}
 // Use inside updateUser(): takes peanuts off or throws a friendly error.
 export function spendPeanuts(u, n, text) {
   if (peanutsOf(u) < n) throw new Error(`You have ${fmtPeanuts(peanutsOf(u))} and this costs ${n}. Peanuts do not grow on trees. They grow underground.`);
