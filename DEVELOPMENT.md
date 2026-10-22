@@ -1307,3 +1307,6 @@ Ads are edge to edge (same width as the header and the apology bar, no side bord
 
 ## Joel mode v2
 `js/joelmode.js`: turning Joel mode on opens 20 praise pop-ups, one a second (`startPraise`). When the last one is closed, 50 small "Error: Joel ate the error." boxes appear and vanish one by one over 5 seconds (`checkFinale`, `finale`). Ten random disturbances follow (`startDisturbances`, `DIST`: a sandwich walker, a slamming cupboard door, a cursor label, a big JOEL flash, a pigeon). Easter eggs, only while Joel mode is on (`egg`): type "joel" (a message), or the Konami code (a message and 20 more pop-ups). Typing in a form does not count. Joel, stop clears everything. Pop-ups are 240 px wide; the old "ten more on first close" rule is gone.
+
+## JTIA and JoelTEH Hotels on the homepage
+The "Why fly Octee?" section on `index.html` has two new cards: JTIA (links to `joel-jtia.html`) and JoelTEH Hotels (links to `joel-hotels.html`). The destination search box (`js/destsearch.js`, used by `index.html` and `destinations.html`) now also matches "JTIA", "Joel Teh International Airport" and "Joel" (`matchesJTIA`); picking that suggestion goes straight to `joel-airlines.html` instead of the usual itinerary search, since JTIA is JT's own airport, not an Octee destination. `js/destinations.js`'s `PLACES` and the normal booking flow are unchanged.

@@ -1,7 +1,14 @@
 // Destination search box (Home + Destinations). Lives in destsearch.js; search.js re-exports it.
 import { $, el, niceDate, today } from "./dom.js";
-import { PLACES, OA_PLACES, matchPlace, placeName, placeShort, itinerariesOn, nextDates, describeItinerary, ALL_FLIGHTS, daysText, routeText } from "./destinations.js";
+import { PLACES, OA_PLACES, matchPlace, placeName, placeShort, itinerariesOn, nextDates, describeItinerary, ALL_FLIGHTS, daysText, routeText, normalize } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
+
+
+// JTIA (Joel Teh International Airport) is not an Octee destination — it is JT's own airport, in the JoelTEH area.
+// It still shows up here as a suggestion, so typing "JTIA" (or "Joel") in the search box finds it and goes straight
+// to JoelTEH Airlines instead of the usual itinerary search.
+const JTIA_ALIASES = ["jtia", "joel teh international airport", "joel teh airport", "joel airport", "jt airport", "joelteh", "joel"].map(normalize);
+const matchesJTIA = (query) => { const q = normalize(query); return !!q && JTIA_ALIASES.some((n) => n === q || (q.length >= 4 && (n.includes(q) || q.includes(n)))); };
 
 export function mountSearchBox(holder, { onSearch, from = "FIA", query = "" } = {}) {
   const listId = "dest-suggestions";
@@ -12,11 +19,14 @@ export function mountSearchBox(holder, { onSearch, from = "FIA", query = "" } = 
   const list = el("ul", { class: "suggestions", id: listId, role: "listbox", hidden: true });
   let active = -1, items = [];
   const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); active = -1; };
-  const choose = (code) => { input.value = placeName(code); close(); onSearch(input.value, fromSel.value); };
+  const choose = (code) => { if (code === "JTIA") { close(); location.href = "joel-airlines.html"; return; } input.value = placeName(code); close(); onSearch(input.value, fromSel.value); };
   const render = () => {
     items = matchPlace(input.value);
+    if (matchesJTIA(input.value) && !items.includes("JTIA")) items = ["JTIA", ...items];
     list.replaceChildren(...items.map((c, k) => el("li", { id: "sug-" + c, role: "option", "aria-selected": String(k === active),
-      onmousedown: (e) => { e.preventDefault(); choose(c); } }, placeName(c), PLACES[c].oa ? "" : " (via Scraggy Airlines)")));
+      onmousedown: (e) => { e.preventDefault(); choose(c); } },
+      c === "JTIA" ? "Joel Teh International Airport (JTIA)" : placeName(c),
+      c === "JTIA" ? " (JoelTEH Airlines)" : (PLACES[c].oa ? "" : " (via Scraggy Airlines)"))));
     const open = items.length > 0 && input.value.trim().length > 0;
     list.hidden = !open;
     input.setAttribute("aria-expanded", String(open));
