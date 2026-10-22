@@ -1231,13 +1231,8 @@ body.cup-crush main { animation-delay: .12s; } body.cup-crush .site-footer { ani
 /* Octee Flare (Duty Free signature product) */
 .flare-hero { border: 3px solid var(--octee-orange); background: linear-gradient(135deg, #fff1de, #ffd9a8); position: relative; }
 .flare-badge { display: inline-block; background: var(--octee-orange); color: var(--octee-ink); font: 700 .72rem var(--sans); letter-spacing: .08em; text-transform: uppercase; padding: 2px 10px; border-radius: 999px; }
-.flare-ov { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 16px; background: #ff7a00; }
-.flare-glow { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, #fff3b0 0%, #ffb347 35%, #ff7a00 70%); animation: flare-pulse 1.6s ease-in-out infinite; }
-.flare-card { position: relative; text-align: center; color: #2b1a0e; max-width: 520px; }
-.flare-card h2 { font-size: clamp(3rem, 14vw, 6.5rem); margin: 6px 0; line-height: 1; letter-spacing: .04em; color: #2b1a0e; }
-.flare-small { font: 700 .85rem var(--sans); letter-spacing: .08em; }
-@keyframes flare-pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .flare-glow { animation: none; } }
+.flare-panel { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 9500; width: min(380px, calc(100vw - 24px)); background: #fff8ee; color: #2b1a0e; border: 3px solid var(--octee-orange); border-radius: 14px; padding: 12px 16px; box-shadow: 0 10px 34px rgba(0,0,0,.35); text-align: center; }
+.flare-small { font: 700 .85rem var(--sans); letter-spacing: .08em; margin: 2px 0; }
 
 /* Duty Free "Try me" effects */
 .dfx-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9990; pointer-events: none; }

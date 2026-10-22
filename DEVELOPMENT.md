@@ -1310,3 +1310,6 @@ Ads are edge to edge (same width as the header and the apology bar, no side bord
 
 ## JTIA and JoelTEH Hotels on the homepage
 The "Why fly Octee?" section on `index.html` has two new cards: JTIA (links to `joel-jtia.html`) and JoelTEH Hotels (links to `joel-hotels.html`). The destination search box (`js/destsearch.js`, used by `index.html` and `destinations.html`) now also matches "JTIA", "Joel Teh International Airport" and "Joel" (`matchesJTIA`); picking that suggestion goes straight to `joel-airlines.html` instead of the usual itinerary search, since JTIA is JT's own airport, not an Octee destination. `js/destinations.js`'s `PLACES` and the normal booking flow are unchanged.
+
+## Flare: shoot the words instead of a full orange screen
+`js/dutyuse.js` `flare()`: no more full-screen orange overlay. A small panel at the bottom of the screen holds the words box and a Shoot button; the rest of the page stays visible and usable. Pressing Shoot (`fireWords`) launches the typed words flying up the screen with a spark trail, over the existing canvas "stage". Each shot costs 8 seconds of the 60-second charge (so up to 7 shots per full charge); recharging is unchanged. "Put it away" or Esc closes the panel and keeps the remaining charge.

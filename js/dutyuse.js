@@ -12,7 +12,7 @@ const calm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)")
 // What each item does and what to press (shown in the Duty Free guide and on each purchase).
 export const HINTS = {
   extinguisher: "Move the mouse to aim at the flames and HOLD Space to spray. Put all ten out before the foam runs out, or the page burns to dust (Error 400). Esc gives up, and the page burns too.",
-  flare: "Type your own words in the box (it says I AM LOST). Hold your screen up so staff can see it. Esc or the button puts it out. It burns for up to 60 seconds, then needs a recharge.",
+  flare: "Type your own words (it says I AM LOST), then press Shoot: they fly up the screen like a flare. Each shot costs some charge; recharge it when it runs low.",
   sparkler: "Move the mouse. Sparks follow it for 9 seconds.", cloud: "Move the mouse. The cloud follows it and rains.", shampoo: "Move the mouse to blow bubbles.",
   umbrella: "Move the mouse and keep the rain off the cursor.", fireworks: "Aim with the mouse. Click, or tap Space, to fire.", glitter: "Just watch. It lasts 7 seconds.",
   marbles: "Just watch them roll.", volcano: "Just watch, from a safe distance.", paint: "Click anywhere to splash paint.",
@@ -149,35 +149,48 @@ function dust(why) {
   document.body.append(ov); ov.querySelector("button").focus();
 }
 
-// ---- the Octee Flare: the words on your screen ----
+// ---- the Octee Flare: type your words, press Shoot, and they fly up the screen ----
+const FLARE_SHOT_COST = 8; // seconds of charge used by one shot
 function flare(h) {
-  if (document.querySelector(".flare-ov")) return false;
-  const rem = h.charge("flare");
+  if (document.querySelector(".flare-panel")) return false;
+  let rem = h.charge("flare");
   if (rem <= 0) { h.say("The Flare has gone dark. Recharge it first.", "error"); return false; }
-  stopAll();
-  const spots = ["Gate B3 (it has moved)", "the duty free (you are already in it)", "a bench that looks like every other bench", "the corridor with the long moving walkway", "just past the sign that points at the sign"];
-  const where = spots[Math.floor(R() * spots.length)];
-  const t0 = performance.now(), left = () => Math.max(0, rem - (performance.now() - t0) / 1000);
-  const big = el("h2", {}, "I AM LOST");
-  const cd = el("p", { class: "flare-small" }, "");
-  const words = el("input", { type: "text", maxlength: "40", value: "I AM LOST", "aria-label": "What the Flare says", class: "flare-in", oninput: (e) => { big.textContent = (e.target.value || "I AM LOST").toUpperCase(); } });
-  let tick = 0;
-  const out = (dark) => { clearInterval(tick); removeEventListener("keydown", onKey); ov.remove(); h.setCharge("flare", left()); h.say(dark ? "The Flare burned out. Somebody in orange was already walking towards you." : "You put the Flare out. It will keep what is left.", "info"); };
-  const onKey = (e) => { if (e.key === "Escape" && e.target !== words) out(false); else if (e.key === "Escape") out(false); };
-  const ov = el("div", { class: "flare-ov", role: "dialog", "aria-modal": "true", "aria-label": "Octee Flare" },
-    el("div", { class: "flare-glow", "aria-hidden": "true" }),
-    el("div", { class: "flare-card" },
-      el("p", { class: "flare-small" }, "OCTEE FLARE · LIT"), big,
-      el("p", {}, "Terminal FIA. Please hold me up."),
-      el("label", { class: "flare-small" }, "It says: ", words),
-      el("p", { class: "flare-small" }, `Staff in orange have been told. They were already looking. Last seen near ${where}. Estimated help: 4 minutes (it is 11).`),
-      cd, el("button", { class: "btn", type: "button", onclick: () => out(false) }, "Put the Flare out")));
-  document.body.append(ov); addEventListener("keydown", onKey);
-  tick = setInterval(() => { const l = left(); cd.textContent = `Glow left: ${Math.ceil(l)}s`; if (l <= 0) out(true); }, 250);
-  cd.textContent = `Glow left: ${Math.ceil(left())}s`;
-  tone(880, 0.12, "triangle", 0.1); tone(1320, 0.2, "triangle", 0.1, 0, 0.12);
-  ov.querySelector("button").focus();
+  const out = el("p", { class: "flare-small" }, "");
+  const words = el("input", { type: "text", maxlength: "24", value: "I AM LOST", "aria-label": "Words to shoot up the screen", class: "flare-in" });
+  const refresh = () => { const shots = Math.max(0, Math.floor(rem / FLARE_SHOT_COST)); out.textContent = `Charge: ${Math.round(rem)}s · ${shots} shot${shots === 1 ? "" : "s"} left`; };
+  const close = () => { removeEventListener("keydown", onKey); panel.remove(); h.setCharge("flare", rem); };
+  const onKey = (e) => { if (e.key === "Escape" && e.target !== words) close(); };
+  const shoot = () => {
+    if (rem < FLARE_SHOT_COST) { h.say("Not enough charge left to shoot. Recharge the Flare.", "error"); return; }
+    rem -= FLARE_SHOT_COST; refresh();
+    fireWords((words.value.trim() || "I AM LOST").toUpperCase());
+    if (rem < FLARE_SHOT_COST) h.say("That was the last shot. Recharge the Flare before the next one.", "info");
+  };
+  const panel = el("div", { class: "flare-panel", role: "dialog", "aria-label": "Octee Flare" },
+    el("p", { class: "flare-small" }, "OCTEE FLARE"),
+    el("label", { class: "flare-small" }, "Words: ", words),
+    el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: shoot }, "Shoot"), el("button", { class: "btn ghost small", type: "button", onclick: close }, "Put it away")),
+    out);
+  refresh(); document.body.append(panel); addEventListener("keydown", onKey); words.focus();
   return false;
+}
+
+// Shoots the given words up the screen like a flare, with a spark trail. The rest of the page stays as it was.
+function fireWords(text) {
+  const size = Math.max(22, Math.min(78, 760 / Math.max(4, text.length)));
+  tone(900, 0.1, "triangle", 0.12); tone(1500, 0.22, "triangle", 0.1, 0, 0.1);
+  stage({
+    label: "Flare", ms: 1500,
+    frame(s, dt) {
+      const prog = Math.min(1, s.t / 1.3), y = s.h - 30 - prog * (s.h + 80);
+      for (let i = 0; i < 4; i++) add(s, s.w / 2 + (R() - 0.5) * 24, y + 24, (R() - 0.5) * 50, 160 + R() * 120, 0.55, R() < 0.5 ? "255,120,20" : "255,210,80", 3 + R() * 2);
+      step(s, dt);
+      s.g.save(); s.g.font = `800 ${size}px Georgia, serif`; s.g.textAlign = "center"; s.g.textBaseline = "middle";
+      s.g.shadowColor = "#ff7a00"; s.g.shadowBlur = 22; s.g.fillStyle = "#ffb347"; s.g.fillText(text, s.w / 2, y);
+      s.g.shadowBlur = 0; s.g.restore();
+      if (prog >= 1) s.end("done");
+    }
+  });
 }
 
 // ---- the toys ----
