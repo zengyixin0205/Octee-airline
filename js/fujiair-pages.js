@@ -1,6 +1,5 @@
 // The pages of FujiAIR. fujiair-shell.js builds the frame and calls PAGES_BY_KEY[page](redraw), which returns the page body.
 import { el } from "./dom.js";
-import { load, save } from "./store.js";
 import { currentUser, updateUser } from "./auth.js";
 import { OA_PLACES, placeName } from "./destinations.js";
 import { fujitechTenthsOf, fmtFujitech, spendFujitech, claimFujiairDaily, fujiairClaimedToday, fujiairDailyAmount, fujiairGoldOrHigher } from "./fujitech.js";
@@ -52,7 +51,7 @@ function dailyCard() {
     } catch (e) { say(msg, e.message, "err"); }
   });
   return card("Your free daily Fujitech", el("p", {}, balance, " in your account right now."),
-    el("p", { class: "fj-note" }, fujiairGoldOrHigher(u) ? "You're Gold Wing or higher: 1300 Fujitech a day." : "1000 Fujitech a day. Reach Gold Wing for 1300."),
+    el("p", { class: "fj-note" }, fujiairGoldOrHigher(u) ? "You're Gold Wing or higher: 1300 Fujitech a day." : "1000 Fujitech a day. Reach Gold Wing for 1300.", " Same claim as on the Octee Airlines homepage — one per day, not one per airline."),
     el("p", {}, btn), msg);
 }
 
@@ -64,7 +63,7 @@ function homePage() {
     card("The rest of FujiAIR", el("div", { class: "fj-grid" },
       el("a", { class: "fj-tile", href: "fujiair-book.html" }, el("b", {}, "Book a flight"), el("span", {}, "Pick a seat right now, in the form.")),
       el("a", { class: "fj-tile", href: "fujiair-checkin.html" }, el("b", {}, "Check-in"), el("span", {}, "No seat here — just a tag for your bag.")),
-      el("a", { class: "fj-tile", href: "fujiair-lounge.html" }, el("b", {}, "Lounge"), el("span", {}, "Sandwiches. Possibly a crushed page.")))));
+      el("a", { class: "fj-tile", href: "lounge.html" }, el("b", {}, "Lounge"), el("span", {}, "Sandwiches. Possibly a crushed page.")))));
 }
 
 // ---------------- Book ----------------
@@ -183,67 +182,7 @@ function checkinPage() {
   return el("div", {},
     hero("Check-in · FujiAIR", "Check in", "Your seat was already picked when you booked, so check-in here is just for your bag: ask for a tag and track it on the bag tracker. Need help? Ask JoelAI, or try GulletAI."),
     body,
-    card("Need a hand?", el("div", { class: "fj-row" }, el("div", {}, askJoel), el("div", {}, el("a", { class: "fj-btn ghost", href: "zhang-gullet.html" }, "Ask GulletAI")), el("div", {}, el("a", { class: "fj-btn ghost", href: "fujiair-lounge.html" }, "Go to the Lounge")))));
+    card("Need a hand?", el("div", { class: "fj-row" }, el("div", {}, askJoel), el("div", {}, el("a", { class: "fj-btn ghost", href: "zhang-gullet.html" }, "Ask GulletAI")), el("div", {}, el("a", { class: "fj-btn ghost", href: "lounge.html" }, "Go to the Lounge")))));
 }
 
-// ---------------- Lounge ----------------
-const LOUNGE_POD = [
-  ["Nap pod", "A chair that reclines exactly 4 degrees. Technically a bed."],
-  ["Water point", "Free hot water. Also free cold water, if you wait for the hot water to cool."],
-  ["Charging socket", "There is one. It is contested. Good luck."],
-  ["Window seat, no window", "The view is a painting of a window. The painting is also cheap."],
-  ["Business corner", "A standing desk and a strong opinion that this counts as a lounge."],
-  ["Lost sock shelf", "Nobody flies FujiAIR with both socks. Take one if yours matches."]
-];
-const SANDWICH_FJ = [
-  ["A sandwich sits on the counter. It is included. That is the entire selling point.", "Take a bite"],
-  ["You take a bite. It is fine. It is a sandwich. FujiAIR is proud of this sandwich.", "Take another bite"],
-  ["You take another bite. The sandwich is now mostly gone and mostly a philosophical question.", "Finish it"]
-];
-const KEY = "fujiair.lounge.state";
-const lst = () => ({ sand: 0, ate: 0, ...load(KEY, {}) });
-const lsv = (s) => save(KEY, s);
-
-function crushPage() {
-  const over = el("div", { class: "crush-404", role: "alert" },
-    el("p", { class: "crush-big" }, "404"),
-    el("h1", { class: "crush-h" }, "U Crushed the page"),
-    el("p", { class: "crush-err" }, "ERROR 404"),
-    el("p", {}, "FujiAIR warned you the lounge was cheap. The floor was apparently also cheap."),
-    el("button", { class: "btn", type: "button", onclick: () => location.reload() }, "Put the page back"));
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  setTimeout(() => {
-    document.body.classList.add("cup-crush");
-    setTimeout(() => { document.body.append(over); over.querySelector("button").focus(); }, reduce ? 0 : 1500);
-  }, reduce ? 300 : 1400);
-}
-
-function loungePage() {
-  const msg = msgBox();
-  const sandText = el("p", {});
-  const sandBtn = el("button", { class: "btn", type: "button" });
-  const paint = () => {
-    const s = lst();
-    sandText.textContent = s.sand === 0 ? "A sandwich sits on the counter. It is included." : SANDWICH_FJ[Math.min(s.sand, 3) - 1][0];
-    sandBtn.textContent = s.sand === 0 ? "Look at it" : SANDWICH_FJ[Math.min(s.sand, 3) - 1][1];
-  };
-  sandBtn.addEventListener("click", () => {
-    const s = lst(); const finishing = s.sand === 2;
-    s.sand = s.sand >= 3 ? 0 : s.sand + 1;
-    if (finishing) s.ate = (s.ate || 0) + 1;
-    lsv(s); paint();
-    if (!finishing) return;
-    if (s.ate === 1) { say(msg, "You finished the sandwich. A second one appears, because this is a very cheap lounge with very cheap sandwiches.", "info"); return; }
-    sandBtn.disabled = true;
-    say(msg, s.ate === 2 ? "You finish another. The counter creaks. This seems unrelated to sandwiches." : "You finish a third. The counter was apparently load-bearing.", "error");
-    crushPage();
-  });
-  paint();
-
-  return el("div", {},
-    hero("Lounge · FujiAIR", "The FujiAIR Lounge", "Everything here is free, and you can tell. Eat the sandwich. Eat it again. See what happens on the third one."),
-    card("The sandwich", sandText, el("p", {}, sandBtn), msg),
-    card("Everything else in the lounge", el("div", { class: "fj-lounge-grid" }, LOUNGE_POD.map(([t, d]) => el("div", { class: "fj-pod" }, el("b", {}, t), el("p", { class: "fj-note" }, d))))));
-}
-
-export const PAGES_BY_KEY = { home: homePage, book: bookPage, checkin: checkinPage, lounge: loungePage };
+export const PAGES_BY_KEY = { home: homePage, book: bookPage, checkin: checkinPage };

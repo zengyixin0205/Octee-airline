@@ -15,6 +15,7 @@ import {
   PLACES, OA_PLACES, placeName, placeShort, rate, itinerariesOn, seatsLeft, itineraryMiles, describeItinerary, mins, fiaGate } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
 import { OA_AIRCRAFT, OA_CLASSES, OA_SNACKS, OA_REASONS, SEATS, passCard, OU_LEVELS, OU_SEATS, OU_SNACKS, OU_AIRCRAFT } from "./booking-data.js";
+import { seatMap } from "./seatmap.js";
 
 const DRAFT = "octee.booking.draft";
 const DAILY_LEG_LIMIT = 5;
@@ -30,6 +31,7 @@ const blank = () => ({
   from: "FIA", to: "SIA", tripType: "return", passengers: 1, departDate: "", returnDate: "", outChoice: 0, backChoice: 0, discountCode: "", discountCheck: null,
   aircraft: "", travelClass: "", names: [], seatPref: "", snack: "", bags: "", reason: "", joelmobile: false,
   acceptCeo: false, acceptEngines: false, acceptLuggage: false,
+  seats: {},
   ou: { level: "", seat: "", snack: "", d1: false, d2: false },
   sa: { aircraft: "", travelClass: "", seat: "", snack: "", bags: "", reason: "", t1: false, t2: false }
 });
@@ -53,6 +55,12 @@ const needsSA = () => allLegs().some((s) => s.airline === "SA") || !!(PLACES[sta
 const needsOU = () => allLegs().some((s) => s.airline === "OU");
 const hasOA = () => allLegs().some((s) => s.airline === "OA");
 const fareClassFor = (s) => s.airline === "SA" ? state.sa.travelClass : s.airline === "OU" ? state.ou.level : state.travelClass;
+const legKey = (s) => `${s.no}|${s.date}`;
+const seatsFor = (s) => Array.from({ length: state.passengers }, (_, p) => (state.seats[legKey(s)] || [])[p] || "");
+function seatsProblems() {
+  if (!allLegs().length) return [];
+  return allLegs().filter((s) => seatsFor(s).some((c) => !c)).map((s) => `Pick a seat for everyone on ${s.no}.`);
+}
 const fareMilesFor = (s) => {
   if (s.airline === "SA") return SA?.data?.ROUTES?.[s.scraggyId]?.base || scraggyMilesFor(s);
   const stops = [s.from, ...(s.via || []), s.to];
@@ -126,6 +134,7 @@ const STEPS = {
   s5: { form: "sa", title: "5. Fun extras", validate: () => [
     ...req(state.sa.reason, "SIA form: choose a reason for travelling."),
     ...(state.sa.t1 && state.sa.t2 ? [] : ["SIA form: you must accept both statements. Scraggy insists."])] },
+  seats: { form: "both", title: "Seats", validate: seatsProblems },
   review: { form: "both", title: "Review & confirm", validate: () => [] }
 };
 function steps() {
@@ -133,6 +142,7 @@ function steps() {
   if (needsOA()) ids.push("o2", "o3", "o4", "o5");
   if (needsOU()) ids.push("u1", "u2", "u3", "u4");
   if (needsSA()) ids.push("s1", "s2", "s3", "s4", "s5");
+  if (allLegs().length) ids.push("seats");
   ids.push("review");
   return ids;
 }
@@ -344,6 +354,44 @@ const stepSA = {
     check("sa-t2", "I accept that we may go somewhere else eventually.", state.sa.t2, (v) => updateSA({ t2: v })))
 };
 
+// ---------------- Seats: pick your seat here, not at check-in. Same idea as FujiAIR, now for every airline. ----------------
+function legSeatCard(s) {
+  const key = legKey(s);
+  const l = { ...s, travelClass: fareClassFor(s) };
+  const choices = seatsFor(s);
+  let active = Math.max(0, choices.findIndex((c) => !c));
+  const msg = el("p", { class: "msg", role: "status" });
+  const mapBox = el("div", { class: "map-wrap" });
+  const who = el("div", { class: "pax", role: "radiogroup", "aria-label": "Passenger" });
+  function draw() {
+    who.replaceChildren(...Array.from({ length: state.passengers }, (_, p) => el("button", { type: "button", role: "radio", "aria-checked": String(p === active), class: "pax-btn" + (p === active ? " on" : ""), onclick: () => { active = p; setMsg(msg, ""); draw(); } },
+      `P${p + 1}${state.names[p] ? ` · ${state.names[p]}` : ""}`, el("small", {}, choices[p] ? ` seat ${choices[p]}` : " pick a seat"))));
+    mapBox.replaceChildren(seatMap(l, {
+      choices, active, prefer: null, takenElsewhere: new Set(),
+      onPick: (id, why) => {
+        if (why) { setMsg(msg, `${id}: ${why}`, "error"); return; }
+        const other = choices.findIndex((c, p) => c === id && p !== active);
+        if (other >= 0) { setMsg(msg, `${id} is already P${other + 1}'s seat.`, "error"); return; }
+        choices[active] = choices[active] === id ? "" : id;
+        state.seats = { ...state.seats, [key]: [...choices] };
+        persist();
+        setMsg(msg, choices[active] ? `Seat ${id} picked.` : "");
+        if (choices[active]) { const next = choices.findIndex((c) => !c); if (next >= 0) active = next; }
+        draw();
+      }
+    }));
+  }
+  draw();
+  return el("div", { class: "card", style: "margin-bottom:14px" },
+    el("h3", {}, s.no, " · ", placeShort(s.from), " → ", placeShort(s.to), s.airline === "OA" ? el("span", { class: "tag oa" }, "Octee") : s.airline === "OU" ? el("span", { class: "tag ou" }, "One United") : el("span", { class: "tag sa" }, "Scraggy Airlines")),
+    state.passengers > 1 ? who : "", mapBox, msg);
+}
+function stepSeats() {
+  return el("fieldset", {}, el("legend", {}, "Seats"),
+    el("p", { class: "sub", style: "margin-top:0" }, "Pick your seat now, for every flight in this trip — the only step where you do it here instead of at check-in. You can still change it later at check-in."),
+    ...allLegs().map(legSeatCard));
+}
+
 function stepReview() {
   const all = allProblems();
   const u = currentUser();
@@ -425,7 +473,7 @@ function render() {
   const id = ids[current];
   const focusId = document.activeElement?.id;
   const body = $("#step-body");
-  body.replaceChildren(id === "o1" ? stepTrip() : id === "review" ? stepReview() : (stepOA[id] || stepOU[id] || stepSA[id])());
+  body.replaceChildren(id === "o1" ? stepTrip() : id === "seats" ? stepSeats() : id === "review" ? stepReview() : (stepOA[id] || stepOU[id] || stepSA[id])());
   renderNav();
   if (focusId) document.getElementById(focusId)?.focus();
 }
@@ -496,7 +544,8 @@ async function doConfirm() {
           scraggymiles: s.airline === "SA" ? scraggyMilesFor(s) : 0,
           aircraft: s.airline === "SA" ? saAircraft : s.airline === "OU" ? OU_AIRCRAFT : oaAircraft,
           travelClass: s.airline === "SA" ? state.sa.travelClass : s.airline === "OU" ? state.ou.level : state.travelClass,
-          seat: s.airline === "SA" ? state.sa.seat : s.airline === "OU" ? state.ou.seat : state.seatPref
+          seat: s.airline === "SA" ? state.sa.seat : s.airline === "OU" ? state.ou.seat : state.seatPref,
+          seats: (state.seats[legKey(s)] || []).slice(0, state.passengers)
         })),
         fujitechPaidTenths: price, discount: promo ? { hash: promo.hash, percent: promo.percent, note: promo.note } : null,
         details: { snack: state.snack, bags: state.bags, reason: state.reason, joelmobile: state.joelmobile, ou: needsOU() ? { ...state.ou } : null, sa: needsSA() ? { ...state.sa } : null }

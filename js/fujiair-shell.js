@@ -11,7 +11,7 @@ export const FJ_PAGES = [
   ["fujiair.html", "FujiAIR", "home"],
   ["fujiair-book.html", "Book a flight", "book"],
   ["fujiair-checkin.html", "Check-in", "checkin"],
-  ["fujiair-lounge.html", "Lounge", "lounge"]
+  ["lounge.html", "Lounge", ""]
 ];
 const page = document.body.dataset.page || "home";
 const here = () => location.pathname.split("/").pop() || "fujiair.html";
