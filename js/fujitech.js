@@ -2,6 +2,7 @@
 // so the 50 Octmiles = 5.5 Fujitech exchange stays exact without float drift.
 import { updateUser } from "./auth.js";
 import { fujitechUnlimited } from "./perks.js";
+import { TIERS } from "./miles.js";
 
 export const FUJITECH_MILES_PER_EXCHANGE = 50;
 export const FUJITECH_TENTHS_PER_EXCHANGE = 55;
@@ -40,13 +41,32 @@ export function spendFujitech(u, tenths, text) {
   if (tenths) u.history.unshift({ at: new Date().toISOString(), text, fujitechTenths: -tenths });
 }
 
-const MULTIPLIER = { economy: 100, united: 100, business: 150, semi: 150, first: 200, chaos: 200, scraggy: 250 };
+// Flat Fujitech fares per class, one flight (not per mile — this is what "reasonable" means here).
+// Octee Economy and Scraggy Economy and One United ("united") are free. The middle classes (Octee/Scraggy
+// Business, One United "semi") cost more than 300. The best three (Octee First, Scraggy Class, One United Chaos)
+// are the top of the range.
+const CLASS_FARE = { economy: 0, united: 0, business: 350, semi: 320, first: 700, scraggy: 700, chaos: 630 };
 export function passengerFareTenths(routeMiles, classId, platinum = false, passengers = 1) {
-  const base = Math.max(0, Number(routeMiles) || 0) * 0.55; // 0.055 Fujitech per route mile
-  const multiplier = platinum ? 100 : (MULTIPLIER[classId] || 100);
-  return Math.ceil(base * multiplier / 100 * Math.max(1, Number(passengers) || 1));
+  const perPerson = (platinum ? 0 : (CLASS_FARE[classId] ?? 0)) * 10; // Fujitech -> tenths
+  return perPerson * Math.max(1, Number(passengers) || 1);
 }
 
+// FujiAIR gives everyone free Fujitech once a day: 1000, or 1300 for Gold Wing or higher.
+export const FUJIAIR_DAILY = 1000, FUJIAIR_DAILY_GOLD = 1300;
+const GOLD_MIN = TIERS.find((t) => t.name === "Gold Wing")?.min ?? 2000;
+export const fujiairGoldOrHigher = (u) => (Number(u && u.lifetime) || 0) >= GOLD_MIN;
+export const fujiairDailyAmount = (u) => (fujiairGoldOrHigher(u) ? FUJIAIR_DAILY_GOLD : FUJIAIR_DAILY);
+const dayKey = () => new Date().toISOString().slice(0, 10);
+export const fujiairClaimedToday = (u) => ((u && u.history) || []).some((h) => String(h.at || "").slice(0, 10) === dayKey() && h.text === "FujiAIR daily Fujitech");
+export function claimFujiairDaily() {
+  return updateUser((u) => {
+    if (fujiairClaimedToday(u)) throw new Error("You already claimed today's free Fujitech from FujiAIR. Come back tomorrow.");
+    const gained = fujiairDailyAmount(u) * 10;
+    u.fujitechTenths = fujitechTenthsOf(u) + gained;
+    u.history.unshift({ at: new Date().toISOString(), text: "FujiAIR daily Fujitech", fujitechTenths: gained });
+    return gained;
+  });
+}
 
 export function cargoFareTenths(routeMiles, weightKg) {
   const miles = Math.max(0, Number(routeMiles) || 0);

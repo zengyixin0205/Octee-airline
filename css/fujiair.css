@@ -1,0 +1,64 @@
+/* FujiAIR: Octee's cheap offshoot, flying out of Mt Fuji (MFIA). Own header, own colours. Loaded after styles.css. */
+body.fujiair {
+  --fj-bg: #eafcff; --fj-ink: #042b33; --fj-line: #b7e7ee; --fj-teal: #0097a7; --fj-teal-dk: #00707c; --fj-yellow: #ffcf33; --fj-dim: #3f6b72; --fj-ok: #1f8a5b; --fj-bad: #c4382f;
+  background: var(--fj-bg); color: var(--fj-ink); font-family: var(--sans); margin: 0; min-height: 100vh;
+}
+body.fujiair a { color: var(--fj-teal-dk); }
+body.fujiair h1, body.fujiair h2, body.fujiair h3 { font-family: var(--serif); color: var(--fj-ink); }
+.fj-header { background: var(--fj-teal); color: #fff; position: sticky; top: 0; z-index: 30; border-bottom: 4px solid var(--fj-yellow); }
+.fj-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 16px; max-width: 1180px; margin: 0 auto; }
+.fj-home { background: #fff; color: var(--fj-teal-dk) !important; font-weight: 700; padding: 8px 14px; border-radius: 999px; text-decoration: none; }
+.fj-home:hover { filter: brightness(.96); }
+.fj-brand { font-family: var(--serif); font-weight: 800; font-size: 1.3rem; color: #fff !important; text-decoration: none; letter-spacing: .01em; }
+.fj-brand small { display: block; font: 700 .66rem var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--fj-yellow); }
+.fj-account { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .9rem; }
+.fj-pill { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 4px 12px; color: #fff !important; text-decoration: none; white-space: nowrap; }
+.fj-pill.gold { background: var(--fj-yellow); border-color: var(--fj-yellow); color: #3a2c00 !important; font-weight: 800; }
+.fj-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 16px 10px; max-width: 1180px; margin: 0 auto; }
+.fj-nav a { color: #fff; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: .92rem; border: 1px solid transparent; opacity: .88; }
+.fj-nav a:hover { background: rgba(255,255,255,.16); opacity: 1; }
+.fj-nav a[aria-current="page"] { background: #fff; border-color: #fff; color: var(--fj-teal-dk); font-weight: 700; opacity: 1; }
+.fj-main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; }
+.fj-hero { padding: 26px 0 12px; }
+.fj-hero .eyebrow { color: var(--fj-teal-dk); font: 800 .75rem var(--sans); letter-spacing: .14em; text-transform: uppercase; margin: 0 0 6px; }
+.fj-hero h1 { margin: 0 0 8px; font-size: clamp(1.9rem, 5.5vw, 3rem); }
+.fj-hero p.lead { color: var(--fj-dim); max-width: 62ch; margin: 0; }
+.fj-card { background: #fff; border: 1px solid var(--fj-line); border-radius: 14px; padding: 16px 18px; margin: 14px 0; box-shadow: 0 6px 20px rgba(0,120,135,.1); }
+.fj-card h2, .fj-card h3 { margin-top: 0; }
+.fj-note { color: var(--fj-dim); font-size: .92rem; }
+.fj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.fj-tile { display: block; background: #fff; border: 1px solid var(--fj-line); border-radius: 14px; padding: 16px; text-decoration: none; color: var(--fj-ink) !important; transition: transform .12s, border-color .12s; }
+.fj-tile:hover { transform: translateY(-2px); border-color: var(--fj-teal); }
+.fj-tile b { display: block; font-family: var(--serif); font-size: 1.15rem; margin-bottom: 4px; }
+.fj-tile span { color: var(--fj-dim); font-size: .9rem; }
+.fj-price { display: inline-block; background: var(--fj-yellow); color: #3a2c00; font: 800 .85rem var(--sans); padding: 2px 10px; border-radius: 999px; margin-top: 6px; }
+body.fujiair input, body.fujiair select, body.fujiair textarea { background: #fff; color: var(--fj-ink); border: 1px solid var(--fj-line); border-radius: 8px; padding: 8px 10px; font: inherit; max-width: 100%; }
+body.fujiair label { color: var(--fj-dim); font-size: .88rem; display: block; margin-bottom: 3px; }
+.fj-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 8px 0; }
+.fj-row > div { min-width: 150px; }
+.fj-btn, body.fujiair .btn { background: var(--fj-teal); color: #fff; border: 0; border-radius: 9px; padding: 9px 16px; font: 700 .95rem var(--sans); cursor: pointer; }
+.fj-btn:hover, body.fujiair .btn:hover { background: var(--fj-teal-dk); }
+.fj-btn.ghost, body.fujiair .btn.ghost { background: transparent; color: var(--fj-teal-dk); border: 1px solid var(--fj-teal); }
+body.fujiair .btn:disabled { opacity: .5; cursor: default; }
+.fj-msg { min-height: 1.3em; margin: 8px 0 0; font-size: .92rem; }
+.fj-msg.ok { color: var(--fj-ok); } .fj-msg.err { color: var(--fj-bad); } .fj-msg.info { color: var(--fj-dim); }
+.fj-class { border: 2px solid var(--fj-line); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: #fff; }
+.fj-class.chosen { border-color: var(--fj-teal); background: #f0fcfd; }
+.fj-class input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.fj-seats { display: inline-grid; gap: 6px; background: #fff; border: 1px solid var(--fj-line); border-radius: 12px; padding: 14px; }
+.fj-seat-row { display: flex; gap: 6px; align-items: center; }
+.fj-seat-no { width: 26px; text-align: right; color: var(--fj-dim); font-size: .8rem; }
+.fj-seat { width: 34px; height: 30px; border-radius: 6px 6px 3px 3px; border: 1px solid var(--fj-teal); background: #e6fbfd; color: var(--fj-teal-dk); font: 700 .72rem var(--sans); cursor: pointer; }
+.fj-seat:hover { background: #cdf3f6; }
+.fj-seat.taken { background: #eee; border-color: #ccc; color: #999; cursor: not-allowed; }
+.fj-seat.chosen { background: var(--fj-yellow); border-color: #a9790a; color: #3a2c00; }
+.fj-aisle { width: 14px; }
+.fj-tag { display: inline-block; font: 700 .72rem var(--sans); padding: 2px 8px; border-radius: 999px; background: var(--fj-bg); border: 1px solid var(--fj-line); color: var(--fj-dim); margin-right: 4px; }
+.fj-ref { font: 800 1.3rem ui-monospace, Menlo, monospace; letter-spacing: .06em; background: var(--fj-bg); border: 1px dashed var(--fj-teal); border-radius: 8px; padding: 6px 12px; display: inline-block; }
+.fj-foot { border-top: 4px solid var(--fj-yellow); margin-top: 30px; padding: 18px 16px 40px; text-align: center; color: var(--fj-dim); font-size: .88rem; background: var(--fj-teal-dk); }
+.fj-foot a { color: #eafcff; }
+.fj-foot p { color: #d7f4f7; }
+/* Lounge */
+.fj-lounge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.fj-pod { background: #e6fbfd; border: 1px dashed var(--fj-teal); border-radius: 12px; padding: 14px; text-align: center; }
+@media (max-width: 640px) { .fj-account { margin-left: 0; } .fj-row > div { min-width: 120px; } .fj-seat { width: 30px; } }
