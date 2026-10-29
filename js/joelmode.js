@@ -68,12 +68,14 @@ function checkFinale() {
   if (praiseLeft === 0 && !praiseTimer && popCount === 0 && !finaleDone && joelModeOn()) { finaleDone = true; finale(); }
 }
 function finale() {
-  const boxes = Array.from({ length: 50 }, (_, i) => errorBox(i));
-  boxes.forEach((b, i) => setTimeout(() => b.remove(), (i + 1) * 100));
+  Array.from({ length: 50 }, (_, i) => errorBox(i));   // stays up until you close each one yourself
 }
+// Error boxes no longer vanish on their own — close them yourself, same as every other Joel-mode message.
 function errorBox(i) {
   const w = 210, x = Math.random() * Math.max(0, innerWidth - w - 8), y = Math.random() * Math.max(0, innerHeight - 70);
-  const n = el("div", { class: "jerr", role: "alert", style: `left:${x}px;top:${y}px;z-index:${9800 + i}` }, el("strong", {}, "Error"), " Joel ate the error.");
+  const n = el("div", { class: "jerr", role: "alert", style: `left:${x}px;top:${y}px;z-index:${9800 + i}` },
+    el("strong", {}, "Error"), " Joel ate the error.",
+    el("button", { class: "jerr-x", type: "button", "aria-label": "Close this error", onclick: () => n.remove() }, "×"));
   document.body.append(n); return n;
 }
 const DIST = [
@@ -90,6 +92,84 @@ function startDisturbances() {
     disturbTimers.push(setTimeout(() => { if (joelModeOn() && !document.hidden) DIST[Math.floor(Math.random() * DIST.length)](); }, t));
     t += 2500 + Math.random() * 5000;
   }
+}
+
+// ---- Joel sings. A real recording (a voice memo of Joel singing), not the made-up Web Audio music elsewhere on
+// the site. One shared <audio>, looped: it starts (a) whenever Joel mode is turned on, stopping when Joel mode is
+// turned off, and (b) completely independently, at random, on ANY page whether Joel mode is on or off — a small
+// note appears ("Joel is singing something. Please listen."), an orange flare shoots the word JOEL up the screen,
+// and the song loops from a pill parked just above the Joel mode pill/toggle, until someone presses Stop there. ----
+const SING_SRC = "assets/audio/joel-sings.mp3";
+let singAudio = null, singPill = null, singScheduleTimer = null;
+
+function shootJoelFlare(text = "JOEL") {
+  const n = el("div", { class: "joel-flare", "aria-hidden": "true" }, text);
+  document.body.append(n);
+  setTimeout(() => n.remove(), 1700);
+}
+
+function audioEl() {
+  if (!singAudio) {
+    singAudio = new Audio(SING_SRC);
+    singAudio.loop = true;
+    singAudio.addEventListener("play", () => {
+      if (!singPill) {
+        singPill = el("div", { class: "joel-sing-pill", "data-joel-keep": "1" },
+          el("span", {}, "🎵 Joel is singing"),
+          el("button", { class: "btn small", type: "button", onclick: () => singAudio.pause() }, "Stop"));
+        document.body.append(singPill);
+      }
+    });
+    singAudio.addEventListener("pause", () => { singPill?.remove(); singPill = null; });
+  }
+  return singAudio;
+}
+function playSinging() { audioEl().play().catch(() => {}); }
+function stopSinging() { if (singAudio && !singAudio.paused) singAudio.pause(); }
+
+function randomSing() {
+  if (!document.hidden) {
+    if (!singAudio || singAudio.paused) { say("🎤 Joel is singing something. Please listen."); shootJoelFlare(); }
+    playSinging();
+  }
+  scheduleRandomSing();
+}
+function scheduleRandomSing() { clearTimeout(singScheduleTimer); singScheduleTimer = setTimeout(randomSing, 120000 + Math.random() * 180000); }
+
+// ---- Turning Joel mode on also, in addition to the usual chain above: 10 "Joel is great" messages appear all at
+// once (not staggered), close them all yourself, then an orange flare shoots JOEL up the screen, then more keeps
+// happening — extra chaos on top of the usual disturbances — for as long as Joel mode stays on. ----
+function burstPop(text, state) {
+  const w = Math.min(240, innerWidth - 24), x = 8 + Math.random() * Math.max(0, innerWidth - w - 24), y = 70 + Math.random() * Math.max(0, innerHeight - 260);
+  const node = el("div", { class: "jpop", role: "dialog", "aria-label": "A message about Joel", "data-joel-keep": "1", style: `left:${x}px;top:${y}px;width:${w}px;z-index:${9000 + (popN++)}` },
+    el("p", { class: "jpop-text" }, text),
+    el("div", { class: "actions" }, el("button", { class: "btn small", type: "button", onclick: () => { node.remove(); state.left--; if (state.left <= 0) afterBurst(); } }, "Close")));
+  document.body.append(node);
+}
+function startJoelBurst() {
+  const state = { left: 10 };
+  for (let i = 0; i < 10; i++) burstPop(PRAISE[Math.floor(Math.random() * PRAISE.length)], state);
+}
+function afterBurst() {
+  shootJoelFlare();
+  setTimeout(startOngoingChaos, 1700);
+}
+const MORE_HAPPENS = [
+  () => { const n = el("div", { class: "jdist", style: "top:20%;left:50%;transform:translateX(-50%)" }, "🎵"); document.body.append(n); const a = n.animate([{ transform: "translate(-50%,0)", opacity: 1 }, { transform: "translate(-50%,-120px)", opacity: 0 }], { duration: 2200 }); a.onfinish = () => n.remove(); say("Joel hums a few bars. It is, legally, humming."); },
+  () => shootJoelFlare(),
+  () => { playSinging(); say("Joel breaks into song again."); }
+];
+let chaosTimer = null;
+function ongoingChaosTick() {
+  chaosTimer = null;
+  if (!joelModeOn()) return;
+  const pool = Math.random() < 0.5 ? DIST : MORE_HAPPENS;
+  pool[Math.floor(Math.random() * pool.length)]();
+  if (joelModeOn()) chaosTimer = setTimeout(ongoingChaosTick, 8000 + Math.random() * 12000);
+}
+function startOngoingChaos() {
+  clearTimeout(chaosTimer);
+  chaosTimer = setTimeout(ongoingChaosTick, 8000 + Math.random() * 12000);
 }
 // Easter eggs (only while Joel mode is on). Typing in a form does not count.
 const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
@@ -125,13 +205,17 @@ function start() {
   document.body.append(pill);
   startPraise(20); startDisturbances(); document.removeEventListener("keydown", egg); document.addEventListener("keydown", egg);
   timer = setTimeout(() => { closeOne(); if (timer) schedule(); }, 6000 + Math.random() * 6000);
+  playSinging();        // loops for as long as Joel mode stays on
+  startJoelBurst();      // additional: 10 at once, then a flare, then ongoing extra chaos
 }
 function stop() {
   clearTimeout(timer); timer = null;
   clearTimeout(praiseTimer); praiseTimer = null; praiseLeft = 0;
   disturbTimers.forEach(clearTimeout); disturbTimers = [];
+  clearTimeout(chaosTimer); chaosTimer = null;
   document.removeEventListener("keydown", egg);
   restoreAll(); pill?.remove(); pill = null;
+  stopSinging();
 }
 
 function paintToggle() {
@@ -163,3 +247,4 @@ function addToggle() {
 addToggle();
 if (document.readyState === "loading") addEventListener("DOMContentLoaded", () => setTimeout(addVisibleButton, 350)); else setTimeout(addVisibleButton, 350);
 if (joelModeOn()) start();
+scheduleRandomSing();   // Joel may start singing on any page, at random, whether Joel mode is on or off
