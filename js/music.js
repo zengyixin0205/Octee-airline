@@ -140,7 +140,14 @@ function splash() {
   const go = (withMusic) => {
     saveSession(SPLASH_SEEN, true);
     if (!withMusic) { on = false; save(PREF, "off"); paint(); if (engine) engine.stop(); }
-    else if (engine) engine.start();
+    else {
+      // One click both boards the flight and starts the music: the Control Tower's Tower Music (a saved
+      // YouTube track) takes priority when one is saved, and this site's own synthesized tunes play only
+      // when there is nothing saved there.
+      import("./tower-music.js").then((m) => m.startTowerMusic()).catch(() => false).then((started) => {
+        if (!started && engine) engine.start();
+      });
+    }
     box.remove();
     document.removeEventListener("keydown", onKey);
   };
