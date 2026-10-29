@@ -174,7 +174,7 @@ function splash() {
 // Browsers only allow sound after the visitor has clicked, tapped or pressed a key on this site, so try to
 // start straight away (works on pages after the first) and, if that is blocked, start on the first interaction.
 function firstGesture() {
-  if (on && !radioOn) { if (!started) begin(); else if (engine) engine.start(); }
+  if (on && !pausedFor.size) { if (!started) begin(); else if (engine) engine.start(); }
 }
 ["pointerdown", "keydown", "touchstart"].forEach((e) => addEventListener(e, firstGesture, { capture: true, passive: true }));
 
@@ -187,12 +187,16 @@ btn.addEventListener("click", async (ev) => {
   else if (engine) engine.stop();
 });
 
-// Octee Radio asks the site music to step aside while it plays
-let radioOn = false;
-addEventListener("octee:radio", (e) => {
-  radioOn = !!e.detail.playing;
+// Octee Radio, and Joel singing, each ask the site music to step aside while they play. Both can happen at
+// once, so track each reason separately: only resume once every one of them has cleared.
+const pausedFor = new Set();
+function stepAside(reason, pausing) {
+  if (pausing) pausedFor.add(reason); else pausedFor.delete(reason);
   if (!engine) return;
-  if (radioOn) engine.stop(); else if (on) engine.start();
-});
+  if (pausedFor.size) engine.stop();
+  else if (on) engine.start();
+}
+addEventListener("octee:radio", (e) => stepAside("radio", !!e.detail.playing));
+addEventListener("octee:joelsinging", (e) => stepAside("joel", !!e.detail.playing));
 paint();
 if (on) begin();

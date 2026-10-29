@@ -119,8 +119,14 @@ function audioEl() {
           el("button", { class: "btn small", type: "button", onclick: () => singAudio.pause() }, "Stop"));
         document.body.append(singPill);
       }
+      // The site's own music and Tower Music both listen for this and pause themselves for as long as
+      // Joel is singing, so his voice isn't fighting whatever else is playing.
+      dispatchEvent(new CustomEvent("octee:joelsinging", { detail: { playing: true } }));
     });
-    singAudio.addEventListener("pause", () => { singPill?.remove(); singPill = null; });
+    singAudio.addEventListener("pause", () => {
+      singPill?.remove(); singPill = null;
+      dispatchEvent(new CustomEvent("octee:joelsinging", { detail: { playing: false } }));
+    });
   }
   return singAudio;
 }

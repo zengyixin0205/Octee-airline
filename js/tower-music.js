@@ -40,8 +40,8 @@ async function trackIds() {
   return ids;
 }
 
-let mount, box, icon;
-let started = false, hiddenPlayer = false;
+let mount, box, icon, player;
+let started = false, hiddenPlayer = false, joelSinging = false;
 
 // Starts the saved YouTube track(s). Returns false and does nothing when nothing is saved, so a caller (the
 // welcome splash) knows to fall back to the site's own synthesized music instead. Safe to call more than once.
@@ -53,13 +53,21 @@ export async function startTowerMusic() {
   icon?.classList.add("tower-music-playing");
   box?.classList.remove("tower-music-hidden");          // show the frame right away, don't wait on the network
   await loadApi();
-  new YT.Player(mount, {
+  player = new YT.Player(mount, {
     width: "160", height: "90", videoId: list[0],
     playerVars: { autoplay: 1, loop: 1, playlist: list.join(","), controls: 1, modestbranding: 1, rel: 0 },
-    events: { onReady: (e) => { try { e.target.playVideo(); } catch { /* browser blocked it; the visible controls still let the visitor press play */ } } }
+    events: { onReady: (e) => { try { if (joelSinging) e.target.pauseVideo(); else e.target.playVideo(); } catch { /* browser blocked it; the visible controls still let the visitor press play */ } } }
   });
   return true;
 }
+
+// Joel singing asks Tower Music to step aside while he's going, same as it asks the site's own synthesized
+// music — resumes on its own once he stops.
+addEventListener("octee:joelsinging", (e) => {
+  joelSinging = !!e.detail.playing;
+  if (!started || !player) return;
+  try { if (joelSinging) player.pauseVideo(); else player.playVideo(); } catch { /* player not ready yet */ }
+});
 
 export async function mountTowerMusic() {
   const list = await trackIds();
