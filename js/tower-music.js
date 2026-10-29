@@ -4,14 +4,16 @@
 // a news article. One track loops forever; two play back to back and loop as a pair (YouTube's own loop+playlist
 // trick: playerVars.loop + playerVars.playlist pointing at the same id(s) as videoId).
 //
-// The control is one small square icon, bottom-left, carrying Oliver Chng's existing site icon (the same drawn
-// picture already used for him elsewhere — assets/img/oliver-scraggy.png, never a real photo) — about half the
-// size of the floating JoelAI button. First click starts it (needs a click: browsers block audio before a user
-// gesture); after that, clicking again just shows/hides the little video frame without pausing it.
+// The control is one small square icon carrying Oliver Chng's existing site icon (the same drawn picture
+// already used for him elsewhere — assets/img/oliver-scraggy.png, never a real photo), sitting in the same
+// bottom-left row as the background-music button and the Radio link. First click starts it (needs a click:
+// browsers block audio before a user gesture); after that, clicking again just shows/hides the video frame,
+// kept as small as a YouTube embed can reasonably go, without pausing it.
 //
 // The site's own welcome splash ("Board (sound on)" in js/music.js) also starts this on its "yes": one click
-// both boards the flight and starts the YouTube track, falling back to the site's own synthesized music only
-// when nothing is saved here (see startTowerMusic below, and the call into it from js/music.js).
+// both boards the flight and starts the YouTube track. Once something is saved here, the site's own
+// synthesized music does not play at all — Tower Music takes over completely (see hasTowerMusic, and how
+// js/music.js checks it before ever starting its own engine).
 import { el } from "./dom.js";
 import { fetchPublished } from "./published.js";
 
@@ -39,6 +41,9 @@ async function trackIds() {
   ids = (Array.isArray(data?.tracks) ? data.tracks : []).map((t) => t?.id).filter((id) => typeof id === "string" && id).slice(0, 2);
   return ids;
 }
+// Whether the Control Tower has anything saved at all. js/music.js checks this before letting its own
+// synthesized tunes play, so the two never compete.
+export async function hasTowerMusic() { return (await trackIds()).length > 0; }
 
 let mount, box, icon, player;
 let started = false, hiddenPlayer = false, joelSinging = false;
@@ -54,7 +59,7 @@ export async function startTowerMusic() {
   box?.classList.remove("tower-music-hidden");          // show the frame right away, don't wait on the network
   await loadApi();
   player = new YT.Player(mount, {
-    width: "160", height: "90", videoId: list[0],
+    width: "46", height: "26", videoId: list[0],
     playerVars: { autoplay: 1, loop: 1, playlist: list.join(","), controls: 1, modestbranding: 1, rel: 0 },
     events: { onReady: (e) => { try { if (joelSinging) e.target.pauseVideo(); else e.target.playVideo(); } catch { /* browser blocked it; the visible controls still let the visitor press play */ } } }
   });

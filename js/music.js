@@ -128,6 +128,10 @@ function synthEngine() {
 async function begin() {
   if (started) return;
   started = true;
+  // Once something is saved in the Control Tower's Music tab, it takes over completely: these made-up tunes
+  // never play at all, on any page, whether or not Tower Music has actually been started yet.
+  const towerHasMusic = await import("./tower-music.js").then((m) => m.hasTowerMusic()).catch(() => false);
+  if (towerHasMusic) { if (!loadSession(SPLASH_SEEN, false)) splash(); return; }
   engine = synthEngine();
   if (!(on && engine)) return;
   const ok = await engine.start();
