@@ -178,6 +178,7 @@ import("./joelfab.js");
 import("./joelmode.js");
 import("./cloud.js");
 import("./ads.js").then((m) => m.showAds()).catch(() => {});
+import("./tower-music.js").then((m) => m.mountTowerMusic()).catch(() => {});
 import("./video-ad.js").then((m) => m.showVideoAd()).catch(() => {});
 import("./version.js").then((m) => m.showVersion()).catch(() => {});
 import("./convenient.js").catch(() => {});

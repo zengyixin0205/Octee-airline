@@ -1299,4 +1299,13 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 /* Joel sings: the "Joel is singing" pill, parked just above the Joel mode pill/toggle so Stop is easy to find */
 .joel-sing-pill { position: fixed; left: 14px; bottom: 112px; z-index: 70; display: flex; align-items: center; gap: 10px; background: #2b1a0e; color: #ffd9b0; border: 2px solid #ff7a00; border-radius: 999px; padding: 4px 6px 4px 14px; font: 700 .82rem var(--sans); }
 @media (max-width: 520px) { .joel-sing-pill { bottom: 162px; } }
-@media print { .joel-flare, .joel-sing-pill { display: none !important; } }
+@media print { .joel-flare, .joel-sing-pill, .tower-music { display: none !important; } }
+
+/* Tower Music: whatever the Control Tower's Music tab has saved, played through YouTube's own embedded player */
+.tower-music { position: fixed; left: 14px; bottom: 212px; z-index: 64; background: #1d1d1d; color: #fff; border: 2px solid var(--octee-orange); border-radius: 10px; padding: 6px; max-width: 176px; }
+.tower-music-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font: 700 .78rem var(--sans); flex-wrap: wrap; }
+.tower-music.tower-music-hidden iframe { width: 2px !important; height: 2px !important; }
+@media (max-width: 520px) { .tower-music { bottom: 262px; } }
+
+/* Control Tower: small previews of the pasted YouTube links on the Music tab */
+.fag iframe { max-width: 100%; border-radius: 6px; margin-top: 4px; }

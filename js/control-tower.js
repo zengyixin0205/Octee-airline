@@ -40,6 +40,24 @@ function download(filename, data) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+// Pulls a YouTube video ID out of a pasted link (watch?v=, youtu.be/, /embed/, /shorts/), or passes through
+// something that already looks like a bare ID. Returns "" if it can't make sense of the input.
+function youtubeId(input) {
+  const s = (input || "").trim();
+  if (!s) return "";
+  if (/^[\w-]{10,12}$/.test(s)) return s;
+  try {
+    const u = new URL(/^https?:\/\//i.test(s) ? s : "https://" + s);
+    if (/(^|\.)youtu\.be$/.test(u.hostname)) return u.pathname.slice(1).split("/")[0] || "";
+    if (/(^|\.)youtube\.com$/.test(u.hostname)) {
+      if (u.pathname === "/watch") return u.searchParams.get("v") || "";
+      const m = u.pathname.match(/\/(?:embed|shorts|live)\/([\w-]+)/);
+      if (m) return m[1];
+    }
+  } catch { /* not a URL we understand */ }
+  return "";
+}
+
 function shell(...content) {
   back?.remove();
   back = el("div", { class: "modal-back fag-back", role: "dialog", "aria-modal": "true", "aria-label": "FAG Fuji Airport Group, Control Tower administration" },
@@ -131,8 +149,10 @@ async function tower(session, crew, notice = "") {
   const publishedPerks = await fetchJson("data/perks.json", { unlimitedFujitech: {}, freePro: {}, freeModels: {}, freeJT: {} });
   const perksDraft = { unlimitedFujitech: { ...(publishedPerks.unlimitedFujitech || {}) }, freePro: { ...(publishedPerks.freePro || {}) }, freeModels: { ...(publishedPerks.freeModels || {}) }, freeJT: { ...(publishedPerks.freeJT || {}) } };
   const publishedDiscounts = await fetchJson("data/flight-discounts.json", { discounts: [] });
+  const publishedMusic = await fetchJson("data/music.json", { tracks: [] });
   let codes = load(DRAFT_CODES, null) || published.codes || [];
   let discounts = load("octee.tower.discounts", null) || publishedDiscounts.discounts || [];
+  let musicTracks = load("octee.tower.music", null) || publishedMusic.tracks || [];
   const tabCodes = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "Codes");
   const tabDiscounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Flight discounts");
   const tabCrew = session.role === "owner" && !session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
@@ -140,6 +160,7 @@ async function tower(session, crew, notice = "") {
   const tabCloud = session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Cloud accounts") : null;
   const tabRequests = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Requests");
   const tabAds = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Ads");
+  const tabMusic = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Music");
   const tabCode = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Code");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
@@ -168,11 +189,12 @@ async function tower(session, crew, notice = "") {
     tabCloud?.setAttribute("aria-selected", String(which === "cloud"));
     tabRequests.setAttribute("aria-selected", String(which === "requests"));
     tabAds.setAttribute("aria-selected", String(which === "ads"));
+    tabMusic.setAttribute("aria-selected", String(which === "music"));
     tabCode.setAttribute("aria-selected", String(which === "code"));
     countRequests();
     if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
     if (which === "cloud") { body.replaceChildren(el("p", { class: "note" }, "Loading Cloud accounts…")); cloudPanel().then((n) => body.replaceChildren(n)); return; }
-    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "code" ? codePanel() : crewPanel());
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "music" ? musicPanel() : which === "code" ? codePanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabDiscounts.addEventListener("click", () => show("discounts"));
@@ -180,6 +202,7 @@ async function tower(session, crew, notice = "") {
   tabAccounts.addEventListener("click", () => show("accounts"));
   tabCloud?.addEventListener("click", () => show("cloud"));
   tabRequests.addEventListener("click", () => show("requests"));
+  tabMusic.addEventListener("click", () => show("music"));
   tabAds.addEventListener("click", () => show("ads"));
   tabCode.addEventListener("click", () => show("code"));
 
@@ -519,6 +542,43 @@ async function tower(session, crew, notice = "") {
       el("p", { class: "hint" }, "Ads without a headline are not saved. Manual download is only for when the cloud has a problem: replace data/ads.json, commit and push."));
   }
 
+  // Tower Music: a YouTube link, embedded on every page. The Worker only ever stores the video ID (musicIdOk in
+  // cloud/index.js), never the video or audio itself — playback always goes through YouTube's own embedded player
+  // (js/tower-music.js), which is what keeps this clear of copyright trouble. One track loops forever; a second
+  // makes it a two-track loop, back to back.
+  function musicPanel() {
+    const mmsg = el("p", { class: "msg", "aria-live": "polite" });
+    const changed = () => setMsg(mmsg, "Changed. Press Save to cloud to make it live.", "info");
+    const inputs = [0, 1].map((i) => el("input", { type: "text", id: "mt-" + i, maxlength: "200", value: musicTracks[i]?.id || "", placeholder: "youtube.com/watch?v=… or youtu.be/…" }));
+    const previews = [el("div"), el("div")];
+    const refreshPreviews = () => inputs.forEach((inp, i) => {
+      const id = youtubeId(inp.value);
+      previews[i].replaceChildren(id
+        ? el("iframe", { width: "160", height: "90", src: `https://www.youtube.com/embed/${id}`, title: "Preview", frameborder: "0", allow: "autoplay; encrypted-media" })
+        : el("p", { class: "note" }, "No track in this slot."));
+    });
+    refreshPreviews();
+    inputs.forEach((inp) => inp.addEventListener("input", () => { changed(); refreshPreviews(); }));
+    return el("div", {},
+      el("div", { class: "card" }, el("h3", {}, "Tower Music"),
+        el("p", { class: "note" }, "Paste a YouTube link. The site never downloads or stores the actual video or audio — it embeds YouTube's own player, which plays it, same as embedding a video in a news article. That is what keeps this clear of copyright trouble; only paste links you actually have the right to loop on the site (your own uploads, or anything the uploader has made embeddable and meant to be shared this way). One track loops forever; add a second and the two play back to back, looping as a pair. Clear a box and Save to cloud to drop a track; clear both to turn the player off."),
+        el("div", { class: "row" },
+          el("div", { class: "field" }, el("label", { for: "mt-0" }, "Track 1"), inputs[0], previews[0]),
+          el("div", { class: "field" }, el("label", { for: "mt-1" }, "Track 2 (optional)"), inputs[1], previews[1]))),
+      el("div", { class: "actions" },
+        el("button", { class: "btn", type: "button", onclick: async () => {
+          if (inputs.some((inp) => inp.value.trim() && !youtubeId(inp.value))) return setMsg(mmsg, "One of those doesn't look like a YouTube link or video ID.", "error");
+          const tracks = inputs.map((inp) => youtubeId(inp.value)).filter(Boolean).map((id) => ({ id }));
+          if (await saveToCloud("music", { tracks }, mmsg, "Music")) {
+            musicTracks = tracks; save("octee.tower.music", musicTracks); show("music");
+            body.append(el("p", { class: "msg ok" }, tracks.length ? "Music saved to the cloud. It is live now, on every page." : "Music cleared. Nothing will play now."));
+          }
+        } }, "Save to cloud"),
+        el("button", { class: "btn small ghost", type: "button", onclick: () => download("music.json", { tracks: inputs.map((inp) => youtubeId(inp.value)).filter(Boolean).map((id) => ({ id })) }) }, "Manual download: music.json")),
+      mmsg,
+      el("p", { class: "hint" }, "Manual download is only for when the cloud has a problem: replace data/music.json, commit and push."));
+  }
+
   // Code: the read-only code viewer. It needs a cloud account that may open it (the owner, or one added with 10 logo clicks).
   function codePanel() {
     const cmsg = el("p", { class: "msg", "aria-live": "polite" });
@@ -569,7 +629,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabCode, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabMusic, tabCode, tabCrew),
     cloudBar,
     body,
     el("p", { class: "hint" }, "Changes here are drafts in this browser until you press Save to cloud. Cloud admin role changes take effect immediately."));
