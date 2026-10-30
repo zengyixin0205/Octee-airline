@@ -14,10 +14,22 @@
 // both boards the flight and starts the YouTube track. Once something is saved here, the site's own
 // synthesized music does not play at all — Tower Music takes over completely (see hasTowerMusic, and how
 // js/music.js checks it before ever starting its own engine).
+//
+// This is a plain multi-page site (every link is a real navigation, not a single-page-app route swap), so a
+// brand new page always means a brand new player with no memory of its own. To make the track feel like it
+// keeps going as you click around rather than restarting from the top each time, the currently-playing track
+// index and position are checkpointed to sessionStorage (every second, plus a final precise save on pagehide)
+// and, on the next page, read back and used to pick up right where it left off — same track, same spot, give or
+// take the player start-up time — with autoplay attempted immediately (no click needed, since the visitor
+// already gave a real gesture earlier in this tab). If the browser's autoplay policy blocks that anyway,
+// YouTube's own on-screen play button (the player always has controls) lets the visitor nudge it once, still at
+// the resumed spot. Closing the tab clears the checkpoint — a fresh visit starts from the top again.
 import { el } from "./dom.js";
 import { fetchPublished } from "./published.js";
+import { loadSession, saveSession } from "./store.js";
 
 const OLIVER_ICON = "assets/img/oliver-scraggy.png";
+const POS_KEY = "octee.music.towerpos";       // { i: playlist index, t: seconds into that track, at: Date.now() }
 
 function loadApi() {
   return new Promise((resolve) => {
@@ -46,23 +58,54 @@ async function trackIds() {
 export async function hasTowerMusic() { return (await trackIds()).length > 0; }
 
 let mount, box, icon, player;
-let started = false, hiddenPlayer = false, joelSinging = false;
+let started = false, hiddenPlayer = false, joelSinging = false, checkpointTimer = null;
+
+// Where to pick up: a checkpoint saved from the previous page, in this same tab, for the same track(s) —
+// otherwise null, meaning "start from the top".
+function readCheckpoint(list) {
+  const pos = loadSession(POS_KEY, null);
+  if (!pos || typeof pos.t !== "number" || typeof pos.at !== "number") return null;
+  const i = Number.isInteger(pos.i) && pos.i >= 0 && pos.i < list.length ? pos.i : 0;
+  const elapsed = pos.t + Math.max(0, (Date.now() - pos.at) / 1000);
+  return { i, t: elapsed };
+}
+
+function checkpoint() {
+  if (!player) return;
+  try {
+    const i = player.getPlaylistIndex ? player.getPlaylistIndex() : 0;
+    const t = player.getCurrentTime();
+    saveSession(POS_KEY, { i: Number.isInteger(i) && i >= 0 ? i : 0, t: typeof t === "number" ? t : 0, at: Date.now() });
+  } catch { /* player not ready yet */ }
+}
+addEventListener("pagehide", checkpoint);
 
 // Starts the saved YouTube track(s). Returns false and does nothing when nothing is saved, so a caller (the
 // welcome splash) knows to fall back to the site's own synthesized music instead. Safe to call more than once.
+// Picks up from the last page's checkpoint when there is one for this tab, instead of starting at the top.
 export async function startTowerMusic() {
   if (started) return true;
   const list = await trackIds();
   if (!list.length) return false;
   started = true;
+  const resume = readCheckpoint(list);
   icon?.classList.add("tower-music-playing");
   box?.classList.remove("tower-music-hidden");          // show the frame right away, don't wait on the network
   await loadApi();
   player = new YT.Player(mount, {
-    width: "46", height: "26", videoId: list[0],
-    playerVars: { autoplay: 1, loop: 1, playlist: list.join(","), controls: 1, modestbranding: 1, rel: 0 },
-    events: { onReady: (e) => { try { if (joelSinging) e.target.pauseVideo(); else e.target.playVideo(); } catch { /* browser blocked it; the visible controls still let the visitor press play */ } } }
+    width: "46", height: "26", videoId: list[resume?.i ?? 0],
+    playerVars: { autoplay: 1, loop: 1, playlist: list.join(","), start: resume ? Math.floor(resume.t) : undefined, controls: 1, modestbranding: 1, rel: 0 },
+    events: {
+      onReady: (e) => {
+        try {
+          if (resume && e.target.seekTo) e.target.seekTo(resume.t, true);   // sub-second precision beyond the integer "start" param
+          if (joelSinging) e.target.pauseVideo(); else e.target.playVideo();
+        } catch { /* browser blocked it; the visible controls still let the visitor press play */ }
+      },
+      onStateChange: (e) => { icon?.classList.toggle("tower-music-playing", e.data === YT.PlayerState.PLAYING); }
+    }
   });
+  checkpointTimer = setInterval(checkpoint, 1000);      // keeps the next page's resume spot fresh
   return true;
 }
 
@@ -90,4 +133,8 @@ export async function mountTowerMusic() {
   });
 
   document.body.append(box);
+
+  // Picked up mid-flight from an earlier page in this tab: carry straight on, no click needed. (A fresh visit,
+  // or the splash's own "Board (sound on)" button, has no checkpoint yet and stays idle until clicked, as before.)
+  if (loadSession(POS_KEY, null)) startTowerMusic();
 }
