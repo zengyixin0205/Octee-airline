@@ -1,5 +1,6 @@
 {
   "christmas": { "on": false, "start": "", "end": "" },
   "cny": { "on": false, "start": "", "end": "", "reward": 188 },
+  "deepavali": { "on": false, "start": "", "end": "" },
   "halloween": { "on": false, "start": "", "end": "" }
 }

@@ -1,9 +1,9 @@
-// Seasonal themes: Christmas, Chinese New Year and Halloween, switched on (or off) from the Control Tower's
-// Theme tab, same cloud-published pattern as ads and music (data/theme.json is the fallback). Each theme has
-// its own on/off switch and an optional start/end date range (same shape as an ad's dates — blank means "no
+// Seasonal themes: Christmas, Chinese New Year, Deepavali and Halloween, switched on (or off) from the Control
+// Tower's Theme tab, same cloud-published pattern as ads and music (data/theme.json is the fallback). Each theme
+// has its own on/off switch and an optional start/end date range (same shape as an ad's dates — blank means "no
 // date limit, just use the switch"). At most one theme is ever shown at once: if more than one is somehow left
-// on, Christmas wins over Chinese New Year wins over Halloween, in that order — the Control Tower's own preview
-// warns when more than one is on, so this should not normally come up.
+// on, Christmas wins over Chinese New Year wins over Deepavali wins over Halloween, in that order — the Control
+// Tower's own preview warns when more than one is on, so this should not normally come up.
 //
 // Every effect here is pure decoration: CSS animations plus small DOM nodes this module spawns and removes
 // itself, all behind pointer-events:none so nothing sits on top of the page's real buttons and links. Nothing
@@ -20,7 +20,7 @@ import { currentUser } from "./auth.js";
 import { claimAngPao, angPaoClaimedToday, fmtFujitech } from "./fujitech.js";
 import { push } from "./cloud.js";
 
-export const THEME_KEYS = ["christmas", "cny", "halloween"];
+export const THEME_KEYS = ["christmas", "cny", "deepavali", "halloween"];
 export const THEME_CNY_REWARD = 188; // Fujitech, before the Control Tower has saved its own amount
 
 // Clean one theme entry (also used by the Control Tower before saving).
@@ -92,6 +92,25 @@ function mountCnySides() {
   document.body.append(el("div", { class: "theme-cny-side left", "aria-hidden": "true" }), el("div", { class: "theme-cny-side right", "aria-hidden": "true" }));
 }
 
+// Deepavali: twinkling diya (oil lamp) lights scattered over the page, plus gold side decoration echoing the
+// Christmas/CNY side touches. Bo asked for "deepavali and stuff" without naming a specific effect, so this —
+// like Halloween's bats — is this session's own pick, not something he specified.
+function mountDiyas() {
+  const layer = fxLayer();
+  const spawn = () => {
+    const dur = 2.5 + Math.random() * 2.5;
+    const diya = el("span", { class: "theme-diya" }, "🪔");
+    diya.style.left = (4 + Math.random() * 92) + "vw";
+    diya.style.top = (8 + Math.random() * 78) + "vh";
+    diya.style.animationDuration = dur + "s";
+    layer.append(diya);
+    setTimeout(() => diya.remove(), 6500);
+  };
+  for (let i = 0; i < 10; i++) setTimeout(spawn, Math.random() * 1500);
+  setInterval(spawn, 850);
+  document.body.append(el("div", { class: "theme-deepavali-side left", "aria-hidden": "true" }), el("div", { class: "theme-deepavali-side right", "aria-hidden": "true" }));
+}
+
 function mountBats() {
   const layer = fxLayer();
   const spawn = () => {
@@ -139,5 +158,6 @@ export async function mountTheme() {
   document.body.classList.add("theme-" + key);
   if (key === "christmas") mountSnow();
   else if (key === "cny") { mountFireworks(); mountCnySides(); mountAngPao(data.cny?.reward); }
+  else if (key === "deepavali") mountDiyas();
   else if (key === "halloween") mountBats();
 }

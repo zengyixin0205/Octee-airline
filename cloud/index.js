@@ -54,7 +54,7 @@ const musicIdOk = (t, source) => t && typeof t === "object" && !Array.isArray(t)
 // Seasonal themes from the Control Tower: Christmas, Chinese New Year and Halloween, each just an on/off switch
 // plus an optional date range (same "" = no limit shape as an ad's start/end). Chinese New Year also carries the
 // Fujitech amount its "ang pao" button pays out, 0-100000.
-const THEME_KEYS = ["christmas", "cny", "halloween"];
+const THEME_KEYS = ["christmas", "cny", "deepavali", "halloween"];
 const themeDateOk = (v) => v === undefined || v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v);
 const themeEntryOk = (t) => t && typeof t === "object" && !Array.isArray(t) && typeof t.on === "boolean" && themeDateOk(t.start) && themeDateOk(t.end);
 const themeOk = (d) => d && typeof d === "object" && !Array.isArray(d)

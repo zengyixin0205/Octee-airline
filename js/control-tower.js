@@ -621,14 +621,15 @@ async function tower(session, crew, notice = "") {
       el("p", { class: "hint" }, "Manual download is only for when the cloud has a problem: replace data/music.json, commit and push."));
   }
 
-  // Theme: Christmas (snow), Chinese New Year (fireworks, red side decoration and an "ang pao" claim button) and
-  // Halloween (bats), each its own on/off switch plus an optional date range, same "" = no limit shape ads use.
-  // If more than one is left on at once, the site shows only the first of Christmas / Chinese New Year /
-  // Halloween that is active that day — this panel warns about it instead of guessing which one the visitor sees.
+  // Theme: Christmas (snow), Chinese New Year (fireworks, red side decoration and an "ang pao" claim button),
+  // Deepavali (diya lights) and Halloween (bats), each its own on/off switch plus an optional date range, same
+  // "" = no limit shape ads use. If more than one is left on at once, the site shows only the first of
+  // Christmas / Chinese New Year / Deepavali / Halloween that is active that day — this panel warns about it
+  // instead of guessing which one the visitor sees.
   function themePanel() {
     const tmsg = el("p", { class: "msg", "aria-live": "polite" });
     const changed = () => setMsg(tmsg, "Changed. Press Save to cloud to make it live.", "info");
-    const LABELS = { christmas: "Christmas (falling snow)", cny: "Chinese New Year (fireworks, red side decoration, ang pao reward)", halloween: "Halloween (bats)" };
+    const LABELS = { christmas: "Christmas (falling snow)", cny: "Chinese New Year (fireworks, red side decoration, ang pao reward)", deepavali: "Deepavali (diya lights)", halloween: "Halloween (bats)" };
     const card = (key) => {
       const t = theme[key] || cleanThemeEntry({}, key);
       const on = el("input", { type: "checkbox", checked: !!t.on });
@@ -652,8 +653,8 @@ async function tower(session, crew, notice = "") {
     const onCount = THEME_KEYS.filter((k) => theme[k]?.on).length;
     return el("div", {},
       el("div", { class: "card" }, el("h3", {}, "Seasonal themes"),
-        el("p", { class: "note" }, "Switch a theme on to decorate the whole site: falling snow for Christmas, fireworks and red decoration at the side for Chinese New Year, bats for Halloween. A date range is optional — leave both blank to control it with the switch alone instead. Only one theme shows at a time: if more than one is on, Christmas wins, then Chinese New Year, then Halloween."),
-        onCount > 1 ? el("p", { class: "msg info" }, `${onCount} themes are On at once — only one will actually show (Christmas, then Chinese New Year, then Halloween, whichever comes first).`) : ""),
+        el("p", { class: "note" }, "Switch a theme on to decorate the whole site: falling snow for Christmas, fireworks and red decoration at the side for Chinese New Year, diya lights for Deepavali, bats for Halloween. A date range is optional — leave both blank to control it with the switch alone instead. Only one theme shows at a time: if more than one is on, Christmas wins, then Chinese New Year, then Deepavali, then Halloween."),
+        onCount > 1 ? el("p", { class: "msg info" }, `${onCount} themes are On at once — only one will actually show (Christmas, then Chinese New Year, then Deepavali, then Halloween, whichever comes first).`) : ""),
       ...THEME_KEYS.map(card),
       el("div", { class: "actions" },
         el("button", { class: "btn", type: "button", onclick: async () => {

@@ -1348,4 +1348,13 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 .theme-halloween-side.left { left: 6px; }
 .theme-halloween-side.right { right: 6px; }
 
-@media print { .theme-fx, .theme-cny-side, .theme-halloween-side, .ang-pao-btn, .ang-pao-flash { display: none !important; } }
+.theme-diya { position: absolute; font-size: 20px; opacity: 0; animation: theme-diya-glow ease-in-out 1; filter: drop-shadow(0 0 6px rgba(255, 170, 40, .7)); }
+@keyframes theme-diya-glow { 0% { opacity: 0; transform: scale(.85); } 15%, 75% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(.9); } }
+.theme-deepavali-side { position: fixed; top: 0; bottom: 0; width: 14px; background: linear-gradient(180deg, #ffb300, #7a3b00); z-index: 6; pointer-events: none; }
+.theme-deepavali-side.left { left: 0; box-shadow: 2px 0 6px rgba(0, 0, 0, .2); }
+.theme-deepavali-side.right { right: 0; box-shadow: -2px 0 6px rgba(0, 0, 0, .2); }
+.theme-deepavali-side::before, .theme-deepavali-side::after { content: "🪔"; position: absolute; left: 50%; transform: translateX(-50%); font-size: 16px; }
+.theme-deepavali-side::before { top: 12%; }
+.theme-deepavali-side::after { top: 62%; }
+
+@media print { .theme-fx, .theme-cny-side, .theme-deepavali-side, .theme-halloween-side, .ang-pao-btn, .ang-pao-flash { display: none !important; } }
