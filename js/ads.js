@@ -3,6 +3,7 @@
 // Ads are plain text only (set with textContent). Links must be https:// or a page of this site.
 import { el } from "./dom.js";
 import { fetchPublished } from "./published.js";
+import { loadSession, saveSession, removeSession } from "./store.js";
 
 export const THEMES = { orange: "Orange", ink: "Dark", sky: "Sky blue", cream: "Cream", mint: "Mint green", rose: "Rose pink", lilac: "Lilac", lemon: "Lemon yellow", teal: "Teal", sunset: "Sunset", grape: "Grape (dark purple)", lime: "Lime", custom: "Custom colours / gradient" };
 export const MAX_ADS = 30;
@@ -75,6 +76,13 @@ export function adNode(a, extra = {}) {
 const CLOSED = "octee.ads.closed";
 const closed = () => { try { return sessionStorage.getItem(CLOSED) === "1"; } catch { return false; } };
 
+// Like a page is a real navigation (reload), so without this the banner would pick a fresh random ad and restart
+// its 9s rotation clock from zero on every single page — visitors said that felt like the ad kept "reloading".
+// Instead, which ad is showing (by id, since the live list can differ page to page) and when it started showing
+// are checkpointed to sessionStorage, so clicking to another page carries the same ad over and the rotation timer
+// picks up roughly where it left off, instead of resetting. Closing the ad clears the checkpoint along with it.
+const POS = "octee.ads.pos";   // { id: <currently-shown ad's id>, at: Date.now() when it started showing }
+
 export async function showAds() {
   if (closed() || document.querySelector(".ad-banner:not(.ad-preview)") || /^(login|404)\.html$/.test(here())) return;
   const data = await fetchPublished("ads", "data/ads.json", { ads: [] });
@@ -84,11 +92,27 @@ export async function showAds() {
   const header = document.querySelector(".site-header");
   if (!header) return;
   header.after(slot);
-  let n = Math.floor(Math.random() * ads.length), timer = null;
+
+  const ROTATE_MS = 9000;
+  const pos = loadSession(POS, null);
+  let n = Math.floor(Math.random() * ads.length), startedAt = Date.now();
+  const carriedOver = pos && ads.some((a) => a.id === pos.id);
+  if (carriedOver) {
+    n = ads.findIndex((a) => a.id === pos.id);
+    startedAt = pos.at;
+  }
+  let timer = null;
   const paint = () => {
-    const box = adNode(ads[n % ads.length], { close: () => { clearInterval(timer); try { sessionStorage.setItem(CLOSED, "1"); } catch { /* fine */ } slot.remove(); } });
+    const ad = ads[((n % ads.length) + ads.length) % ads.length];
+    saveSession(POS, { id: ad.id, at: startedAt });
+    const box = adNode(ad, { close: () => { clearInterval(timer); try { sessionStorage.setItem(CLOSED, "1"); } catch { /* fine */ } removeSession(POS); slot.remove(); } });
     slot.replaceChildren(box);
   };
   paint();
-  if (ads.length > 1) timer = setInterval(() => { if (!document.hidden) { n++; paint(); } }, 9000);
+  if (ads.length > 1) {
+    const rotate = () => { if (!document.hidden) { n++; startedAt = Date.now(); paint(); } timer = setTimeout(rotate, ROTATE_MS); };
+    // Carried over mid-cycle: pick up in phase instead of giving the resumed ad a fresh full 9s.
+    const elapsed = carriedOver ? Math.max(0, Date.now() - startedAt) : 0;
+    timer = setTimeout(rotate, Math.max(0, ROTATE_MS - (elapsed % ROTATE_MS)));
+  }
 }
