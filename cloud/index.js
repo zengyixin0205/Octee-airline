@@ -51,7 +51,16 @@ const adOk = (a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.
 // "youtube" so data saved before this field existed keeps working unchanged.
 const MUSIC_ID = { youtube: /^[\w-]{6,20}$/, spotify: /^[A-Za-z0-9]{22}$/ };
 const musicIdOk = (t, source) => t && typeof t === "object" && !Array.isArray(t) && typeof t.id === "string" && MUSIC_ID[source].test(t.id);
-const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), ads: (d) => Array.isArray(d.ads) && d.ads.length <= 30 && d.ads.every(adOk), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech), music: (d) => (d.source === undefined || d.source === "youtube" || d.source === "spotify") && Array.isArray(d.tracks) && d.tracks.length <= 2 && d.tracks.every((t) => musicIdOk(t, d.source || "youtube")) };
+// Seasonal themes from the Control Tower: Christmas, Chinese New Year and Halloween, each just an on/off switch
+// plus an optional date range (same "" = no limit shape as an ad's start/end). Chinese New Year also carries the
+// Fujitech amount its "ang pao" button pays out, 0-100000.
+const THEME_KEYS = ["christmas", "cny", "halloween"];
+const themeDateOk = (v) => v === undefined || v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v);
+const themeEntryOk = (t) => t && typeof t === "object" && !Array.isArray(t) && typeof t.on === "boolean" && themeDateOk(t.start) && themeDateOk(t.end);
+const themeOk = (d) => d && typeof d === "object" && !Array.isArray(d)
+  && THEME_KEYS.every((k) => d[k] === undefined || themeEntryOk(d[k]))
+  && (d.cny === undefined || d.cny.reward === undefined || (Number.isFinite(d.cny.reward) && d.cny.reward >= 0 && d.cny.reward <= 100000));
+const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), ads: (d) => Array.isArray(d.ads) && d.ads.length <= 30 && d.ads.every(adOk), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech), music: (d) => (d.source === undefined || d.source === "youtube" || d.source === "spotify") && Array.isArray(d.tracks) && d.tracks.length <= 2 && d.tracks.every((t) => musicIdOk(t, d.source || "youtube")), theme: themeOk };
 const MAX_DATA = 400 * 1024;
 // Account perks the Control Tower publishes ("perks"). Until a setting is saved there, these defaults apply.
 const DEFAULT_PERKS = { freePro: { octee: true, joel: true }, freeModels: { octee: true, joel: true } };
@@ -120,7 +129,7 @@ async function applyWallet(env, db, u, bal, prevProf, nextProf) {
   const hist = Array.isArray(nextProf.history) ? nextProf.history : [];
   for (let i = hist.length - 1; i >= 0; i--) { const k = histKey(hist[i]); if (seen.get(k) > 0) seen.set(k, seen.get(k) - 1); else if (prevProf) fresh.push(hist[i]); } // oldest first; the very first save only sets the balance
   const day = iso().slice(0, 10);
-  const today = (b.state.days[day] = { book: 0, scraggy: 0, ride: 0, pot: 0, jm: 0, ...(b.state.days[day] || {}) });
+  const today = (b.state.days[day] = { book: 0, scraggy: 0, ride: 0, pot: 0, jm: 0, angpao: false, ...(b.state.days[day] || {}) });
   for (const k of Object.keys(b.state.days)) if (k < day) delete b.state.days[k];
   const prevRefs = new Set(((prevProf && prevProf.trips) || []).map((t) => t && t.ref));
   const trips = Array.isArray(nextProf.trips) ? nextProf.trips : [];
@@ -185,6 +194,12 @@ async function applyWallet(env, db, u, bal, prevProf, nextProf) {
       if (dM === WALLET.rideMiles && !dT && !dF && !dS && today.ride + dM <= WALLET.rideDay) { today.ride += dM; credit(dM, 0, 0, 0, true); }
     } else if (text === "First review") {
       if (dM === WALLET.reviewMiles && !dT && !dF && !dS && !b.state.review) { b.state.review = true; credit(dM, 0, 0, 0, true); }
+    } else if (text === "Chinese New Year ang pao") {
+      if (!dM && !dT && !dS && dF > 0 && !today.angpao) {
+        const theme = await publishedData(env, db, "theme");
+        const reward = Math.max(0, Math.min(100000, wint(theme?.cny?.reward))) * 10;
+        if (reward > 0 && dF === reward) { today.angpao = true; credit(0, 0, dF, 0, false); }
+      }
     } else moveOut(Math.min(0, dM), Math.min(0, dT), Math.min(0, dF), Math.min(0, dS), Math.min(0, dJ));         // anything else may only take away
   }
   return b;

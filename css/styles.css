@@ -1317,3 +1317,35 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 
 /* Control Tower: small previews of the pasted YouTube links on the Music tab */
 .fag iframe { max-width: 100%; border-radius: 6px; margin-top: 4px; }
+
+/* Seasonal themes (Control Tower > Theme tab): Christmas snow, Chinese New Year fireworks + red side decoration
+   + ang pao button, Halloween bats. One shared full-screen overlay layer carries the falling/drifting pieces;
+   it never catches clicks, so it never gets in the way of the page underneath. */
+.theme-fx { position: fixed; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
+
+.theme-snowflake { position: absolute; top: -16px; color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, .35); animation-name: theme-snow-fall, theme-snow-drift; animation-timing-function: linear, ease-in-out; animation-iteration-count: 1, infinite; }
+@keyframes theme-snow-fall { from { transform: translateY(-16px); } to { transform: translateY(110vh); } }
+@keyframes theme-snow-drift { 0%, 100% { margin-left: 0; } 50% { margin-left: 26px; } }
+
+.theme-cny-side { position: fixed; top: 0; bottom: 0; width: 14px; background: linear-gradient(180deg, #c8102e, #7a0b1d); z-index: 6; pointer-events: none; }
+.theme-cny-side.left { left: 0; box-shadow: 2px 0 6px rgba(0, 0, 0, .2); }
+.theme-cny-side.right { right: 0; box-shadow: -2px 0 6px rgba(0, 0, 0, .2); }
+.theme-cny-side::before, .theme-cny-side::after { content: "🧧"; position: absolute; left: 50%; transform: translateX(-50%); font-size: 16px; }
+.theme-cny-side::before { top: 12%; }
+.theme-cny-side::after { top: 62%; }
+.theme-firework { position: absolute; width: 4px; height: 4px; border-radius: 50%; animation: theme-firework-burst 950ms ease-out forwards; }
+@keyframes theme-firework-burst { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(var(--fx), var(--fy)) scale(.2); opacity: 0; } }
+
+.ang-pao-btn { position: fixed; right: 14px; bottom: 14px; z-index: 70; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #7a0b1d; background: #d81e35; font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 0 2px 0 #7a0b1d; }
+.ang-pao-btn:hover { filter: brightness(1.08); }
+.ang-pao-btn:active { transform: translateY(2px); box-shadow: none; }
+.ang-pao-btn.ang-pao-opened { filter: grayscale(.55) brightness(.92); }
+.ang-pao-flash { position: fixed; right: 14px; bottom: 68px; z-index: 70; max-width: 220px; background: #1d1d1d; color: #fff; padding: 6px 10px; border-radius: 8px; font: 500 .82rem var(--sans); box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+
+.theme-bat { position: absolute; top: -24px; font-size: 20px; animation: theme-bat-fly linear 1; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .4)); }
+@keyframes theme-bat-fly { from { transform: translate(-10vw, 0) rotate(0deg); } to { transform: translate(110vw, 14vh) rotate(12deg); } }
+.theme-halloween-side { position: fixed; top: 50%; width: 30px; height: 30px; font-size: 22px; line-height: 30px; text-align: center; z-index: 6; pointer-events: none; opacity: .85; }
+.theme-halloween-side.left { left: 6px; }
+.theme-halloween-side.right { right: 6px; }
+
+@media print { .theme-fx, .theme-cny-side, .theme-halloween-side, .ang-pao-btn, .ang-pao-flash { display: none !important; } }

@@ -14,6 +14,7 @@ import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions
 import { cloudAdminCall, cloudState } from "./cloud.js";
 import { fetchPublished, publishToCloud, isPublisher } from "./published.js";
 import { THEMES, MAX_ADS, GRADS, PRESETS, hex, cleanAd, adNode } from "./ads.js";
+import { THEME_KEYS, THEME_CNY_REWARD, cleanTheme, cleanThemeEntry } from "./theme.js";
 import { cleanVersion } from "./version.js";
 
 const SESSION = "octee.tower.session";
@@ -169,11 +170,13 @@ async function tower(session, crew, notice = "") {
   const perksDraft = { unlimitedFujitech: { ...(publishedPerks.unlimitedFujitech || {}) }, freePro: { ...(publishedPerks.freePro || {}) }, freeModels: { ...(publishedPerks.freeModels || {}) }, freeJT: { ...(publishedPerks.freeJT || {}) } };
   const publishedDiscounts = await fetchJson("data/flight-discounts.json", { discounts: [] });
   const publishedMusic = await fetchJson("data/music.json", { tracks: [] });
+  const publishedTheme = cleanTheme(await fetchJson("data/theme.json", {}));
   let codes = load(DRAFT_CODES, null) || published.codes || [];
   let discounts = load("octee.tower.discounts", null) || publishedDiscounts.discounts || [];
   const draftMusic = load("octee.tower.music", null);
   let musicTracks = draftMusic?.tracks || publishedMusic.tracks || [];
   let musicSource = draftMusic?.source || publishedMusic.source || "youtube";
+  let theme = load("octee.tower.theme", null) || publishedTheme;
   const tabCodes = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "Codes");
   const tabDiscounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Flight discounts");
   const tabCrew = session.role === "owner" && !session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
@@ -182,6 +185,7 @@ async function tower(session, crew, notice = "") {
   const tabRequests = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Requests");
   const tabAds = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Ads");
   const tabMusic = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Music");
+  const tabTheme = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Theme");
   const tabCode = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Code");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
@@ -211,11 +215,12 @@ async function tower(session, crew, notice = "") {
     tabRequests.setAttribute("aria-selected", String(which === "requests"));
     tabAds.setAttribute("aria-selected", String(which === "ads"));
     tabMusic.setAttribute("aria-selected", String(which === "music"));
+    tabTheme.setAttribute("aria-selected", String(which === "theme"));
     tabCode.setAttribute("aria-selected", String(which === "code"));
     countRequests();
     if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
     if (which === "cloud") { body.replaceChildren(el("p", { class: "note" }, "Loading Cloud accounts…")); cloudPanel().then((n) => body.replaceChildren(n)); return; }
-    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "music" ? musicPanel() : which === "code" ? codePanel() : crewPanel());
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "music" ? musicPanel() : which === "theme" ? themePanel() : which === "code" ? codePanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabDiscounts.addEventListener("click", () => show("discounts"));
@@ -224,6 +229,7 @@ async function tower(session, crew, notice = "") {
   tabCloud?.addEventListener("click", () => show("cloud"));
   tabRequests.addEventListener("click", () => show("requests"));
   tabMusic.addEventListener("click", () => show("music"));
+  tabTheme.addEventListener("click", () => show("theme"));
   tabAds.addEventListener("click", () => show("ads"));
   tabCode.addEventListener("click", () => show("code"));
 
@@ -615,6 +621,50 @@ async function tower(session, crew, notice = "") {
       el("p", { class: "hint" }, "Manual download is only for when the cloud has a problem: replace data/music.json, commit and push."));
   }
 
+  // Theme: Christmas (snow), Chinese New Year (fireworks, red side decoration and an "ang pao" claim button) and
+  // Halloween (bats), each its own on/off switch plus an optional date range, same "" = no limit shape ads use.
+  // If more than one is left on at once, the site shows only the first of Christmas / Chinese New Year /
+  // Halloween that is active that day — this panel warns about it instead of guessing which one the visitor sees.
+  function themePanel() {
+    const tmsg = el("p", { class: "msg", "aria-live": "polite" });
+    const changed = () => setMsg(tmsg, "Changed. Press Save to cloud to make it live.", "info");
+    const LABELS = { christmas: "Christmas (falling snow)", cny: "Chinese New Year (fireworks, red side decoration, ang pao reward)", halloween: "Halloween (bats)" };
+    const card = (key) => {
+      const t = theme[key] || cleanThemeEntry({}, key);
+      const on = el("input", { type: "checkbox", checked: !!t.on });
+      on.addEventListener("change", () => { t.on = on.checked; theme = { ...theme, [key]: t }; changed(); });
+      const start = el("input", { type: "date", value: t.start || "" });
+      start.addEventListener("change", () => { t.start = start.value; theme = { ...theme, [key]: t }; changed(); });
+      const end = el("input", { type: "date", value: t.end || "" });
+      end.addEventListener("change", () => { t.end = end.value; theme = { ...theme, [key]: t }; changed(); });
+      const rewardField = key === "cny" ? (() => {
+        const reward = el("input", { type: "number", min: "0", max: "100000", step: "1", value: String(t.reward ?? THEME_CNY_REWARD) });
+        reward.addEventListener("input", () => { t.reward = Math.max(0, Math.min(100000, Math.floor(Number(reward.value) || 0))); theme = { ...theme, [key]: t }; changed(); });
+        return el("div", { class: "field" }, el("label", {}, "Ang pao reward (Fujitech, once a day per account)"), reward);
+      })() : "";
+      return el("div", { class: "card" }, el("h3", {}, LABELS[key]),
+        el("div", { class: "field" }, el("label", {}, on, " On")),
+        el("div", { class: "row" },
+          el("div", { class: "field" }, el("label", {}, "Starts (blank = no start limit)"), start),
+          el("div", { class: "field" }, el("label", {}, "Ends (blank = no end limit)"), end),
+          rewardField));
+    };
+    const onCount = THEME_KEYS.filter((k) => theme[k]?.on).length;
+    return el("div", {},
+      el("div", { class: "card" }, el("h3", {}, "Seasonal themes"),
+        el("p", { class: "note" }, "Switch a theme on to decorate the whole site: falling snow for Christmas, fireworks and red decoration at the side for Chinese New Year, bats for Halloween. A date range is optional — leave both blank to control it with the switch alone instead. Only one theme shows at a time: if more than one is on, Christmas wins, then Chinese New Year, then Halloween."),
+        onCount > 1 ? el("p", { class: "msg info" }, `${onCount} themes are On at once — only one will actually show (Christmas, then Chinese New Year, then Halloween, whichever comes first).`) : ""),
+      ...THEME_KEYS.map(card),
+      el("div", { class: "actions" },
+        el("button", { class: "btn", type: "button", onclick: async () => {
+          const clean = cleanTheme(theme);
+          if (await saveToCloud("theme", clean, tmsg, "Theme")) { theme = clean; save("octee.tower.theme", theme); show("theme"); body.append(el("p", { class: "msg ok" }, "Theme saved to the cloud. It is live now, on every page.")); }
+        } }, "Save to cloud"),
+        el("button", { class: "btn small ghost", type: "button", onclick: () => download("theme.json", cleanTheme(theme)) }, "Manual download: theme.json")),
+      tmsg,
+      el("p", { class: "hint" }, "Manual download is only for when the cloud has a problem: replace data/theme.json, commit and push."));
+  }
+
   // Code: the read-only code viewer. It needs a cloud account that may open it (the owner, or one added with 10 logo clicks).
   function codePanel() {
     const cmsg = el("p", { class: "msg", "aria-live": "polite" });
@@ -665,7 +715,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabMusic, tabCode, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabMusic, tabTheme, tabCode, tabCrew),
     cloudBar,
     body,
     el("p", { class: "hint" }, "Changes here are drafts in this browser until you press Save to cloud. Cloud admin role changes take effect immediately."));

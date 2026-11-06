@@ -68,6 +68,21 @@ export function claimFujiairDaily() {
   });
 }
 
+// Chinese New Year's "ang pao" (red packet): one claim a day, same shape as FujiAIR's daily Fujitech above, but
+// its amount comes from whatever the Control Tower has saved for this year's Chinese New Year theme (js/theme.js
+// passes it in; the Control Tower's Theme tab is where it is set) rather than being fixed.
+export const angPaoClaimedToday = (u) => ((u && u.history) || []).some((h) => String(h.at || "").slice(0, 10) === dayKey() && h.text === "Chinese New Year ang pao");
+export function claimAngPao(rewardFujitech) {
+  return updateUser((u) => {
+    if (angPaoClaimedToday(u)) throw new Error("You already opened today's ang pao. Come back tomorrow.");
+    const gained = Math.max(0, Math.floor(Number(rewardFujitech) || 0)) * 10;
+    if (!gained) throw new Error("No Chinese New Year reward is set right now.");
+    u.fujitechTenths = fujitechTenthsOf(u) + gained;
+    u.history.unshift({ at: new Date().toISOString(), text: "Chinese New Year ang pao", fujitechTenths: gained });
+    return gained;
+  });
+}
+
 export function cargoFareTenths(routeMiles, weightKg) {
   const miles = Math.max(0, Number(routeMiles) || 0);
   const kg = Math.max(0.1, Number(weightKg) || 0.1);

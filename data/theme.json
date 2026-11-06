@@ -1,0 +1,5 @@
+{
+  "christmas": { "on": false, "start": "", "end": "" },
+  "cny": { "on": false, "start": "", "end": "", "reward": 188 },
+  "halloween": { "on": false, "start": "", "end": "" }
+}
