@@ -61,14 +61,16 @@ let mount, box, icon, player;
 let started = false, hiddenPlayer = false, joelSinging = false, checkpointTimer = null;
 
 // Where to pick up: a checkpoint saved from the previous page, in this same tab, for the same track(s) —
-// otherwise null, meaning "start from the top".
+// otherwise null, meaning "start from the top". Keeps the raw saved time + timestamp rather than pre-computing
+// the elapsed position, so the actual seek (in onReady, below) can work out "how far in" right when it happens —
+// loading the YouTube API can itself take a second or more, and that gap should count too.
 function readCheckpoint(list) {
   const pos = loadSession(POS_KEY, null);
   if (!pos || typeof pos.t !== "number" || typeof pos.at !== "number") return null;
   const i = Number.isInteger(pos.i) && pos.i >= 0 && pos.i < list.length ? pos.i : 0;
-  const elapsed = pos.t + Math.max(0, (Date.now() - pos.at) / 1000);
-  return { i, t: elapsed };
+  return { i, t: pos.t, at: pos.at };
 }
+const elapsedNow = (resume) => resume.t + Math.max(0, (Date.now() - resume.at) / 1000);
 
 function checkpoint() {
   if (!player) return;
@@ -93,16 +95,21 @@ export async function startTowerMusic() {
   box?.classList.remove("tower-music-hidden");          // show the frame right away, don't wait on the network
   await loadApi();
   player = new YT.Player(mount, {
+    // No playerVars.autoplay here on purpose: with it on, YouTube starts playing from the top itself the moment
+    // the embed is ready, racing the seekTo() below — the visitor would briefly hear the track restart before it
+    // jumped to the resumed spot. Seeking first, then calling playVideo() ourselves once that's done, gives a
+    // single clean start at the right position instead.
     width: "46", height: "26", videoId: list[resume?.i ?? 0],
-    playerVars: { autoplay: 1, loop: 1, playlist: list.join(","), start: resume ? Math.floor(resume.t) : undefined, controls: 1, modestbranding: 1, rel: 0 },
+    playerVars: { loop: 1, playlist: list.join(","), controls: 1, modestbranding: 1, rel: 0 },
     events: {
       onReady: (e) => {
-        try {
-          if (resume && e.target.seekTo) e.target.seekTo(resume.t, true);   // sub-second precision beyond the integer "start" param
-          if (joelSinging) e.target.pauseVideo(); else e.target.playVideo();
-        } catch { /* browser blocked it; the visible controls still let the visitor press play */ }
+        try { if (resume) e.target.seekTo(elapsedNow(resume), true); } catch { /* not resuming, or browser blocked it */ }
+        try { if (joelSinging) e.target.pauseVideo(); else e.target.playVideo(); } catch { /* browser blocked it; the visible controls still let the visitor press play, already at the resumed spot */ }
       },
-      onStateChange: (e) => { icon?.classList.toggle("tower-music-playing", e.data === YT.PlayerState.PLAYING); }
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.PLAYING) icon?.classList.add("tower-music-playing");
+        else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) icon?.classList.remove("tower-music-playing");
+      }
     }
   });
   checkpointTimer = setInterval(checkpoint, 1000);      // keeps the next page's resume spot fresh
