@@ -45,10 +45,13 @@ async function etchedList(env) {
 const adOk = (a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.title === "string" && a.title.length <= 80
   && ["text", "icon", "button", "pages", "start", "end", "id"].every((k) => a[k] === undefined || typeof a[k] === "string")
   && (!a.text || a.text.length <= 200) && ["link", "image"].every((k) => !a[k] || (typeof a[k] === "string" && a[k].length <= 300 && (/^https:\/\/\S+$/i.test(a[k]) || (k === "link" && /^[\w-]+\.html(#[\w-]*)?$/i.test(a[k])))));
-// Music from the Control Tower: a YouTube video ID, not the video or audio itself — the site always embeds
-// YouTube's own player to play it, never downloads or re-hosts it. At most 2 tracks (the second makes it a loop of two).
-const musicIdOk = (t) => t && typeof t === "object" && !Array.isArray(t) && typeof t.id === "string" && /^[\w-]{6,20}$/.test(t.id);
-const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), ads: (d) => Array.isArray(d.ads) && d.ads.length <= 30 && d.ads.every(adOk), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech), music: (d) => Array.isArray(d.tracks) && d.tracks.length <= 2 && d.tracks.every(musicIdOk) };
+// Music from the Control Tower: a track ID, not the audio itself — the site always embeds the platform's own
+// player (YouTube or, now, Spotify) to play it, never downloads or re-hosts it. At most 2 tracks (the second
+// makes it a loop of two). `source` picks which platform the IDs are for; missing/unrecognised defaults to
+// "youtube" so data saved before this field existed keeps working unchanged.
+const MUSIC_ID = { youtube: /^[\w-]{6,20}$/, spotify: /^[A-Za-z0-9]{22}$/ };
+const musicIdOk = (t, source) => t && typeof t === "object" && !Array.isArray(t) && typeof t.id === "string" && MUSIC_ID[source].test(t.id);
+const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), ads: (d) => Array.isArray(d.ads) && d.ads.length <= 30 && d.ads.every(adOk), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech), music: (d) => (d.source === undefined || d.source === "youtube" || d.source === "spotify") && Array.isArray(d.tracks) && d.tracks.length <= 2 && d.tracks.every((t) => musicIdOk(t, d.source || "youtube")) };
 const MAX_DATA = 400 * 1024;
 // Account perks the Control Tower publishes ("perks"). Until a setting is saved there, these defaults apply.
 const DEFAULT_PERKS = { freePro: { octee: true, joel: true }, freeModels: { octee: true, joel: true } };

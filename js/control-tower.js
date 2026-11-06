@@ -58,6 +58,25 @@ function youtubeId(input) {
   return "";
 }
 
+// Pulls a Spotify track ID out of a pasted link (open.spotify.com/track/<id>, a spotify:track:<id> URI), or
+// passes through something that already looks like a bare ID (22 base62 characters). Returns "" if it can't
+// make sense of the input.
+function spotifyId(input) {
+  const s = (input || "").trim();
+  if (!s) return "";
+  if (/^[A-Za-z0-9]{22}$/.test(s)) return s;
+  const uri = s.match(/^spotify:track:([A-Za-z0-9]{22})$/);
+  if (uri) return uri[1];
+  try {
+    const u = new URL(/^https?:\/\//i.test(s) ? s : "https://" + s);
+    if (/(^|\.)spotify\.com$/.test(u.hostname)) {
+      const m = u.pathname.match(/\/track\/([A-Za-z0-9]{22})/);
+      if (m) return m[1];
+    }
+  } catch { /* not a URL we understand */ }
+  return "";
+}
+
 function shell(...content) {
   back?.remove();
   back = el("div", { class: "modal-back fag-back", role: "dialog", "aria-modal": "true", "aria-label": "FAG Fuji Airport Group, Control Tower administration" },
@@ -152,7 +171,9 @@ async function tower(session, crew, notice = "") {
   const publishedMusic = await fetchJson("data/music.json", { tracks: [] });
   let codes = load(DRAFT_CODES, null) || published.codes || [];
   let discounts = load("octee.tower.discounts", null) || publishedDiscounts.discounts || [];
-  let musicTracks = load("octee.tower.music", null) || publishedMusic.tracks || [];
+  const draftMusic = load("octee.tower.music", null);
+  let musicTracks = draftMusic?.tracks || publishedMusic.tracks || [];
+  let musicSource = draftMusic?.source || publishedMusic.source || "youtube";
   const tabCodes = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "Codes");
   const tabDiscounts = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Flight discounts");
   const tabCrew = session.role === "owner" && !session.cloud ? el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Admins") : null;
@@ -549,32 +570,47 @@ async function tower(session, crew, notice = "") {
   function musicPanel() {
     const mmsg = el("p", { class: "msg", "aria-live": "polite" });
     const changed = () => setMsg(mmsg, "Changed. Press Save to cloud to make it live.", "info");
-    const inputs = [0, 1].map((i) => el("input", { type: "text", id: "mt-" + i, maxlength: "200", value: musicTracks[i]?.id || "", placeholder: "youtube.com/watch?v=… or youtu.be/…" }));
+    let source = musicSource === "spotify" ? "spotify" : "youtube";
+    const idOf = (v) => (source === "spotify" ? spotifyId(v) : youtubeId(v));
+    const inputs = [0, 1].map((i) => el("input", { type: "text", id: "mt-" + i, maxlength: "200", value: musicTracks[i]?.id || "" }));
     const previews = [el("div"), el("div")];
+    const fields = [el("div", {}), el("div", {})];
     const refreshPreviews = () => inputs.forEach((inp, i) => {
-      const id = youtubeId(inp.value);
+      const id = idOf(inp.value);
       previews[i].replaceChildren(id
-        ? el("iframe", { width: "160", height: "90", src: `https://www.youtube.com/embed/${id}`, title: "Preview", frameborder: "0", allow: "autoplay; encrypted-media" })
+        ? source === "spotify"
+          ? el("iframe", { width: "260", height: "80", src: `https://open.spotify.com/embed/track/${id}`, title: "Preview", frameborder: "0", allow: "autoplay; encrypted-media" })
+          : el("iframe", { width: "160", height: "90", src: `https://www.youtube.com/embed/${id}`, title: "Preview", frameborder: "0", allow: "autoplay; encrypted-media" })
         : el("p", { class: "note" }, "No track in this slot."));
     });
+    const applyPlaceholders = () => inputs.forEach((inp) => { inp.placeholder = source === "spotify" ? "open.spotify.com/track/… or spotify:track:…" : "youtube.com/watch?v=… or youtu.be/…"; });
+    applyPlaceholders();
     refreshPreviews();
     inputs.forEach((inp) => inp.addEventListener("input", () => { changed(); refreshPreviews(); }));
+    const srcYoutube = el("input", { type: "radio", name: "mt-source", id: "mt-src-yt", checked: source === "youtube" });
+    const srcSpotify = el("input", { type: "radio", name: "mt-source", id: "mt-src-sp", checked: source === "spotify" });
+    const switchSource = (to) => { source = to; applyPlaceholders(); refreshPreviews(); changed(); };
+    srcYoutube.addEventListener("change", () => srcYoutube.checked && switchSource("youtube"));
+    srcSpotify.addEventListener("change", () => srcSpotify.checked && switchSource("spotify"));
     return el("div", {},
       el("div", { class: "card" }, el("h3", {}, "Tower Music"),
-        el("p", { class: "note" }, "Paste a YouTube link. The site never downloads or stores the actual video or audio — it embeds YouTube's own player, which plays it, same as embedding a video in a news article. That is what keeps this clear of copyright trouble; only paste links you actually have the right to loop on the site (your own uploads, or anything the uploader has made embeddable and meant to be shared this way). One track loops forever; add a second and the two play back to back, looping as a pair. Clear a box and Save to cloud to drop a track; clear both to turn the player off."),
+        el("p", { class: "note" }, "Paste a link from one source — YouTube or Spotify. The site never downloads or stores the actual video or audio — it embeds that platform's own player, which plays it, same as embedding a video in a news article. That is what keeps this clear of copyright trouble; only paste links you actually have the right to loop on the site (your own uploads/tracks, or anything the owner has made embeddable and meant to be shared this way). One track loops forever; add a second and the two play back to back, looping as a pair. Clear a box and Save to cloud to drop a track; clear both to turn the player off."),
+        el("div", { class: "row" },
+          el("label", { class: "radio" }, srcYoutube, " YouTube"),
+          el("label", { class: "radio" }, srcSpotify, " Spotify")),
         el("div", { class: "row" },
           el("div", { class: "field" }, el("label", { for: "mt-0" }, "Track 1"), inputs[0], previews[0]),
           el("div", { class: "field" }, el("label", { for: "mt-1" }, "Track 2 (optional)"), inputs[1], previews[1]))),
       el("div", { class: "actions" },
         el("button", { class: "btn", type: "button", onclick: async () => {
-          if (inputs.some((inp) => inp.value.trim() && !youtubeId(inp.value))) return setMsg(mmsg, "One of those doesn't look like a YouTube link or video ID.", "error");
-          const tracks = inputs.map((inp) => youtubeId(inp.value)).filter(Boolean).map((id) => ({ id }));
-          if (await saveToCloud("music", { tracks }, mmsg, "Music")) {
-            musicTracks = tracks; save("octee.tower.music", musicTracks); show("music");
+          if (inputs.some((inp) => inp.value.trim() && !idOf(inp.value))) return setMsg(mmsg, source === "spotify" ? "One of those doesn't look like a Spotify link or track ID." : "One of those doesn't look like a YouTube link or video ID.", "error");
+          const tracks = inputs.map((inp) => idOf(inp.value)).filter(Boolean).map((id) => ({ id }));
+          if (await saveToCloud("music", { source, tracks }, mmsg, "Music")) {
+            musicTracks = tracks; musicSource = source; save("octee.tower.music", { source, tracks }); show("music");
             body.append(el("p", { class: "msg ok" }, tracks.length ? "Music saved to the cloud. It is live now, on every page." : "Music cleared. Nothing will play now."));
           }
         } }, "Save to cloud"),
-        el("button", { class: "btn small ghost", type: "button", onclick: () => download("music.json", { tracks: inputs.map((inp) => youtubeId(inp.value)).filter(Boolean).map((id) => ({ id })) }) }, "Manual download: music.json")),
+        el("button", { class: "btn small ghost", type: "button", onclick: () => download("music.json", { source, tracks: inputs.map((inp) => idOf(inp.value)).filter(Boolean).map((id) => ({ id })) }) }, "Manual download: music.json")),
       mmsg,
       el("p", { class: "hint" }, "Manual download is only for when the cloud has a problem: replace data/music.json, commit and push."));
   }
