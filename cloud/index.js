@@ -54,12 +54,15 @@ const musicIdOk = (t, source) => t && typeof t === "object" && !Array.isArray(t)
 // Seasonal themes from the Control Tower: Christmas, Chinese New Year and Halloween, each just an on/off switch
 // plus an optional date range (same "" = no limit shape as an ad's start/end). Chinese New Year also carries the
 // Fujitech amount its "ang pao" button pays out, 0-100000.
-const THEME_KEYS = ["christmas", "cny", "deepavali", "halloween"];
+const THEME_KEYS = ["christmas", "cny", "deepavali", "halloween", "aidilfitri", "haji", "vesak", "midautumn", "thaipusam", "easter"];
+// Festivals that pay a daily reward, keyed by the history text the browser writes (must match THEME_REWARDS in js/theme.js).
+const THEME_REWARDS = { "Chinese New Year ang pao": "cny", "Hari Raya Aidilfitri duit raya": "aidilfitri", "Mid-Autumn lantern": "midautumn", "Easter egg": "easter" };
+const THEME_REWARD_KEYS = Object.values(THEME_REWARDS);
 const themeDateOk = (v) => v === undefined || v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v);
 const themeEntryOk = (t) => t && typeof t === "object" && !Array.isArray(t) && typeof t.on === "boolean" && themeDateOk(t.start) && themeDateOk(t.end);
 const themeOk = (d) => d && typeof d === "object" && !Array.isArray(d)
   && THEME_KEYS.every((k) => d[k] === undefined || themeEntryOk(d[k]))
-  && (d.cny === undefined || d.cny.reward === undefined || (Number.isFinite(d.cny.reward) && d.cny.reward >= 0 && d.cny.reward <= 100000));
+  && THEME_REWARD_KEYS.every((k) => d[k] === undefined || d[k].reward === undefined || (Number.isFinite(d[k].reward) && d[k].reward >= 0 && d[k].reward <= 100000));
 const DATA_NAMES = { codes: (d) => Array.isArray(d.codes), accounts: (d) => Array.isArray(d.accounts), permissions: (d) => d.crew && typeof d.crew === "object" && !Array.isArray(d.crew), "control-tower": (d) => "owner" in d && Array.isArray(d.admins), "flight-discounts": (d) => Array.isArray(d.discounts), ads: (d) => Array.isArray(d.ads) && d.ads.length <= 30 && d.ads.every(adOk), perks: (d) => d.unlimitedFujitech && typeof d.unlimitedFujitech === "object" && !Array.isArray(d.unlimitedFujitech), music: (d) => (d.source === undefined || d.source === "youtube" || d.source === "spotify") && Array.isArray(d.tracks) && d.tracks.length <= 2 && d.tracks.every((t) => musicIdOk(t, d.source || "youtube")), theme: themeOk };
 const MAX_DATA = 400 * 1024;
 // Account perks the Control Tower publishes ("perks"). Until a setting is saved there, these defaults apply.
@@ -194,11 +197,13 @@ async function applyWallet(env, db, u, bal, prevProf, nextProf) {
       if (dM === WALLET.rideMiles && !dT && !dF && !dS && today.ride + dM <= WALLET.rideDay) { today.ride += dM; credit(dM, 0, 0, 0, true); }
     } else if (text === "First review") {
       if (dM === WALLET.reviewMiles && !dT && !dF && !dS && !b.state.review) { b.state.review = true; credit(dM, 0, 0, 0, true); }
-    } else if (text === "Chinese New Year ang pao") {
-      if (!dM && !dT && !dS && dF > 0 && !today.angpao) {
+    } else if (THEME_REWARDS[text]) {
+      // A festival reward: one a day per account. The ang pao keeps its old day flag ("angpao") so today's claims carry over.
+      const key = THEME_REWARDS[text], flag = key === "cny" ? "angpao" : "reward_" + key;
+      if (!dM && !dT && !dS && dF > 0 && !today[flag]) {
         const theme = await publishedData(env, db, "theme");
-        const reward = Math.max(0, Math.min(100000, wint(theme?.cny?.reward))) * 10;
-        if (reward > 0 && dF === reward) { today.angpao = true; credit(0, 0, dF, 0, false); }
+        const reward = Math.max(0, Math.min(100000, wint(theme?.[key]?.reward))) * 10;
+        if (reward > 0 && dF === reward) { today[flag] = true; credit(0, 0, dF, 0, false); }
       }
     } else moveOut(Math.min(0, dM), Math.min(0, dT), Math.min(0, dF), Math.min(0, dS), Math.min(0, dJ));         // anything else may only take away
   }
@@ -491,8 +496,9 @@ export default {
       }
       // Reviews: everyone can read them; a cloud login writes one review each.
       if (req.method === "GET" && path === "/api/reviews") {
-        const rows = await db.prepare("SELECT id, username, stars, title, body, date, route, trip_ref, verified FROM review_posts ORDER BY updated_at DESC LIMIT 300").all();
-        return reply(req, { reviews: (rows.results || []).map((r) => ({ id: r.id, username: r.username, stars: r.stars, title: r.title, body: r.body, date: r.date, route: r.route || "", tripRef: r.trip_ref || "", verified: !!r.verified })) });
+        const rows = await db.prepare("SELECT id, username, stars, title, body, date, route, trip_ref, verified, created_at, updated_at FROM review_posts ORDER BY updated_at DESC LIMIT 300").all();
+        // edited: changed after it was first posted (by its writer, or by the Control Tower)
+        return reply(req, { reviews: (rows.results || []).map((r) => ({ id: r.id, username: r.username, stars: r.stars, title: r.title, body: r.body, date: r.date, route: r.route || "", tripRef: r.trip_ref || "", verified: !!r.verified, edited: r.updated_at !== r.created_at })) });
       }
       if (req.method === "POST" && (path === "/api/register" || path === "/api/login")) {
         const b = await req.json().catch(() => ({}));
@@ -546,6 +552,7 @@ export default {
         if (!u) return reply(req, { error: "login" }, 401);
         const idm = path.match(/^\/api\/review\/(\d+)$/), rid = idm ? Number(idm[1]) : null;
         if (req.method === "DELETE") {
+          if (rid && (await adminRole())) { await db.prepare("DELETE FROM review_posts WHERE id=?").bind(rid).run(); return reply(req, { ok: true, staff: true }); }   // Control Tower owner/admin may remove any review
           if (rid) await db.prepare("DELETE FROM review_posts WHERE id=? AND user_id=?").bind(rid, u.id).run();
           else await db.prepare("DELETE FROM review_posts WHERE id=(SELECT id FROM review_posts WHERE user_id=? ORDER BY id DESC LIMIT 1)").bind(u.id).run();   // older pages: delete the newest
           return reply(req, { ok: true });
@@ -560,6 +567,12 @@ export default {
           if (body.length < 20) return reply(req, { error: "bad_body" }, 400);
           const date = /^\d{4}-\d{2}-\d{2}$/.test(String(b?.date || "")) ? b.date : iso().slice(0, 10);
           const at = iso(), route = clip(b?.route, 60), trip = clip(b?.tripRef, 20), ver = b?.verified ? 1 : 0;
+          if (rid && (await adminRole())) {   // Control Tower owner/admin: change only the words and stars; the writer, flight and date stay
+            const found = await db.prepare("SELECT id FROM review_posts WHERE id=?").bind(rid).first();
+            if (!found) return reply(req, { error: "not_found" }, 404);
+            await db.prepare("UPDATE review_posts SET stars=?, title=?, body=?, updated_at=? WHERE id=?").bind(stars, title, body, at, rid).run();
+            return reply(req, { ok: true, id: rid, staff: true });
+          }
           const mine = ((await db.prepare("SELECT id, trip_ref, created_at FROM review_posts WHERE user_id=?").bind(u.id).all()).results) || [];
           if (rid && !mine.some((r) => r.id === rid)) return reply(req, { error: "not_found" }, 404);
           if (trip && mine.some((r) => r.trip_ref === trip && r.id !== rid)) return reply(req, { error: "trip_taken" }, 409);

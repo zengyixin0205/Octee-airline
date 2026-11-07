@@ -3,6 +3,7 @@ import { $, el, reducedMotion } from "./dom.js";
 import { ALL_FLIGHTS, placeShort } from "./destinations.js";
 import { scraggyData } from "./scraggy.js";
 import { CONFIG } from "./config.js";
+import { currentThemeKey, THEME_NAMES } from "./theme.js";
 
 const root = $("#app");
 const CH = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-/'.";
@@ -53,6 +54,7 @@ async function rows() {
 }
 async function build() {
   const list = await rows();
+  const festival = await currentThemeKey();
   const board = el("div", { class: "sf-board", id: "sf-board", role: "table", "aria-label": "Departures, all delayed" },
     el("div", { class: "sf-head", role: "row" }, ...["FLIGHT", "TO", "TIME", "STATUS"].map((h) => el("span", { role: "columnheader" }, h))),
     ...list.map((f) => el("div", { class: "sf-row", role: "row" }, word(f.no, W.no), word(f.to, W.to), word(String(f.time), W.time), word("DELAYED", W.st))));
@@ -61,6 +63,7 @@ async function build() {
   const again = el("button", { class: "btn small ghost", type: "button", onclick: () => { board.querySelectorAll(".sf").forEach((c) => { c.textContent = " "; }); flipAll(board); } }, "Flip again");
   const clock = el("span", { class: "sf-clock" });
   const wrap = el("div", { id: "sf-wrap", class: "sf-wrap" }, el("div", { class: "sf-title" }, el("strong", {}, "OCTEE AIRLINES · DEPARTURES"), clock), board,
+    festival && THEME_NAMES[festival] ? el("div", { class: "sf-festival" }, `FESTIVAL DAY · ALL FLIGHTS DELAYED FOR ${THEME_NAMES[festival].toUpperCase()}`) : "",
     el("div", { class: "sf-foot" }, "ALL FLIGHTS DELAYED · WE ARE SORRY · THIS IS NOT A MISTAKE"));
   root.replaceChildren(el("div", { class: "actions" }, fs, snd, again), wrap);
   const upd = () => { clock.textContent = new Intl.DateTimeFormat("en-GB", { timeZone: CONFIG.FIA_TIMEZONE, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()) + " FIA"; };

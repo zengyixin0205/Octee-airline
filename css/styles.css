@@ -1342,13 +1342,13 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 .ang-pao-btn.ang-pao-opened { filter: grayscale(.55) brightness(.92); }
 .ang-pao-flash { position: fixed; right: 14px; bottom: 68px; z-index: 70; max-width: 220px; background: #1d1d1d; color: #fff; padding: 6px 10px; border-radius: 8px; font: 500 .82rem var(--sans); box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
 
-.theme-bat { position: absolute; top: -24px; font-size: 20px; animation: theme-bat-fly linear 1; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .4)); }
+.theme-bat { position: absolute; top: -24px; font-size: 30px; animation: theme-bat-fly linear 1; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .4)); }
 @keyframes theme-bat-fly { from { transform: translate(-10vw, 0) rotate(0deg); } to { transform: translate(110vw, 14vh) rotate(12deg); } }
 .theme-halloween-side { position: fixed; top: 50%; width: 30px; height: 30px; font-size: 22px; line-height: 30px; text-align: center; z-index: 6; pointer-events: none; opacity: .85; }
 .theme-halloween-side.left { left: 6px; }
 .theme-halloween-side.right { right: 6px; }
 
-.theme-diya { position: absolute; font-size: 20px; opacity: 0; animation: theme-diya-glow ease-in-out 1; filter: drop-shadow(0 0 6px rgba(255, 170, 40, .7)); }
+.theme-diya { position: absolute; font-size: 30px; opacity: 0; animation: theme-diya-glow ease-in-out 1; filter: drop-shadow(0 0 6px rgba(255, 170, 40, .7)); }
 @keyframes theme-diya-glow { 0% { opacity: 0; transform: scale(.85); } 15%, 75% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(.9); } }
 .theme-deepavali-side { position: fixed; top: 0; bottom: 0; width: 14px; background: linear-gradient(180deg, #ffb300, #7a3b00); z-index: 6; pointer-events: none; }
 .theme-deepavali-side.left { left: 0; box-shadow: 2px 0 6px rgba(0, 0, 0, .2); }
@@ -1357,4 +1357,49 @@ body.convenient #confirm, body.convenient #cp-form button[type=submit], body.con
 .theme-deepavali-side::before { top: 12%; }
 .theme-deepavali-side::after { top: 62%; }
 
-@media print { .theme-fx, .theme-cny-side, .theme-deepavali-side, .theme-halloween-side, .ang-pao-btn, .ang-pao-flash { display: none !important; } }
+/* Festival greeting on the home page, and the festival-day line on the departures board (both shown only while a theme is on) */
+.festival-greet { margin: 8px 0 0; font-weight: 600; color: #fff7d6; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+.sf-festival { margin-top: 12px; color: #ffd54a; text-align: center; font-size: .9rem; letter-spacing: .08em; }
+
+/* Festival themes added later: falling, rising and twinkling emoji, and coloured side ribbons (.theme-side) whose colour and icon js/theme.js sets as CSS variables */
+.theme-side { position: fixed; top: 0; bottom: 0; width: 14px; background: var(--side-bg); z-index: 6; pointer-events: none; }
+.theme-side.left { left: 0; box-shadow: 2px 0 6px rgba(0, 0, 0, .2); }
+.theme-side.right { right: 0; box-shadow: -2px 0 6px rgba(0, 0, 0, .2); }
+.theme-side::before, .theme-side::after { content: var(--side-icon); position: absolute; left: 50%; transform: translateX(-50%); font-size: 16px; }
+.theme-side::before { top: 12%; }
+.theme-side::after { top: 62%; }
+.theme-fall, .theme-rise { position: absolute; line-height: 1; pointer-events: none; }
+.theme-fall { top: -28px; animation: theme-fall-drop linear 1 forwards; }
+@keyframes theme-fall-drop { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(125vh) rotate(160deg); } }
+.theme-rise { bottom: -40px; animation: theme-rise-up linear 1 forwards; }
+@keyframes theme-rise-up { from { transform: translateY(0); opacity: .9; } to { transform: translateY(-125vh); opacity: .2; } }
+.theme-twinkle { position: absolute; font-size: 20px; opacity: 0; animation: theme-twinkle-glow ease-in-out 1; filter: drop-shadow(0 0 6px rgba(255, 236, 150, .8)); }
+@keyframes theme-twinkle-glow { 0% { opacity: 0; transform: scale(.7); } 20%, 70% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(.8); } }
+/* Festival extras (js/festival-pieces.js): big tappable pieces, sweet bowls, Santa and his gift, corner trees, surprises */
+.theme-big { position: fixed; z-index: 64; font-size: 84px; line-height: 1; background: none; border: 0; padding: 0; cursor: pointer; user-select: none; transition: filter .25s, transform .2s; }
+.theme-big:hover { transform: scale(1.06); }
+.theme-big:active { transform: scale(.94); }
+.theme-big.off { filter: grayscale(.6) brightness(.5); }
+.theme-big.lit { filter: drop-shadow(0 0 18px #ffa726) drop-shadow(0 0 4px #fff3b0) brightness(1.12); }
+.theme-big.bloom { transform: scale(1.3); }
+.theme-big.bloom:hover { transform: scale(1.36); }
+.theme-big.spin { animation: theme-spin .9s ease-in-out; }
+@keyframes theme-spin { to { transform: rotate(360deg); } }
+.theme-bowl { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 64; display: flex; flex-direction: column; align-items: center; gap: 2px; background: rgba(20, 20, 20, .85); color: #fff; border: 2px solid #ffb300; border-radius: 16px; padding: 6px 14px; font: 600 .8rem var(--sans); cursor: pointer; }
+.theme-bowl:hover { filter: brightness(1.15); }
+.theme-bowl-emoji { font-size: 40px; line-height: 1; }
+.theme-flash { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 90; background: #1d1d1d; color: #fff; padding: 8px 14px; border-radius: 10px; font: 600 .9rem var(--sans); max-width: 90vw; text-align: center; }
+.theme-surprise { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 90; max-width: 320px; background: #fff; color: #1d1d1d; border: 3px solid #ffb300; border-radius: 14px; padding: 16px 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); font: 600 1rem var(--sans); text-align: center; cursor: pointer; }
+.theme-surprise small { display: block; margin-top: 8px; font-weight: 400; color: #555; }
+.theme-flyer { position: fixed; top: 9vh; left: -10vw; font-size: 48px; line-height: 1; z-index: 62; pointer-events: none; filter: drop-shadow(0 0 4px rgba(0, 0, 0, .3)); animation: theme-fly 14s linear 1 forwards; }
+@keyframes theme-fly { from { transform: translateX(0); } to { transform: translateX(124vw); } }
+.theme-gift { position: fixed; top: 18vh; z-index: 63; display: flex; flex-direction: column; align-items: center; background: none; border: 0; cursor: pointer; animation: theme-gift-fall 1.8s ease-in forwards; }
+.theme-gift-box { font-size: 44px; line-height: 1; }
+.theme-gift-tag { background: #fff; color: #c8102e; border-radius: 8px; padding: 2px 6px; font: 700 .72rem var(--sans); margin-top: 2px; }
+@keyframes theme-gift-fall { from { transform: translateY(0); } to { transform: translateY(52vh); } }
+.theme-tree { position: fixed; z-index: 4; font-size: 72px; line-height: 1; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .35)); }
+.theme-tree-tl { top: -12px; left: -8px; transform: rotate(-16deg); }
+.theme-tree-tr { top: -12px; right: -8px; transform: rotate(16deg); }
+.theme-tree-bl { bottom: -12px; left: -8px; transform: rotate(14deg); }
+.theme-tree-br { bottom: -12px; right: -8px; transform: rotate(-14deg); }
+@media print { .theme-fx, .theme-cny-side, .theme-deepavali-side, .theme-halloween-side, .theme-side, .theme-big, .theme-bowl, .theme-flyer, .theme-gift, .theme-surprise, .theme-flash, .theme-tree, .ang-pao-btn, .ang-pao-flash { display: none !important; } }

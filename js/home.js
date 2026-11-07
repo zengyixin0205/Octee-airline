@@ -6,8 +6,11 @@ import { allReviews, starsText } from "./reviews-data.js";
 import { currentUser } from "./auth.js";
 import { fujitechTenthsOf, fmtFujitech, claimFujiairDaily, fujiairClaimedToday, fujiairDailyAmount, fujiairGoldOrHigher } from "./fujitech.js";
 import { push } from "./cloud.js";
+import { currentThemeKey, THEME_GREETINGS } from "./theme.js";
 
 mountRotator($("#rotator"));
+// Festival greeting: only while a seasonal theme is on (js/theme.js THEME_GREETINGS)
+currentThemeKey().then((key) => { const g = $("#festival-greet"); if (key && THEME_GREETINGS[key]) { g.textContent = THEME_GREETINGS[key]; g.hidden = false; } });
 mountSearchBox($("#home-search"), { onSearch: goSearch });
 
 // Quick flight finder -> the booking form (the only way to book)

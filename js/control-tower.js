@@ -11,10 +11,11 @@ import { el, setMsg } from "./dom.js";
 import { hashPassword, randomSalt, codeHash, normalizeCode } from "./crypto.js";
 import { loadSession, saveSession, removeSession, load, save, remove } from "./store.js";
 import { pendingRequests, allGrants, grant, dismissRequest } from "./permissions.js";
-import { cloudAdminCall, cloudState } from "./cloud.js";
+import { cloudAdminCall, cloudState, cloudMessage } from "./cloud.js";
+import { cloudReviews } from "./reviews-data.js";
 import { fetchPublished, publishToCloud, isPublisher } from "./published.js";
 import { THEMES, MAX_ADS, GRADS, PRESETS, hex, cleanAd, adNode } from "./ads.js";
-import { THEME_KEYS, THEME_CNY_REWARD, cleanTheme, cleanThemeEntry } from "./theme.js";
+import { THEME_KEYS, THEME_REWARDS, cleanTheme, cleanThemeEntry } from "./theme.js";
 import { cleanVersion } from "./version.js";
 
 const SESSION = "octee.tower.session";
@@ -186,6 +187,7 @@ async function tower(session, crew, notice = "") {
   const tabAds = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Ads");
   const tabMusic = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Music");
   const tabTheme = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Theme");
+  const tabReviews = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Reviews");
   const tabCode = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "Code");
   const countRequests = () => { const n = pendingRequests().length; tabRequests.textContent = n ? `Requests (${n})` : "Requests"; };
   countRequests();
@@ -216,11 +218,12 @@ async function tower(session, crew, notice = "") {
     tabAds.setAttribute("aria-selected", String(which === "ads"));
     tabMusic.setAttribute("aria-selected", String(which === "music"));
     tabTheme.setAttribute("aria-selected", String(which === "theme"));
+    tabReviews.setAttribute("aria-selected", String(which === "reviews"));
     tabCode.setAttribute("aria-selected", String(which === "code"));
     countRequests();
     if (which === "requests") { body.replaceChildren(el("p", { class: "note" }, "Loading…")); requestsPanel().then((n) => body.replaceChildren(n)); return; }
     if (which === "cloud") { body.replaceChildren(el("p", { class: "note" }, "Loading Cloud accounts…")); cloudPanel().then((n) => body.replaceChildren(n)); return; }
-    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "music" ? musicPanel() : which === "theme" ? themePanel() : which === "code" ? codePanel() : crewPanel());
+    body.replaceChildren(which === "codes" ? codesPanel() : which === "discounts" ? discountsPanel() : which === "accounts" ? accountsPanel() : which === "ads" ? adsPanel() : which === "music" ? musicPanel() : which === "theme" ? themePanel() : which === "reviews" ? reviewsPanel() : which === "code" ? codePanel() : crewPanel());
   };
   tabCodes.addEventListener("click", () => show("codes"));
   tabDiscounts.addEventListener("click", () => show("discounts"));
@@ -230,6 +233,7 @@ async function tower(session, crew, notice = "") {
   tabRequests.addEventListener("click", () => show("requests"));
   tabMusic.addEventListener("click", () => show("music"));
   tabTheme.addEventListener("click", () => show("theme"));
+  tabReviews.addEventListener("click", () => show("reviews"));
   tabAds.addEventListener("click", () => show("ads"));
   tabCode.addEventListener("click", () => show("code"));
 
@@ -629,7 +633,18 @@ async function tower(session, crew, notice = "") {
   function themePanel() {
     const tmsg = el("p", { class: "msg", "aria-live": "polite" });
     const changed = () => setMsg(tmsg, "Changed. Press Save to cloud to make it live.", "info");
-    const LABELS = { christmas: "Christmas (falling snow)", cny: "Chinese New Year (fireworks, red side decoration, ang pao reward)", deepavali: "Deepavali (diya lights)", halloween: "Halloween (bats)" };
+    const LABELS = {
+      christmas: "Christmas (falling snow)",
+      cny: "Chinese New Year (fireworks, red side decoration, ang pao reward)",
+      deepavali: "Deepavali (diya lights)",
+      halloween: "Halloween (bats)",
+      aidilfitri: "Hari Raya Aidilfitri (twinkling crescents, green and gold sides, duit raya reward)",
+      haji: "Hari Raya Haji (twinkling stars, green and white sides)",
+      vesak: "Vesak (falling lotus, blue and gold sides)",
+      midautumn: "Mid-Autumn (rising lanterns, moon sides, lantern reward)",
+      thaipusam: "Thaipusam (falling marigolds, purple and gold sides)",
+      easter: "Easter (falling eggs and bunnies, pastel sides, egg reward)",
+    };
     const card = (key) => {
       const t = theme[key] || cleanThemeEntry({}, key);
       const on = el("input", { type: "checkbox", checked: !!t.on });
@@ -638,10 +653,10 @@ async function tower(session, crew, notice = "") {
       start.addEventListener("change", () => { t.start = start.value; theme = { ...theme, [key]: t }; changed(); });
       const end = el("input", { type: "date", value: t.end || "" });
       end.addEventListener("change", () => { t.end = end.value; theme = { ...theme, [key]: t }; changed(); });
-      const rewardField = key === "cny" ? (() => {
-        const reward = el("input", { type: "number", min: "0", max: "100000", step: "1", value: String(t.reward ?? THEME_CNY_REWARD) });
+      const rewardField = THEME_REWARDS[key] ? (() => {
+        const reward = el("input", { type: "number", min: "0", max: "100000", step: "1", value: String(t.reward ?? THEME_REWARDS[key].fallback) });
         reward.addEventListener("input", () => { t.reward = Math.max(0, Math.min(100000, Math.floor(Number(reward.value) || 0))); theme = { ...theme, [key]: t }; changed(); });
-        return el("div", { class: "field" }, el("label", {}, "Ang pao reward (Fujitech, once a day per account)"), reward);
+        return el("div", { class: "field" }, el("label", {}, "Reward (Fujitech, once a day per account)"), reward);
       })() : "";
       return el("div", { class: "card" }, el("h3", {}, LABELS[key]),
         el("div", { class: "field" }, el("label", {}, on, " On")),
@@ -653,8 +668,8 @@ async function tower(session, crew, notice = "") {
     const onCount = THEME_KEYS.filter((k) => theme[k]?.on).length;
     return el("div", {},
       el("div", { class: "card" }, el("h3", {}, "Seasonal themes"),
-        el("p", { class: "note" }, "Switch a theme on to decorate the whole site: falling snow for Christmas, fireworks and red decoration at the side for Chinese New Year, diya lights for Deepavali, bats for Halloween. A date range is optional — leave both blank to control it with the switch alone instead. Only one theme shows at a time: if more than one is on, Christmas wins, then Chinese New Year, then Deepavali, then Halloween."),
-        onCount > 1 ? el("p", { class: "msg info" }, `${onCount} themes are On at once — only one will actually show (Christmas, then Chinese New Year, then Deepavali, then Halloween, whichever comes first).`) : ""),
+        el("p", { class: "note" }, "Switch a theme on to decorate the whole site: falling snow for Christmas, fireworks and red decoration at the side for Chinese New Year, diya lights for Deepavali, bats for Halloween, twinkling crescents for Hari Raya Aidilfitri, stars for Hari Raya Haji, lotus for Vesak, lanterns for Mid-Autumn, marigolds for Thaipusam and eggs and bunnies for Easter. A date range is optional — leave both blank to control it with the switch alone instead. Only one theme shows at a time: if more than one is on, the first in this list that is active wins (Christmas, Chinese New Year, Deepavali, Halloween, Hari Raya Aidilfitri, Hari Raya Haji, Vesak, Mid-Autumn, Thaipusam, Easter)."),
+        onCount > 1 ? el("p", { class: "msg info" }, `${onCount} themes are On at once — only one will actually show (the first of them in the order above that is active today).`) : ""),
       ...THEME_KEYS.map(card),
       el("div", { class: "actions" },
         el("button", { class: "btn", type: "button", onclick: async () => {
@@ -664,6 +679,52 @@ async function tower(session, crew, notice = "") {
         el("button", { class: "btn small ghost", type: "button", onclick: () => download("theme.json", cleanTheme(theme)) }, "Manual download: theme.json")),
       tmsg,
       el("p", { class: "hint" }, "Manual download is only for when the cloud has a problem: replace data/theme.json, commit and push."));
+  }
+
+  // Reviews: every review saved in the cloud, with its writer. The owner or an admin can change the stars, title or
+  // words (the website then shows the review with an "edited" tag), or delete it. The writer, flight and date stay.
+  function reviewsPanel() {
+    const rmsg = el("p", { class: "msg", "aria-live": "polite" });
+    const box = el("div", {}, el("p", { class: "note" }, "Loading reviews…"));
+    const card = (r) => {
+      const stars = el("select", { "aria-label": "Stars" }, [5, 4, 3, 2, 1].map((n) => el("option", { value: String(n), selected: n === r.stars }, `${n} star${n > 1 ? "s" : ""}`)));
+      const title = el("input", { type: "text", maxlength: "60", value: r.title || "", "aria-label": "Title" });
+      const text = el("textarea", { maxlength: "500", "aria-label": "Review text" });
+      text.value = r.body || "";
+      const save = async () => {
+        setMsg(rmsg, "Saving…", "info");
+        try {
+          await cloudAdminCall("PUT", `/api/review/${r.id}`, { stars: Number(stars.value), title: title.value.trim(), body: text.value.trim() });
+          setMsg(rmsg, `Review by ${r.username} saved. It now shows as edited on the website.`, "ok");
+          await load();
+        } catch (e) { setMsg(rmsg, cloudMessage(e), "error"); }
+      };
+      const remove = async () => {
+        if (!confirm(`Delete the review "${r.title}" by ${r.username} for everyone? This cannot be undone.`)) return;
+        try { await cloudAdminCall("DELETE", `/api/review/${r.id}`); setMsg(rmsg, "Review deleted.", "ok"); await load(); }
+        catch (e) { setMsg(rmsg, cloudMessage(e), "error"); }
+      };
+      return el("div", { class: "card" },
+        el("h3", {}, `${r.title} · ${r.username}`),
+        el("p", { class: "note" }, r.date, r.route ? " · " + r.route : "", r.edited ? " · edited before" : ""),
+        el("div", { class: "row" },
+          el("div", { class: "field" }, el("label", {}, "Stars"), stars),
+          el("div", { class: "field" }, el("label", {}, "Title"), title)),
+        el("div", { class: "field" }, el("label", {}, "Review"), text),
+        el("div", { class: "actions" },
+          el("button", { class: "btn", type: "button", onclick: save }, "Save changes"),
+          el("button", { class: "btn small ghost danger", type: "button", onclick: remove }, "Delete review")));
+    };
+    const load = async () => {
+      const all = (await cloudReviews()).sort((a, b) => (b.id || 0) - (a.id || 0));
+      box.replaceChildren(...(all.length ? all.map(card) : [el("p", { class: "note" }, "No reviews in the cloud yet.")]));
+    };
+    load();
+    return el("div", {},
+      el("div", { class: "card" }, el("h3", {}, "Reviews"),
+        el("p", { class: "note" }, "Every review saved in the cloud. Change the stars, title or words, or delete a review. Changed reviews show an \"edited\" tag on the website. Save changes is for the owner or an admin."),
+        rmsg),
+      box);
   }
 
   // Code: the read-only code viewer. It needs a cloud account that may open it (the owner, or one added with 10 logo clicks).
@@ -716,7 +777,7 @@ async function tower(session, crew, notice = "") {
     top,
     el("p", { class: "fag-who" }, `Signed in as ${session.name} `, el("span", { class: "tag" }, session.role),
       " ", el("button", { class: "btn small ghost", type: "button", onclick: () => { removeSession(SESSION); back.remove(); } }, "Sign out")),
-    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabMusic, tabTheme, tabCode, tabCrew),
+    el("div", { class: "tabs", role: "tablist" }, tabCodes, tabDiscounts, tabAccounts, tabCloud, tabRequests, tabAds, tabMusic, tabTheme, tabReviews, tabCode, tabCrew),
     cloudBar,
     body,
     el("p", { class: "hint" }, "Changes here are drafts in this browser until you press Save to cloud. Cloud admin role changes take effect immediately."));

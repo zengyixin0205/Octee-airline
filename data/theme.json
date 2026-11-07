@@ -2,5 +2,11 @@
   "christmas": { "on": false, "start": "", "end": "" },
   "cny": { "on": false, "start": "", "end": "", "reward": 188 },
   "deepavali": { "on": false, "start": "", "end": "" },
-  "halloween": { "on": false, "start": "", "end": "" }
+  "halloween": { "on": false, "start": "", "end": "" },
+  "aidilfitri": { "on": false, "start": "", "end": "", "reward": 88 },
+  "haji": { "on": false, "start": "", "end": "" },
+  "vesak": { "on": false, "start": "", "end": "" },
+  "midautumn": { "on": false, "start": "", "end": "", "reward": 88 },
+  "thaipusam": { "on": false, "start": "", "end": "" },
+  "easter": { "on": false, "start": "", "end": "", "reward": 88 }
 }

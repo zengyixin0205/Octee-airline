@@ -83,6 +83,20 @@ export function claimAngPao(rewardFujitech) {
   });
 }
 
+// Festival rewards (Hari Raya duit raya, Mid-Autumn lantern, Easter egg): the same one-claim-a-day shape as the ang pao,
+// keyed by the history text, which the cloud checks against the festival's reward amount (cloud/index.js THEME_REWARDS).
+export const themeRewardClaimedToday = (u, label) => ((u && u.history) || []).some((h) => String(h.at || "").slice(0, 10) === dayKey() && h.text === label);
+export function claimThemeReward(label, rewardFujitech) {
+  return updateUser((u) => {
+    if (themeRewardClaimedToday(u, label)) throw new Error("You already claimed today's reward for this festival. Come back tomorrow.");
+    const gained = Math.max(0, Math.floor(Number(rewardFujitech) || 0)) * 10;
+    if (!gained) throw new Error("No reward is set for this festival right now.");
+    u.fujitechTenths = fujitechTenthsOf(u) + gained;
+    u.history.unshift({ at: new Date().toISOString(), text: label, fujitechTenths: gained });
+    return gained;
+  });
+}
+
 export function cargoFareTenths(routeMiles, weightKg) {
   const miles = Math.max(0, Number(routeMiles) || 0);
   const kg = Math.max(0.1, Number(weightKg) || 0.1);

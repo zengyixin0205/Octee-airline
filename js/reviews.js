@@ -16,6 +16,7 @@ function card(r) {
     el("p", {}, r.body),
     el("p", { class: "meta" }, r.username, " · ", niceDate(r.date), r.route ? " · " + r.route : "", " ",
       r.verified ? el("span", { class: "tag" }, "Verified Octee flyer ✈") : "",
+      r.edited ? el("span", { class: "tag" }, "edited") : "",
       r.archived || r.cloud ? "" : el("span", { class: "tag" }, "In this browser only")));
 }
 
@@ -66,7 +67,7 @@ async function renderForm() {
     el("p", { class: "note" }, "You can write as many reviews as you like (up to 5 a day). Edit or delete any of them here."),
     list.map((r) => el("div", { class: "review mine", style: "border-top:1px solid #eadfce;padding:10px 0" },
       el("div", { class: "stars" }, starsText(r.stars)), el("strong", {}, " " + r.title),
-      el("p", { class: "meta" }, niceDate(r.date), r.route ? " · " + r.route : "", r.cloud ? "" : " · in this browser only"),
+      el("p", { class: "meta" }, niceDate(r.date), r.route ? " · " + r.route : "", r.edited ? " · edited" : "", r.cloud ? "" : " · in this browser only"),
       el("div", { class: "actions" },
         el("button", { class: "btn small ghost", type: "button", onclick: () => { editing = r; flash = null; renderForm(); } }, "Edit"),
         el("button", { class: "btn small ghost danger", type: "button", onclick: async () => { await deleteMyReview(u.username, r); if (sameReview(editing, r)) editing = null; await renderForm(); renderList(); } }, "Delete"))))) : "";

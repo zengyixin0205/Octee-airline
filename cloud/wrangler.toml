@@ -1,3 +1,4 @@
+account_id = "65933b918638f3aada041ec25372ac29"
 name = "octee-cloud-api"
 main = "index.js"
 compatibility_date = "2026-10-01"
@@ -5,4 +6,6 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "octee-cloud"
-database_id = "<your D1 database id>"
+database_id = "<f7a70304-f9bc-473f-b38e-0cd8907e86c5>"
+[vars]
+CONTROL_TOWER_OWNER_USERNAME = "Octee"
