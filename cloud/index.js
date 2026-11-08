@@ -81,6 +81,45 @@ const CODE_OWNERS = ["octee"];
 const REVIEW_LIMITS = { day: 5, total: 50 };
 const clip = (v, n) => String(v ?? "").slice(0, n);
 
+// ---- Octee City: the CCT wallet, the OCT Bank (tiered daily interest), job pay and arrests. The server keeps all of it. ----
+// CCT is earned by doing jobs in the city, or exchanged from Octmiles. The bank keeps money in hundredths of a CCT, pays
+// interest every day at the tier's yearly rate, and never sends the interest through the browser.
+const DAY = 86400000;
+const CITY = {
+  rate: 10,                 // Octmiles for 1 CCT
+  jobPay: 10,               // CCT paid for each finished shift
+  fine: 5,                  // CCT taken when arrested
+  jailMinutes: 30,          // how long an arrest keeps you from shifts
+  tiers: [{ name: "Bronze", min: 0, rate: 0.01 }, { name: "Silver", min: 1000, rate: 0.025 }, { name: "Gold", min: 10000, rate: 0.04 }],
+  jobs: ["bank-teller", "bank-vault", "hall-stamp", "hall-notes", "clinic-nurse", "clinic-pharmacy", "fire-hose", "fire-dispatch", "post-parcel", "post-stamp",
+    "bakery-assistant", "bakery-till", "library-shelf", "library-returns", "cinema-usher", "cinema-projector", "power-switch", "power-meter", "radio-dial", "radio-playlist",
+    "food-waiter", "food-dish", "harbour-crane", "harbour-dock", "police-patrol", "police-desk"]
+};
+const tierFor = (cct) => { let t = CITY.tiers[0]; for (const x of CITY.tiers) if (cct >= x.min) t = x; return t; };
+async function cityAccount(db, uid) {
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_accounts (user_id INTEGER PRIMARY KEY, wallet INTEGER NOT NULL DEFAULT 0, bank_c INTEGER NOT NULL DEFAULT 0, bank_at INTEGER NOT NULL DEFAULT 0, jail_until INTEGER NOT NULL DEFAULT 0, shifts TEXT NOT NULL DEFAULT '{}', arrests INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare("INSERT OR IGNORE INTO city_accounts(user_id, bank_at) VALUES(?, ?)").bind(uid, Date.now()).run();
+  const r = await db.prepare("SELECT * FROM city_accounts WHERE user_id=?").bind(uid).first();
+  let shifts = {}; try { shifts = JSON.parse(r.shifts || "{}"); } catch { shifts = {}; }
+  const a = { wallet: Number(r.wallet) || 0, bank_c: Number(r.bank_c) || 0, bank_at: Number(r.bank_at) || 0, jail_until: Number(r.jail_until) || 0, shifts, arrests: Number(r.arrests) || 0 };
+  // interest for every whole day since the last payment, paid into the bank (compounding), at the tier of the day's balance
+  const days = Math.min(3650, Math.floor((Date.now() - a.bank_at) / DAY));
+  if (days > 0) {
+    for (let i = 0; i < days; i++) a.bank_c += Math.floor(a.bank_c * tierFor(Math.floor(a.bank_c / 100)).rate / 365);
+    a.bank_at += days * DAY;
+  }
+  return a;
+}
+async function saveCity(db, uid, a) {
+  await db.prepare("UPDATE city_accounts SET wallet=?, bank_c=?, bank_at=?, jail_until=?, shifts=?, arrests=? WHERE user_id=?")
+    .bind(a.wallet, a.bank_c, a.bank_at, a.jail_until, JSON.stringify(a.shifts), a.arrests, uid).run();
+}
+const cityView = (a, now) => {
+  const t = tierFor(Math.floor(a.bank_c / 100)), today = iso().slice(0, 10);
+  return { wallet: a.wallet, bank: a.bank_c / 100, bankCents: a.bank_c, tier: t.name, rate: t.rate, tiers: CITY.tiers, pay: CITY.jobPay, rateOcts: CITY.rate,
+    todayJobs: a.shifts[today] || [], jailUntil: a.jail_until > now ? a.jail_until : 0, arrests: a.arrests };
+};
+
 
 // ---- Octmiles, Octeetokens, Fujitech and Scraggymiles: the cloud keeps the balances (table `balances`) ----
 // The browser still works the numbers out locally and writes a history line for each change. When it saves the account, the cloud
@@ -407,6 +446,54 @@ export default {
         return reply(req, { ok: true, ...walletView(w), tokens: have - cost, updatedAt: at });
       }
       // JoelTokens <-> Joelmiles (the other currencies are checked from the saved account, see applyWallet). units = Joelmiles.
+      // ---- Octee City: CCT wallet, shifts, exchange from Octmiles, and the OCT Bank. Log in first. ----
+      if (path.startsWith("/api/city")) {
+        if (!u) return reply(req, { error: "login", message: "Log in to Octee Cloud first." }, 401);
+        const b = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+        const city = await cityAccount(db, u.id), now = Date.now();
+        if (path === "/api/city" && req.method === "GET") { await saveCity(db, u.id, city); return reply(req, cityView(city, now)); }
+        if (path === "/api/city/shift" && req.method === "POST") {
+          const job = String(b.job || "");
+          if (!CITY.jobs.includes(job)) return reply(req, { error: "bad_job", message: "There is no such job." }, 400);
+          if (city.jail_until > now) return reply(req, { error: "jailed", message: "You are in the cells. No shifts until your time is up. Nothing was paid.", jailUntil: city.jail_until }, 403);
+          const today = iso().slice(0, 10), done = city.shifts[today] || [];
+          if (done.includes(job)) {
+            // a second shift on the same job in one day is a rule break: arrested, fined, locked up for a while
+            const fine = Math.min(CITY.fine, city.wallet);
+            city.wallet -= fine; city.arrests += 1; city.jail_until = now + CITY.jailMinutes * 60000;
+            await saveCity(db, u.id, city);
+            return reply(req, { ok: false, arrested: true, fine, ...cityView(city, now), message: `Arrested. You already did that shift today. Fine: ${fine} CCT. Please wait in the cells.` });
+          }
+          city.shifts = { [today]: [...done, job] };
+          city.wallet += CITY.jobPay;
+          await saveCity(db, u.id, city);
+          return reply(req, { ok: true, paid: CITY.jobPay, ...cityView(city, now) });
+        }
+        if (path === "/api/city/exchange" && req.method === "POST") {
+          const units = Math.floor(Number(b.units));
+          if (!(units >= 1 && units <= 10000)) return reply(req, { error: "bad_count", message: "Choose 1 to 10,000 CCT." }, 400);
+          const cost = units * CITY.rate, bal = await getBalances(db, env, u);
+          if (bal.octmiles < cost) return reply(req, { error: "short", message: `That needs ${cost.toLocaleString("en-GB")} Octmiles. You have ${bal.octmiles.toLocaleString("en-GB")}. Nothing was changed.` }, 402);
+          await saveBalances(db, { ...bal, octmiles: bal.octmiles - cost }).run();
+          city.wallet += units;
+          await saveCity(db, u.id, city);
+          return reply(req, { ok: true, bought: units, octmiles: bal.octmiles - cost, ...cityView(city, now) });
+        }
+        if (path === "/api/city/bank" && req.method === "POST") {
+          const amount = Math.floor(Number(b.amount)), dir = b.dir === "out" ? "out" : "in";
+          if (!(amount >= 1 && amount <= 10000000)) return reply(req, { error: "bad_count", message: "Choose a whole number of CCT." }, 400);
+          if (dir === "in") {
+            if (city.wallet < amount) return reply(req, { error: "short", message: `You only have ${city.wallet} CCT in your wallet. Nothing was moved.` }, 402);
+            city.wallet -= amount; city.bank_c += amount * 100;
+          } else {
+            if (Math.floor(city.bank_c / 100) < amount) return reply(req, { error: "short", message: "The bank does not hold that much for you. Nothing was moved." }, 402);
+            city.bank_c -= amount * 100; city.wallet += amount;
+          }
+          await saveCity(db, u.id, city);
+          return reply(req, { ok: true, ...cityView(city, now) });
+        }
+        return reply(req, { error: "not_found" }, 404);
+      }
       if (path === "/api/joel/exchange" && req.method === "POST") {
         if (!u) return reply(req, { error: "login", message: "Log in to the cloud first." }, 401);
         const b = await req.json().catch(() => ({})), dir = b.dir === "out" ? "out" : "in", units = Math.floor(Number(b.units));

@@ -38,6 +38,7 @@ const GROUPS = [
   ["Airport", [["cargo.html", "Octee Airline Cargo"], ["flight-radar.html", "Flight-Radar 25"], ["terminal-maps.html", "TDA and MFIA Maps"], ["normal-thursday.html", "Normal Thursday Log"], ["lostfound.html", "Lost and Found"], ["runway.html", "FIA Runway Status"], ["meal.html", "Meal Pre-order"], ["bingo.html", "Delay Bingo"], ["baggame.html", "The Baggage Game"], ["wifi.html", "Octee Wi-Fi"]]],
   ["On Board", [["safety.html", "Safety Demo"], ["safetycard.html", "Safety Card"], ["cockpit.html", "The Cockpit"], ["radio.html", "Octee Radio"]]],
   ["Zhang Gullet", [["zhang-gullet.html", "Zhang Gullet"], ["customer-service.html", "Customer Service (GulletAI)"], ["gullet-complaints.html", "Complaints Office"], ["gullet-hold.html", "Hold Line"]]],
+  ["Octee City", [["city.html", "Octee City"]]],
   ["Reading", [["news.html", "The Octee Times"], ["magazine.html", "In-Flight Magazine"]]]
 ];
 const here = () => location.pathname.split("/").pop() || "index.html";
