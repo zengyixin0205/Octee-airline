@@ -139,6 +139,20 @@ async function cityJob(db, id) {
 // The bank statement: every movement of CCT, in hundredths. Written by the server only.
 const cityLog = (db, uid, kind, cents, note = "") => db.prepare("INSERT INTO city_log(user_id, at, kind, cents, note) VALUES(?, ?, ?, ?, ?)").bind(uid, Date.now(), kind, Math.round(cents), note).run();
 const dayStr = (ms) => new Date(ms).toISOString().slice(0, 10);
+// The weekly edition of the Gazette: written the first time the paper is read after a week has passed.
+async function weeklyEdition(db) {
+  const since = Date.now() - 7 * DAY;
+  const last = await db.prepare("SELECT at FROM city_news WHERE text LIKE 'Weekly edition%' ORDER BY id DESC LIMIT 1").first();
+  if (last && Number(last.at) > since) return;
+  const rent = await db.prepare("SELECT COALESCE(SUM(cents), 0) AS c FROM city_log WHERE kind = 'rent' AND at >= ?").bind(since).first();
+  const bought = await db.prepare("SELECT COUNT(*) AS n FROM city_log WHERE kind = 'buy' AND note LIKE 'bought the %' AND at >= ?").bind(since).first();
+  const sold = await db.prepare("SELECT COUNT(*) AS n FROM city_log WHERE kind = 'sell' AND note LIKE 'sold the %' AND at >= ?").bind(since).first();
+  const top = await db.prepare("SELECT u.username AS name, COUNT(*) AS n FROM city_property p JOIN users u ON u.id = p.user_id GROUP BY p.user_id ORDER BY n DESC LIMIT 1").first();
+  const n = (x) => `${x} building${Number(x) === 1 ? "" : "s"}`;
+  const text = `Weekly edition: ${n(bought.n)} bought, ${n(sold.n)} sold, and ${Math.round(Number(rent.c) / 100).toLocaleString("en-GB")} CCT of rent paid out. ` +
+    (top ? `The biggest landlord is ${top.name}, with ${n(top.n)}.` : "Nobody owns a building yet. The town is renting from itself.");
+  await cityNews(db, text);
+}
 async function cityStreak(db, uid) {
   const r = await db.prepare("SELECT last_day, streak FROM city_streak WHERE user_id=?").bind(uid).first();
   return r ? { last: r.last_day, streak: Number(r.streak) || 0 } : { last: "", streak: 0 };
@@ -512,6 +526,7 @@ export default {
       // ---- Octee City: CCT wallet, shifts, exchange from Octmiles, and the OCT Bank. Log in first. ----
       if (path === "/api/city/news" && req.method === "GET") {
         await ensureCity(db);
+        await weeklyEdition(db);
         const rows = await db.prepare("SELECT at, text FROM city_news ORDER BY id DESC LIMIT 12").all();
         return reply(req, { news: rows.results || [] });
       }
