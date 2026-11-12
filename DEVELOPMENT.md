@@ -1444,10 +1444,16 @@ Only the owner or a Control Tower admin can change the city. The page uses the s
 - remove an owner-made building (its jobs go too; the built-in town cannot be removed).
 
 ### Tables (created lazily in `ensureCity`, so there is no migration)
-`city_accounts`, `city_news`, `city_log`, `city_streak`, `city_chat`, `city_reviews`, `city_game`, `city_buildings`, `city_jobs`, `city_building_terms`, `city_shares`.
+`city_accounts`, `city_news`, `city_log`, `city_streak`, `city_chat`, `city_reviews`, `city_game`, `city_buildings`, `city_jobs`, `city_building_terms`, `city_shares`, `city_building_rules`, `city_tower`.
 
 ### Deploying
 Change `cloud/index.js`, then run `npx wrangler deploy` from `cloud/` on your own machine. The sandbox cannot reach Cloudflare. Do not commit `cloud/wrangler.toml`.
+
+- Owners can set the smallest lot (1 to 10 shares per purchase) for a building. The last shares left can always be bought.
+- The Gazette announces the moment a building is fully owned, by one citizen or split across several.
+- Police on duty (anyone who clocked in to a police job today) can remove a message from the Town Square, and so can the city's owner. Removals are logged in the Gazette without the message text.
+- The Game Tower has a high-score table (best score per citizen, top ten). Every score counts toward it, even when the daily reward has already been paid.
+- The five hard jobs (bank teller, vault guard, auditor, patrol officer, desk sergeant) ask two questions, both of which must be right. Owner-made hard jobs still ask one question.
 
 ## Reviews: edit and delete from the Control Tower
 

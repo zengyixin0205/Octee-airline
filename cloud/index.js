@@ -117,6 +117,8 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_reviews (user_id INTEGER NOT NULL, building TEXT NOT NULL, username TEXT NOT NULL, stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (user_id, building))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_game (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '')").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_buildings (id TEXT PRIMARY KEY, name TEXT NOT NULL, blurb TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_building_rules (building TEXT PRIMARY KEY, min_shares INTEGER NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_tower (user_id INTEGER PRIMARY KEY, best INTEGER NOT NULL, at INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_shares (building TEXT NOT NULL, user_id INTEGER NOT NULL, shares INTEGER NOT NULL, paid INTEGER NOT NULL, collected_at INTEGER NOT NULL, carry INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (building, user_id))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_building_terms (building TEXT PRIMARY KEY, price INTEGER NOT NULL, rent INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_jobs (id TEXT PRIMARY KEY, building TEXT NOT NULL, title TEXT NOT NULL, prompt TEXT NOT NULL, right_answer TEXT NOT NULL, wrong TEXT NOT NULL, hard INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL)").run();
@@ -125,6 +127,17 @@ async function ensureCity(db) {
 async function cityTerms(db, building) {
   const t = await db.prepare("SELECT price, rent FROM city_building_terms WHERE building=?").bind(building).first();
   return t ? { price: Number(t.price), rent: Number(t.rent) } : { price: CITY.price, rent: CITY.rent };
+}
+// The fewest shares one purchase may buy (the owner's rule). The last shares left may always be bought.
+async function cityMinShares(db, building) {
+  const r = await db.prepare("SELECT min_shares FROM city_building_rules WHERE building=?").bind(building).first();
+  return r ? Number(r.min_shares) : 1;
+}
+// Police on duty are the citizens who clocked in to a police job today. The city's owner can always moderate.
+const POLICE_JOBS = ["police-patrol", "police-desk"];
+function cityOnDuty(city) {
+  const today = iso().slice(0, 10);
+  return (city.shifts[today] || []).some((j) => POLICE_JOBS.includes(j));
 }
 // Buildings and jobs made by the city's owner. The built-in ones above are never stored here.
 const CITY_ID = /^[a-z][a-z0-9-]{2,20}$/;
@@ -554,11 +567,17 @@ export default {
         await ensureCity(db);
         const rows = await db.prepare("SELECT s.building AS building, u.username AS owner, s.shares AS shares FROM city_shares s JOIN users u ON u.id = s.user_id ORDER BY s.building, s.shares DESC").all();
         const terms = await db.prepare("SELECT building, price, rent FROM city_building_terms").all();
-        return reply(req, { price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
+        const rules = await db.prepare("SELECT building, min_shares FROM city_building_rules").all();
+        return reply(req, { rules: Object.fromEntries((rules.results || []).map((r) => [r.building, Number(r.min_shares)])), price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
+      }
+      if (path === "/api/city/tower" && req.method === "GET") {
+        await ensureCity(db);
+        const rows = await db.prepare("SELECT u.username AS name, t.best AS best FROM city_tower t JOIN users u ON u.id = t.user_id ORDER BY t.best DESC, t.at ASC LIMIT 10").all();
+        return reply(req, { scores: (rows.results || []).map((r) => ({ name: r.name, best: Number(r.best) })) });
       }
       if (path === "/api/city/chat" && req.method === "GET") {
         await ensureCity(db);
-        const rows = await db.prepare("SELECT at, username, text FROM city_chat ORDER BY id DESC LIMIT 50").all();
+        const rows = await db.prepare("SELECT id, at, username, text FROM city_chat ORDER BY id DESC LIMIT 50").all();
         return reply(req, { messages: (rows.results || []).reverse() });
       }
       if (path === "/api/city/reviews" && req.method === "GET") {
@@ -604,7 +623,12 @@ export default {
             if (price % CITY.shares !== 0) return reply(req, { error: "bad_price", message: `The price must split into ${CITY.shares} equal shares, so a multiple of ${CITY.shares}.` }, 400);
             if (!(rent >= 1 && rent <= 50)) return reply(req, { error: "bad_rent", message: "Rent is between 1 and 50 CCT a day." }, 400);
             await db.prepare("INSERT INTO city_building_terms(building, price, rent) VALUES(?, ?, ?) ON CONFLICT(building) DO UPDATE SET price=excluded.price, rent=excluded.rent").bind(building, price, rent).run();
-            return reply(req, { ok: true, building, price, rent });
+            const minShares = b.minShares === undefined ? null : Math.floor(Number(b.minShares));
+            if (minShares !== null) {
+              if (!(minShares >= 1 && minShares <= CITY.shares)) return reply(req, { error: "bad_min", message: `A lot is between 1 and ${CITY.shares} shares.` }, 400);
+              await db.prepare("INSERT INTO city_building_rules(building, min_shares) VALUES(?, ?) ON CONFLICT(building) DO UPDATE SET min_shares=excluded.min_shares").bind(building, minShares).run();
+            }
+            return reply(req, { ok: true, building, price, rent, minShares });
           }
           return reply(req, { error: "bad_kind", message: "Say whether this is a building or a job." }, 400);
         }
@@ -616,6 +640,17 @@ export default {
           await db.prepare("DELETE FROM city_jobs WHERE building=?").bind(id).run();
           await db.prepare("DELETE FROM city_jobs WHERE id=?").bind(id).run();
           await db.prepare("DELETE FROM city_buildings WHERE id=?").bind(id).run();
+          return reply(req, { ok: true });
+        }
+        if (path.startsWith("/api/city/chat/") && req.method === "DELETE") {
+          await ensureCity(db);
+          const pol = await cityAccount(db, u.id);
+          if (!cityOnDuty(pol) && !(await adminRole())) return reply(req, { error: "forbidden", message: "Only police on duty, or the city's owner, can remove a message." }, 403);
+          const id = Math.floor(Number(path.slice("/api/city/chat/".length)));
+          const row = await db.prepare("SELECT username FROM city_chat WHERE id=?").bind(id).first();
+          if (!row) return reply(req, { error: "gone", message: "That message has already gone." }, 404);
+          await db.prepare("DELETE FROM city_chat WHERE id=?").bind(id).run();
+          await cityNews(db, `The police removed a message from the Town Square, from ${row.username}.`);
           return reply(req, { ok: true });
         }
         if (path === "/api/city/chat" && req.method === "POST") {
@@ -641,6 +676,7 @@ export default {
           await ensureCity(db);
           const score = Math.floor(Number(b.score));
           if (!(score >= 0 && score <= 500)) return reply(req, { error: "bad_score", message: "That is not a real score. The tower is not that tall." }, 400);
+          await db.prepare("INSERT INTO city_tower(user_id, best, at) VALUES(?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET best=MAX(best, excluded.best), at=excluded.at").bind(u.id, score, Date.now()).run();
           const today = iso().slice(0, 10);
           const g = await db.prepare("SELECT last_day FROM city_game WHERE user_id=?").bind(u.id).first();
           if (g && g.last_day === today) return reply(req, { ok: true, reward: 0, score, message: "You already earned from the tower today. You can still play for fun." });
@@ -661,7 +697,7 @@ export default {
           const st = await cityStreak(db, u.id), yesterday = dayStr(now - DAY);
           const live = st.last === dayStr(now) || st.last === yesterday ? st.streak : 0;
           const mine = await db.prepare("SELECT building, shares, paid FROM city_shares WHERE user_id=?").bind(u.id).all();
-          return reply(req, { ...cityView(city, now), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
+          return reply(req, { ...cityView(city, now), canModerate: cityOnDuty(city) || !!(await adminRole()), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
         }
         if (path === "/api/city/shift" && req.method === "POST") {
           const job = String(b.job || "");
@@ -735,6 +771,8 @@ export default {
           const sold = await db.prepare("SELECT COALESCE(SUM(shares), 0) AS n FROM city_shares WHERE building=?").bind(building).first();
           const left = CITY.shares - Number(sold.n);
           if (n > left) return reply(req, { error: "taken", message: left ? `Only ${left} share${left === 1 ? "" : "s"} left.` : "Every share is taken. Ask an owner nicely." }, 409);
+          const min = await cityMinShares(db, building);
+          if (n < min && n !== left) return reply(req, { error: "minimum", message: `This building sells in lots of at least ${min} share${min === 1 ? "" : "s"}, except for the last shares left.` }, 400);
           const terms = await cityTerms(db, building);
           const cost = Math.round((terms.price / CITY.shares) * n);
           if (city.wallet < cost) return reply(req, { error: "short", message: `${n} share${n === 1 ? "" : "s"} cost ${cost} CCT. You have ${city.wallet}. Nothing was changed.` }, 402);
@@ -744,6 +782,11 @@ export default {
           else await db.prepare("INSERT INTO city_shares(building, user_id, shares, paid, collected_at, carry) VALUES(?, ?, ?, ?, ?, 0)").bind(building, u.id, n, cost, now).run();
           await cityLog(db, u.id, "buy", -cost * 100, `bought ${n} share${n === 1 ? "" : "s"} of the ${building} building`);
           await cityNews(db, `${u.username} bought ${n} share${n === 1 ? "" : "s"} of the ${building} building. The building earns ${terms.rent} CCT a day, shared out between its owners.`);
+          if (Number(sold.n) + n === CITY.shares) {
+            const holders = await db.prepare("SELECT COUNT(*) AS c, MIN(user_id) AS only FROM city_shares WHERE building=?").bind(building).first();
+            const whole = Number(holders.c) === 1 ? await db.prepare("SELECT username FROM users WHERE id=?").bind(holders.only).first() : null;
+            await cityNews(db, whole ? `${whole.username} now owns all of the ${building} building. Every share, every day.` : `All ten shares of the ${building} building have been sold. It has changed hands fully.`);
+          }
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, ...cityView(city, now) });
         }

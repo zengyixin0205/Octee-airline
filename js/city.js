@@ -28,8 +28,8 @@ const BUILDINGS = [
   { id: "tower", name: "Game Tower", blurb: "Stack the blocks as high as they go. The tower leans, but that is not your fault." }
 ];
 const JOBS = {
-  "bank-teller": { b: "bank", title: "Bank teller", prompt: "A customer asks for their money back. What do you do?", right: "Count it twice, then say the bank is closed for money today.", wrong: ["Give them all of it in peanuts", "Ask them to come back next Tuesday, with a form"] },
-  "bank-vault": { b: "bank", title: "Vault guard", prompt: "The vault has a sign: DO NOT OPEN. Someone is knocking from inside. What now?", right: "Check the sign is still there, then knock back politely.", wrong: ["Open it. Curiosity pays", "Open it and leave the door open for the interest"] },
+  "bank-teller": { b: "bank", title: "Bank teller", prompt: "A customer asks for their money back. What do you do?", right: "Count it twice, then say the bank is closed for money today.", wrong: ["Give them all of it in peanuts", "Ask them to come back next Tuesday, with a form"], prompt2: "A second customer asks for a loan. You say…", right2: "Of course. Interest is paid in peanuts.", wrong2: ["No, the loan is on holiday", "Give them the bank"] },
+  "bank-vault": { b: "bank", title: "Vault guard", prompt: "The vault has a sign: DO NOT OPEN. Someone is knocking from inside. What now?", right: "Check the sign is still there, then knock back politely.", wrong: ["Open it. Curiosity pays", "Open it and leave the door open for the interest"], prompt2: "The vault combination is written on a bun. Do you…", right2: "Eat the bun, then check the vault is still there.", wrong2: ["Write it on the vault door", "Give the bun to the customer"] },
   "hall-stamp": { b: "hall", title: "Stamp clerk", prompt: "A form has no box for your name. Where do you stamp it?", right: "Across the middle. The form is now yours.", wrong: ["In the box for the weather", "Nowhere. Stamps are for other forms"] },
   "hall-notes": { b: "hall", title: "Minutes clerk", prompt: "The meeting minutes say 'nothing was decided'. What do you write?", right: "Nothing was decided, and that was the decision.", wrong: ["The meeting was cancelled, so there are no minutes", "A poem about the decision"] },
   "clinic-nurse": { b: "clinic", title: "Nurse on the ward", prompt: "A patient says they have a fever of 'about a fortnight'. Your answer?", right: "Ask them to take a nap and to call back in a fortnight.", wrong: ["Give them a peanut for the fever", "Tell them the fever is fine, it is in the leaflet"] },
@@ -53,7 +53,7 @@ const JOBS = {
   "harbour-crane": { b: "harbour", title: "Crane operator", prompt: "A crane lifts a box marked 'do not lift'. You…", right: "Lift it higher. It was rude to say so.", wrong: ["Lower it into the empty harbour", "Lift it to the cinema"] },
   "harbour-dock": { b: "harbour", title: "Dock hand", prompt: "A ship arrives at a harbour with no sea. Where does it dock?", right: "On the car park. Ships love a car park.", wrong: ["In the library", "Back out. It is a plane"] },
   "tax-clerk": { b: "tax", title: "Tax clerk", prompt: "A citizen says their tax is 'whatever the peanuts say'. You…", right: "Ask the peanuts for a receipt.", wrong: ["Accept it. Peanuts are reliable", "Tax them back, twice"] },
-  "tax-audit": { b: "tax", title: "Auditor", prompt: "The audit finds 3 CCT missing. Where did it go?", right: "A spot check, probably. Write it down.", wrong: ["In the bakery's bun", "It was never there. Audits do not count air"] },
+  "tax-audit": { b: "tax", title: "Auditor", prompt: "The audit finds 3 CCT missing. Where did it go?", right: "A spot check, probably. Write it down.", wrong: ["In the bakery's bun", "It was never there. Audits do not count air"], prompt2: "The form has one box left. What goes in it?", right2: "The true number, then a second, shorter one.", wrong2: ["Whatever the peanuts say", "A drawing of the bus"] },
   "car-attendant": { b: "car", title: "Car park attendant", prompt: "A car has been in the bus lane for three days. Ticket?", right: "A ticket, and a note that the bus is also parked.", wrong: ["Clamp the bus", "The car is a monument now"] },
   "car-ticket": { b: "car", title: "Ticket machine", prompt: "The machine says 'insert coin' but has no slot. What do you do?", right: "Insert the coin into the machine's opinion.", wrong: ["Shake the machine", "Give up. Parking is a state of mind"] },
   "gym-instructor": { b: "gym", title: "Gym instructor", prompt: "A member asks how many reps to do. You say…", right: "Until the bench gives up first.", wrong: ["Zero. Resting is the workout", "All of them, in one go"] },
@@ -62,8 +62,8 @@ const JOBS = {
   "museum-cleaner": { b: "museum", title: "Museum cleaner", prompt: "The exhibit's sign has fallen off. Your move?", right: "Put the sign back, next to the exhibit it describes.", wrong: ["Put the exhibit on the sign", "Sweep the sign into the bakery"] },
   "bus-driver": { b: "bus", title: "Bus driver", prompt: "Passengers ask to go to FIA. The bus goes to the sea. You…", right: "Drive to the sea. FIA is a state of mind.", wrong: ["Turn round politely, FIA is a short walk", "Charge the passengers double for the scenic route"] },
   "bus-timetable": { b: "bus", title: "Timetable keeper", prompt: "The timetable says the next bus is 'soon'. How soon?", right: "Soon is a time. Check the clock.", wrong: ["Exactly as soon as you get here", "It is printed on a bun"] },
-  "police-patrol": { b: "police", title: "Patrol officer", prompt: "A citizen has already clocked in twice today. What is the offence?", right: "Double shifting. Arrest, fine, and time in the cells.", wrong: ["Overtime. Pay them more", "Nothing. They are just very keen"] },
-  "police-desk": { b: "police", title: "Desk sergeant", prompt: "A suspect asks for a lawyer. What does the desk say?", right: "A lawyer is on the way. The lawyer is also on the way to jail.", wrong: ["Here is a peanut, the matter is closed", "Lawyers are not in the leaflet"] }
+  "police-patrol": { b: "police", title: "Patrol officer", prompt: "A citizen has already clocked in twice today. What is the offence?", right: "Double shifting. Arrest, fine, and time in the cells.", wrong: ["Overtime. Pay them more", "Nothing. They are just very keen"], prompt2: "The citizen says they only did it for the bun. Next step?", right2: "Write down the bun. The bun is evidence now.", wrong2: ["Give them a second bun", "Let them go, buns are not a crime"] },
+  "police-desk": { b: "police", title: "Desk sergeant", prompt: "A suspect asks for a lawyer. What does the desk say?", right: "A lawyer is on the way. The lawyer is also on the way to jail.", wrong: ["Here is a peanut, the matter is closed", "Lawyers are not in the leaflet"], prompt2: "The cells are full. Where does the next suspect wait?", right2: "In the Park. The Park has a bench.", wrong2: ["In the bakery's oven", "They are released with a peanut"] }
 };
 const PAY = 10, HARD_PAY = 15, RATE = 10, SELL = 8;
 // Harder jobs pay more. Keep in step with CITY.hard in cloud/index.js.
@@ -167,11 +167,13 @@ function hub() {
 
 function jobRow(jobId, onDone) {
   const j = JOBS[jobId];
-  const pick = el("div", { class: "city-quiz", hidden: true }, el("p", {}, j.prompt));
+  // One question for most jobs; two for the hard ones. Every question must be right before the shift is sent.
+  const steps = [[j.prompt, j.right, j.wrong]];
+  if (j.prompt2) steps.push([j.prompt2, j.right2, j.wrong2]);
+  const pick = el("div", { class: "city-quiz", hidden: true });
   const doneMsg = el("p", { class: "note" });
-  const options = [j.right, ...j.wrong].sort(() => Math.random() - 0.5);
-  options.forEach((o) => pick.append(el("button", { class: "btn", type: "button", onclick: async () => {
-    if (o !== j.right) { doneMsg.textContent = "Wrong answer. Nobody is paid for a wrong answer. The leaflet is clear about this."; return; }
+  const clockIn = async () => {
+    doneMsg.className = "note";
     doneMsg.textContent = "Checking the shift…";
     try {
       const r = await api("POST", "/api/city/shift", { job: jobId });
@@ -186,22 +188,27 @@ function jobRow(jobId, onDone) {
       await refresh();
       if (onDone) onDone();
     } catch (e) { doneMsg.textContent = e.message; }
-  } }, o)));
+  };
+  const showStep = (i) => {
+    const [q, right, wrong] = steps[i];
+    const label = steps.length > 1 ? `Question ${i + 1} of ${steps.length}: ` : "";
+    pick.replaceChildren(el("p", {}, label + q));
+    [right, ...wrong].sort(() => Math.random() - 0.5).forEach((o) => pick.append(el("button", { class: "btn", type: "button", onclick: () => {
+      if (o !== right) { doneMsg.className = "note"; doneMsg.textContent = "Wrong answer. Nobody is paid for a wrong answer. The leaflet is clear about this."; return; }
+      if (i + 1 < steps.length) { doneMsg.textContent = "Right. Now the second question."; showStep(i + 1); return; }
+      pick.hidden = true;
+      clockIn();
+    } }, o)));
+  };
   const start = el("button", { class: "btn", type: "button", onclick: () => {
     if (!loggedIn()) { doneMsg.textContent = "Log in first. You can look for free, but not clock in."; return; }
     if (state.view && state.view.jailUntil) { doneMsg.className = "city-warn"; doneMsg.textContent = "You are in the cells. No shifts until your time is up."; return; }
     if (state.view && (state.view.todayJobs || []).includes(jobId)) { doneMsg.className = "city-warn"; doneMsg.textContent = "You already did this shift today. Clocking in again is a crime. Going ahead anyway…"; }
+    doneMsg.textContent = "";
     pick.hidden = false;
+    showStep(0);
   } }, "Clock in");
-  return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT")), start), pick, doneMsg);
-}
-
-// How long until the cells let you out, from the last city card the Worker sent.
-function cellsNote() {
-  const until = state.view && state.view.jailUntil;
-  if (!until) return "";
-  const mins = Math.max(0, Math.ceil((until - Date.now()) / 60000));
-  return mins ? `You are in the cells for ${mins} more minute${mins === 1 ? "" : "s"}.` : "";
+  return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT" + (j.prompt2 ? " · two questions" : ""))), start), pick, doneMsg);
 }
 
 function buildingView(id, app) {
@@ -293,6 +300,10 @@ async function loadWanted(app) {
 }
 
 // ---- Town Square: a public chat, kept short and rate limited by the Worker ----
+async function removeMessage(id) {
+  try { await api("DELETE", "/api/city/chat/" + id); await loadChat(); }
+  catch (e) { const m = document.querySelector("#city-chat-msg"); if (m) m.textContent = e.message; }
+}
 function chatBlock() {
   const list = el("div", { id: "city-chat-list" }, el("p", { class: "note" }, "Loading the square…"));
   const input = el("input", { type: "text", maxlength: 200, placeholder: loggedIn() ? "Say something to the town" : "Log in to say something", style: "flex:1;min-width:0", ...(loggedIn() ? {} : { disabled: true }) });
@@ -314,7 +325,9 @@ async function loadChat() {
   if (!box) return;
   const j = await pub("/api/city/chat");
   if (!j) { box.replaceChildren(el("p", { class: "note" }, "The square is empty. The line is down.")); return; }
-  box.replaceChildren(...(j.messages.length ? j.messages.map((m) => el("p", {}, el("strong", {}, m.username + ": "), m.text)) : [el("p", { class: "note" }, "Nobody has said anything yet. The square is very quiet.")]));
+  const mod = !!(state.view && state.view.canModerate);
+  box.replaceChildren(...(j.messages.length ? j.messages.map((m) => el("p", {}, el("strong", {}, m.username + ": "), m.text, mod ? el("button", { class: "btn ghost small", type: "button", style: "margin-left:8px", onclick: () => removeMessage(m.id) }, "Remove") : null)) : [el("p", { class: "note" }, "Nobody has said anything yet. The square is very quiet.")]));
+  if (mod) box.append(el("p", { class: "note", id: "city-chat-msg" }, "You are on duty. Remove only what breaks the rules of the town."));
   box.scrollTop = box.scrollHeight;
 }
 
@@ -344,6 +357,12 @@ async function loadReviews(id) {
 }
 
 // ---- Game Tower: stack the blocks. The score is checked on the Worker; the daily reward is capped there. ----
+async function loadTowerBoard() {
+  const box = document.querySelector("#city-tower-board");
+  if (!box) return;
+  const j = await pub("/api/city/tower");
+  box.replaceChildren(el("h3", {}, "High scores"), ...(!j ? [el("p", { class: "note" }, "The scoreboard is in the cells. Try again later.")] : j.scores.length ? [table(["Citizen", "Best tower"], j.scores.map((r) => [r.name, r.best + " blocks"]))] : [el("p", { class: "note" }, "No scores yet. The first tower to stand is yours.")]));
+}
 function gameBlock() {
   const W = 320, H = 360, BLOCK = 18, GAP = 8;
   const canvas = el("canvas", { width: W, height: H, "aria-label": "The tower game", style: "width:100%;max-width:320px;border:1px solid #ccc;border-radius:8px;background:#f8fbff;touch-action:none" });
@@ -382,6 +401,7 @@ function gameBlock() {
       const r = await api("POST", "/api/city/game", { score });
       msg.textContent = `${r.message} Score: ${score}.`;
       await refresh();
+      await loadTowerBoard();
     } catch (e) { msg.textContent = (loggedIn() ? e.message : "Log in to earn from the tower. Your score was " + score + ".") ; }
   };
   const drop = () => {
@@ -401,7 +421,7 @@ function gameBlock() {
   reset(); draw();
   document.addEventListener("keydown", (e) => { if (e.key === " " && canvas.isConnected) { e.preventDefault(); drop(); } });
   return el("div", {}, el("h3", {}, "The Game Tower"), canvas, el("div", { class: "city-row" }, start, dropBtn), best, msg,
-    el("p", { class: "note" }, "Ten or more blocks earns 1 CCT. Each block after that earns 1 more, up to 5 CCT a day. Playing again today is for fun only."));
+    el("p", { class: "note" }, "Ten or more blocks earns 1 CCT. Each block after that earns 1 more, up to 5 CCT a day. Playing again today is for fun only. Your best score goes on the board either way."), el("div", { id: "city-tower-board" }));
 }
 
 function render(app, view) {
@@ -411,12 +431,14 @@ function render(app, view) {
   if (view === "home" || !view) loadPanels(app);
   if (view === "police") loadWanted(app);
   if (view === "square") loadChat();
+  if (view === "tower") loadTowerBoard();
   if (view !== "home" && cityIds().includes(view)) loadReviews(view);
 }
 
 // Property: who owns each building, and what it costs and earns. Filled from the Worker before the first render.
 let owners = {};   // building id -> [{ owner, shares }]
 let terms = {};
+let rules = {};    // building id -> fewest shares per purchase
 let economy = { price: 300, rent: 3 };
 async function loadOwners() {
   const j = await pub("/api/city/property");
@@ -425,10 +447,12 @@ async function loadOwners() {
   owners = {};
   for (const o of j.owners) (owners[o.building] = owners[o.building] || []).push({ owner: o.owner, shares: Number(o.shares) });
   terms = j.terms || {};
+  rules = j.rules || {};
 }
 const SHARES = 10;
 const sharesSold = (id) => (owners[id] || []).reduce((t, o) => t + o.shares, 0);
 const ownersText = (id) => (owners[id] || []).map((o) => `${o.owner} (${o.shares})`).join(", ");
+const minOf = (id) => rules[id] || 1;
 const priceOf = (id) => (terms[id] ? terms[id].price : economy.price);
 const rentOf = (id) => (terms[id] ? terms[id].rent : economy.rent);
 function propertyBlock(id) {
@@ -440,13 +464,14 @@ function propertyBlock(id) {
     try { await api("POST", path, { building: id, shares: n }); await loadOwners(); await refresh(); render(document.querySelector("#app"), id); }
     catch (e) { msg.textContent = e.message; }
   };
-  const buyN = el("input", { type: "number", min: 1, max: Math.max(1, left), step: 1, value: 1, style: "width:90px" });
+  const buyN = el("input", { type: "number", min: minOf(id), max: Math.max(1, left), step: 1, value: Math.min(minOf(id), Math.max(1, left)), style: "width:90px" });
   const sellN = el("input", { type: "number", min: 1, max: Math.max(1, mine), step: 1, value: mine || 1, style: "width:90px" });
   const body = [
     el("p", {}, `${SHARES} shares in this building. ${sharesSold(id)} sold, ${left} for sale. A share costs ${perShare} CCT and earns ${perShareRent} CCT a day.`),
     ownersText(id) ? el("p", { class: "note" }, "Owners: " + ownersText(id) + ".") : el("p", { class: "note" }, "Nobody owns a share yet."),
     mine ? el("p", {}, `You own ${mine} share${mine === 1 ? "" : "s"}. Rent is paid into your wallet each time you visit the city.`) : null,
     left && loggedIn() ? el("div", { class: "city-row" }, buyN, el("button", { class: "btn", type: "button", onclick: () => act("/api/city/property/buy", Number(buyN.value)) }, "Buy shares")) : null,
+    left && loggedIn() && minOf(id) > 1 ? el("p", { class: "note" }, `This building sells in lots of at least ${minOf(id)} shares, except for the last shares left.`) : null,
     left && !loggedIn() ? el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to buy a share.") : null,
     mine && loggedIn() ? el("div", { class: "city-row" }, sellN, el("button", { class: "btn ghost", type: "button", onclick: () => act("/api/city/property/sell", Number(sellN.value)) }, "Sell shares (half of what you paid)")) : null
   ];
