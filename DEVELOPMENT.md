@@ -1460,6 +1460,11 @@ Change `cloud/index.js`, then run `npx wrangler deploy` from `cloud/` on your ow
 - A WANTED notice appears in the Gazette the third time a citizen is arrested in seven days.
 - The Gazette's weekly edition names the tower of the week: the best single score in the last seven days (`city_scores`).
 - The owner can declare a bank holiday on a date from today on. Interest at OCT Bank is doubled for that day, and the Gazette announces it (`city_holidays`).
+- The weekly edition also names the richest citizen: wallet plus bank, with interest counted up to the moment of the edition, holidays included.
+- The bank page lists the next ten bank holidays, so citizens can plan deposits. The list comes from `GET /api/city` as `holidays`.
+- Lost Property Office (`lost`): a citizen can claim back half of any fine paid in the last seven days, once per fine (`city_claims`, keyed by the fine's log id). A claim is logged as "Lost property" on the statement.
+- Game Tower weekly challenge: the first time in a week that a citizen reaches `CITY.towerTarget` (20 blocks), they get `CITY.challengeBonus` (10 CCT). Once per citizen per week (`city_challenge`). The reply carries `bonus`, and the board shows the target.
+- Police report (`#report`): public. `GET /api/city/report` returns the last 30 fines and arrests, newest first. The police station links to it.
 
 ## Reviews: edit and delete from the Control Tower
 

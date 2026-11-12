@@ -25,7 +25,8 @@ const BUILDINGS = [
   { id: "museum", name: "Peanut Museum", blurb: "One exhibit, a peanut, under glass. It is very valuable." },
   { id: "bus", name: "Airport Bus Stop", blurb: "The bus to FIA. It goes everywhere except FIA." },
   { id: "square", name: "Town Square", blurb: "The chat room. Everyone talks, nobody listens, and the bakery reads every word." },
-  { id: "tower", name: "Game Tower", blurb: "Stack the blocks as high as they go. The tower leans, but that is not your fault." }
+  { id: "tower", name: "Game Tower", blurb: "Stack the blocks as high as they go. The tower leans, but that is not your fault." },
+  { id: "lost", name: "Lost Property Office", blurb: "Lost your fine? Come and claim half of it back. The form is very long, and the pen is on a string." }
 ];
 const JOBS = {
   "bank-teller": { b: "bank", title: "Bank teller", prompt: "A customer asks for their money back. What do you do?", right: "Count it twice, then say the bank is closed for money today.", wrong: ["Give them all of it in peanuts", "Ask them to come back next Tuesday, with a form"], prompt2: "A second customer asks for a loan. You say…", right2: "Of course. Interest is paid in peanuts.", wrong2: ["No, the loan is on holiday", "Give them the bank"] },
@@ -78,7 +79,8 @@ const SPOT_RULES = [
 // The city map: five by four. The airport is off the edge of the town, next to the Ring Road.
 const MAP = ["tax", "car", "gym", "museum", "bus", "bank", "hall", "clinic", "fire", "post", "bakery", "library", "cinema", "power", "radio", "food", "harbour", "police", "square", "tower", "FIA", "ring", "park", "pond", "gate"];
 const SCENERY = { ring: ["Ring Road", "the bus does not stop here"], park: ["Park", "a bench, no pigeons"], pond: ["Pond", "one duck, under review"], gate: ["Gate", "the way out, if you can find it"] };
-const cityIds = () => BUILDINGS.map((b) => b.id);
+// "report" is the police report page: public, not a building, so it has no reviews or shifts.
+const cityIds = () => [...BUILDINGS.map((b) => b.id), "report"];
 let state = { view: null }; // last city data from the Worker (logged-in only)
 
 async function api(method, path, body) {
@@ -211,6 +213,41 @@ function jobRow(jobId, onDone) {
   return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT" + (j.prompt2 ? " · two questions" : ""))), start), pick, doneMsg);
 }
 
+// Lost Property: claim half of any fine from the last week, once per fine.
+async function claimsBlock(app) {
+  const box = el("div", {}, el("p", { class: "note" }, "Checking the lost property shelves…"));
+  if (!loggedIn()) { box.replaceChildren(el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#lost") }, "Log in"), " to see your claims.")); return box; }
+  const draw = async () => {
+    let j;
+    try { j = await api("GET", "/api/city/claims"); } catch (e) { box.replaceChildren(el("p", { class: "note" }, e.message)); return; }
+    const msg = el("p", { class: "note" });
+    const rows = (j.claims || []).map((c) => el("tr", {}, el("td", {}, new Date(c.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })), el("td", {}, c.note || "Fine"), el("td", {}, fmtCct(c.fine)), el("td", {}, fmtCct(c.refund)), el("td", {}, el("button", { class: "btn ghost", type: "button", onclick: async () => {
+      msg.textContent = "Filing the claim…";
+      try { const r = await api("POST", "/api/city/claim", { log: c.id }); await refresh(); msg.textContent = `Claimed ${fmtCct(r.refund)}. The office stamps it twice.`; await draw(); render(app, "lost"); }
+      catch (e) { msg.textContent = e.message; }
+    } }, "Claim")))); 
+    box.replaceChildren(
+      el("h3", {}, "Your claimable fines"),
+      el("p", { class: "note" }, "A claim refunds half the fine, once. Fines can be claimed for seven days after they are paid."),
+      rows.length ? el("table", { class: "city-table" }, el("tr", {}, el("th", {}, "Fined"), el("th", {}, "For"), el("th", {}, "Paid"), el("th", {}, "Refund"), el("th", {}, "")), ...rows) : el("p", { class: "note" }, "Nothing to claim. Either you have been very well behaved, or you have already claimed it."),
+      msg
+    );
+  };
+  await draw();
+  return box;
+}
+
+// Police report: the last 30 fines and arrests in the town. Public, so anyone can read the record.
+async function loadReport(app) {
+  const box = app.querySelector("#city-report");
+  if (!box) return;
+  const j = await pub("/api/city/report");
+  box.replaceChildren(...(!j ? [el("p", { class: "note" }, "The report is with the desk sergeant. Try again later.")] : j.report.length ? [table(["When", "Citizen", "Fine", "For"], j.report.map((r) => [new Date(r.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), r.name, fmtCct(r.fine), r.note || ""]))] : [el("p", { class: "note" }, "A clean record. The police have checked twice.")]));
+}
+function reportBlock() {
+  return el("div", { class: "city-card", style: "cursor:auto" }, el("h2", {}, "Police report"), el("p", { class: "note" }, "Recent arrests and fines, newest first. Public, because the town has nothing to hide, except the bakery."), el("div", { id: "city-report" }, el("p", { class: "note" }, "Reading the file…")), el("p", { class: "note" }, el("a", { href: "#police" }, "Back to the police station"), " · ", el("a", { href: "#" }, "Back to the town")));
+}
+
 function buildingView(id, app) {
   const b = BUILDINGS.find((x) => x.id === id);
   const jobsHere = Object.entries(JOBS).filter(([, j]) => j.b === id).map(([k]) => k);
@@ -225,6 +262,8 @@ function buildingView(id, app) {
     el("h3", {}, "Wanted"),
     el("p", { class: "note" }, "Citizens with two or more arrests. The police would like a word."),
     el("div", { id: "city-wanted" }, el("p", { class: "note" }, "Checking the files…")));
+  if (id === "police") card.append(el("p", {}, el("a", { href: "#report" }, "Read the police report"), " · the last 30 fines and arrests, on the record."));
+  if (id === "lost") card.append(claimsBlock(app));
   if (id === "square") card.append(chatBlock());
   if (id === "tower") card.append(gameBlock());
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
@@ -261,6 +300,7 @@ function bankBits(app) {
   return [
     el("p", {}, `Wallet: ${fmtCct(v.wallet)}. Bank: ${fmtBank(v.bank)}. You are a ${v.tier} customer.`),
     el("p", { class: "note" }, "Interest is paid every day at your tier's yearly rate. The bank does the sums, not you."),
+    (v.holidays && v.holidays.length) ? el("div", { class: "city-warn" }, el("strong", {}, "Bank holidays ahead. "), "Interest is doubled on these days, so plan your deposits: " + v.holidays.map((d) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })).join(", ") + ".") : el("p", { class: "note" }, "No bank holidays are set for the coming days."),
     el("table", { class: "city-table" }, el("tr", {}, el("th", {}, "Tier"), el("th", {}, "From"), el("th", {}, "Yearly rate")), ...(v.tiers || []).map((t) => el("tr", {}, el("td", {}, t.name), el("td", {}, t.min.toLocaleString("en-GB") + " CCT"), el("td", {}, (t.rate * 100).toFixed(1) + "%")))),
     el("p", { class: "note" }, "No limit on deposits or withdrawals. The bank has, to its credit, never refused anyone."),
     el("div", { class: "city-row" }, amount, el("button", { class: "btn", type: "button", onclick: move("in") }, "Deposit CCT"), el("button", { class: "btn", type: "button", onclick: move("out") }, "Withdraw CCT")),
@@ -280,7 +320,7 @@ function bankBits(app) {
   ];
 }
 
-const KIND = { shift: "Shift", interest: "Interest", deposit: "Deposit", withdraw: "Withdrawal", buy: "Bought", sell: "Sold", fine: "Fine" };
+const KIND = { shift: "Shift", interest: "Interest", deposit: "Deposit", withdraw: "Withdrawal", buy: "Bought", sell: "Sold", fine: "Fine", rent: "Rent", claim: "Lost property", bonus: "Bonus" };
 function statementTable(rows) {
   if (!rows.length) return el("p", { class: "note" }, "Nothing yet. Your statement is empty, which the bank considers a good sign.");
   return table(["When", "What", "CCT", "Note"], rows.map((r) => [
@@ -421,18 +461,20 @@ function gameBlock() {
   reset(); draw();
   document.addEventListener("keydown", (e) => { if (e.key === " " && canvas.isConnected) { e.preventDefault(); drop(); } });
   return el("div", {}, el("h3", {}, "The Game Tower"), canvas, el("div", { class: "city-row" }, start, dropBtn), best, msg,
+    el("p", { class: "note" }, `Weekly challenge: reach ${TOWER_TARGET} blocks and earn a ${CHALLENGE_BONUS} CCT bonus. Once per citizen, per week.`),
     el("p", { class: "note" }, "Ten or more blocks earns 1 CCT. Each block after that earns 1 more, up to 5 CCT a day. Playing again today is for fun only. Your best score goes on the board either way."), el("div", { id: "city-tower-board" }));
 }
 
 function render(app, view) {
   const top = status(app);
-  const body = view === "home" || !view ? hub() : [buildingView(view, app)];
+  const body = view === "home" || !view ? hub() : view === "report" ? [reportBlock()] : [buildingView(view, app)];
   app.replaceChildren(top, ...body.filter(Boolean));
   if (view === "home" || !view) loadPanels(app);
   if (view === "police") loadWanted(app);
+  if (view === "report") loadReport(app);
   if (view === "square") loadChat();
   if (view === "tower") loadTowerBoard();
-  if (view !== "home" && cityIds().includes(view)) loadReviews(view);
+  if (view !== "home" && view !== "report" && BUILDINGS.some((b) => b.id === view)) loadReviews(view);
 }
 
 // Property: who owns each building, and what it costs and earns. Filled from the Worker before the first render.
@@ -452,6 +494,7 @@ async function loadOwners() {
   shareRent = j.shareRent || {};
 }
 const SHARES = 10;
+const TOWER_TARGET = 20, CHALLENGE_BONUS = 10; // keep in step with cloud/index.js (towerTarget, challengeBonus)
 const sharesSold = (id) => (owners[id] || []).reduce((t, o) => t + o.shares, 0);
 const ownersText = (id) => (owners[id] || []).map((o) => `${o.owner} (${o.shares})`).join(", ");
 const minOf = (id) => rules[id] || 1;

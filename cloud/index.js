@@ -94,10 +94,12 @@ const CITY = {
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
   gameMax: 5,               // most CCT the Game Tower pays in one day
+  towerTarget: 20,          // blocks needed for the weekly tower challenge
+  challengeBonus: 10,       // CCT paid once a week to each citizen who reaches the target
   price: 300,               // CCT for a whole building (ten shares)
   shares: 10,               // shares in every building; each share earns a tenth of the rent
   rent: 3,                  // CCT a day that a building earns for its owner
-  buildings: ["bank","hall","clinic","fire","post","bakery","library","cinema","power","radio","food","harbour","police","tax","car","gym","museum","bus","square","tower"],
+  buildings: ["bank","hall","clinic","fire","post","bakery","library","cinema","power","radio","food","harbour","police","tax","car","gym","museum","bus","square","tower","lost"],
   streakDays: 3,            // working this many days in a row earns the streak bonus
   streakBonus: 5,           // extra CCT on every shift while on a streak
   hard: ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"],
@@ -120,6 +122,8 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_job_extra (job TEXT PRIMARY KEY, prompt2 TEXT NOT NULL, right2 TEXT NOT NULL, wrong2 TEXT NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_share_rent (building TEXT PRIMARY KEY, cents INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_holidays (day TEXT PRIMARY KEY)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_claims (log_id INTEGER PRIMARY KEY)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_challenge (user_id INTEGER NOT NULL, week INTEGER NOT NULL, PRIMARY KEY (user_id, week))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, username TEXT NOT NULL, score INTEGER NOT NULL, at INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_building_rules (building TEXT PRIMARY KEY, min_shares INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_tower (user_id INTEGER PRIMARY KEY, best INTEGER NOT NULL, at INTEGER NOT NULL)").run();
@@ -169,8 +173,12 @@ async function weeklyEdition(db) {
   const n = (x) => `${x} building${Number(x) === 1 ? "" : "s"}`;
   const text = `Weekly edition: ${n(bought.n)} bought, ${n(sold.n)} sold, and ${Math.round(Number(rent.c) / 100).toLocaleString("en-GB")} CCT of rent paid out. ` +
     (top ? `The biggest landlord is ${top.name}, with ${top.n} share${Number(top.n) === 1 ? "" : "s"}.` : "Nobody owns a share yet. The town is renting from itself.");
+  const hol = await cityHolidays(db);
+  const rich = await db.prepare("SELECT u.username AS name, c.wallet AS wallet, c.bank_c AS bank, c.bank_at AS bank_at FROM city_accounts c JOIN users u ON u.id = c.user_id LIMIT 500").all();
+  const worth = (r) => Number(r.wallet) + accrue(Number(r.bank), Number(r.bank_at), hol).bank_c / 100;
+  const best = (rich.results || []).map((r) => ({ name: r.name, cct: worth(r) })).sort((x, y) => y.cct - x.cct)[0];
   const star = await db.prepare("SELECT username, score FROM city_scores WHERE at >= ? ORDER BY score DESC LIMIT 1").bind(since).first();
-  await cityNews(db, text + (star ? ` Tower of the week: ${star.username}, with ${star.score} blocks.` : ""));
+  await cityNews(db, text + (best && best.cct > 0 ? ` Richest citizen: ${best.name}, with ${Math.floor(best.cct).toLocaleString("en-GB")} CCT.` : "") + (star ? ` Tower of the week: ${star.username}, with ${star.score} blocks.` : ""));
 }
 async function cityStreak(db, uid) {
   const r = await db.prepare("SELECT last_day, streak FROM city_streak WHERE user_id=?").bind(uid).first();
@@ -585,10 +593,15 @@ export default {
         const shareRent = await db.prepare("SELECT building, cents FROM city_share_rent").all();
         return reply(req, { shareRent: Object.fromEntries((shareRent.results || []).map((r) => [r.building, Number(r.cents)])), rules: Object.fromEntries((rules.results || []).map((r) => [r.building, Number(r.min_shares)])), price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
       }
+      if (path === "/api/city/report" && req.method === "GET") {
+        await ensureCity(db);
+        const rows = await db.prepare("SELECT l.at AS at, l.cents AS cents, l.note AS note, u.username AS name FROM city_log l JOIN users u ON u.id = l.user_id WHERE l.kind = 'fine' ORDER BY l.id DESC LIMIT 30").all();
+        return reply(req, { report: (rows.results || []).map((r) => ({ at: Number(r.at), fine: -Number(r.cents) / 100, note: r.note, name: r.name })) });
+      }
       if (path === "/api/city/tower" && req.method === "GET") {
         await ensureCity(db);
         const rows = await db.prepare("SELECT u.username AS name, t.best AS best FROM city_tower t JOIN users u ON u.id = t.user_id ORDER BY t.best DESC, t.at ASC LIMIT 10").all();
-        return reply(req, { scores: (rows.results || []).map((r) => ({ name: r.name, best: Number(r.best) })) });
+        return reply(req, { scores: (rows.results || []).map((r) => ({ name: r.name, best: Number(r.best) })), challenge: { target: CITY.towerTarget, bonus: CITY.challengeBonus } });
       }
       if (path === "/api/city/chat" && req.method === "GET") {
         await ensureCity(db);
@@ -709,11 +722,21 @@ export default {
           await ensureCity(db);
           const score = Math.floor(Number(b.score));
           if (!(score >= 0 && score <= 500)) return reply(req, { error: "bad_score", message: "That is not a real score. The tower is not that tall." }, 400);
+          let bonus = 0;
+          const week = Math.floor(Date.now() / (7 * DAY));
+          if (score >= CITY.towerTarget && !(await db.prepare("SELECT 1 FROM city_challenge WHERE user_id=? AND week=?").bind(u.id, week).first())) {
+            await db.prepare("INSERT INTO city_challenge(user_id, week) VALUES(?, ?)").bind(u.id, week).run();
+            const cz = await cityAccount(db, u.id);
+            cz.wallet += CITY.challengeBonus;
+            bonus = CITY.challengeBonus;
+            await cityLog(db, u.id, "bonus", bonus * 100, `weekly tower challenge, ${CITY.towerTarget} blocks`);
+            await saveCity(db, u.id, cz);
+          }
           if (score > 0) await db.prepare("INSERT INTO city_scores(user_id, username, score, at) VALUES(?, ?, ?, ?)").bind(u.id, u.username, score, Date.now()).run();
           await db.prepare("INSERT INTO city_tower(user_id, best, at) VALUES(?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET best=MAX(best, excluded.best), at=excluded.at").bind(u.id, score, Date.now()).run();
           const today = iso().slice(0, 10);
           const g = await db.prepare("SELECT last_day FROM city_game WHERE user_id=?").bind(u.id).first();
-          if (g && g.last_day === today) return reply(req, { ok: true, reward: 0, score, message: "You already earned from the tower today. You can still play for fun." });
+          if (g && g.last_day === today) return reply(req, { ok: true, reward: 0, bonus, score, message: "You already earned from the tower today. You can still play for fun." });
           const reward = score >= 10 ? Math.min(CITY.gameMax, Math.floor(score / 10)) : 0;
           if (reward > 0) {
             const city = await cityAccount(db, u.id);
@@ -722,7 +745,7 @@ export default {
             await saveCity(db, u.id, city);
             await db.prepare("INSERT INTO city_game(user_id, last_day) VALUES(?, ?) ON CONFLICT(user_id) DO UPDATE SET last_day=excluded.last_day").bind(u.id, today).run();
           }
-          return reply(req, { ok: true, reward, score, message: reward ? `The tower stood. You earned ${reward} CCT.` : "The tower fell over. It was not your fault." });
+          return reply(req, { ok: true, reward, bonus, score, message: reward ? `The tower stood. You earned ${reward} CCT.` : "The tower fell over. It was not your fault." });
         }
         const city = await cityAccount(db, u.id), now = Date.now();
         if (path === "/api/city" && req.method === "GET") {
@@ -731,7 +754,8 @@ export default {
           const st = await cityStreak(db, u.id), yesterday = dayStr(now - DAY);
           const live = st.last === dayStr(now) || st.last === yesterday ? st.streak : 0;
           const mine = await db.prepare("SELECT building, shares, paid FROM city_shares WHERE user_id=?").bind(u.id).all();
-          return reply(req, { ...cityView(city, now), canModerate: cityOnDuty(city) || !!(await adminRole()), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
+          const hols = await db.prepare("SELECT day FROM city_holidays WHERE day >= ? ORDER BY day LIMIT 10").bind(dayStr(now)).all();
+          return reply(req, { ...cityView(city, now), holidays: (hols.results || []).map((h) => h.day), canModerate: cityOnDuty(city) || !!(await adminRole()), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
         }
         if (path === "/api/city/shift" && req.method === "POST") {
           const job = String(b.job || "");
@@ -798,6 +822,23 @@ export default {
           await cityLog(db, u.id, "sell", -units * 100, `${gain} Octmiles`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, sold: units, got: gain, octmiles: bal.octmiles + gain, ...cityView(city, now) });
+        }
+        if (path === "/api/city/claims" && req.method === "GET") {
+          const rows = await db.prepare("SELECT l.id AS id, l.at AS at, l.cents AS cents, l.note AS note FROM city_log l LEFT JOIN city_claims c ON c.log_id = l.id WHERE l.user_id = ? AND l.kind = 'fine' AND l.cents < 0 AND l.at >= ? AND c.log_id IS NULL ORDER BY l.id DESC LIMIT 20").bind(u.id, Date.now() - 7 * DAY).all();
+          return reply(req, { claims: (rows.results || []).map((r) => ({ id: r.id, at: r.at, fine: -Number(r.cents) / 100, refund: Math.floor(-Number(r.cents) / 200), note: r.note })) });
+        }
+        if (path === "/api/city/claim" && req.method === "POST") {
+          const id = Math.floor(Number(b.log));
+          const f = await db.prepare("SELECT cents FROM city_log WHERE id=? AND user_id=? AND kind = 'fine' AND cents < 0 AND at >= ?").bind(id, u.id, Date.now() - 7 * DAY).first();
+          if (!f) return reply(req, { error: "no_claim", message: "That fine cannot be claimed. Fines can be claimed within a week, once." }, 400);
+          if (await db.prepare("SELECT 1 FROM city_claims WHERE log_id=?").bind(id).first()) return reply(req, { error: "claimed", message: "You have already claimed that one." }, 409);
+          const refund = Math.floor(-Number(f.cents) / 200);
+          await db.prepare("INSERT INTO city_claims(log_id) VALUES(?)").bind(id).run();
+          const city = await cityAccount(db, u.id), now = Date.now();
+          city.wallet += refund;
+          await cityLog(db, u.id, "claim", refund * 100, "lost property refund, half a fine");
+          await saveCity(db, u.id, city);
+          return reply(req, { ok: true, refund, ...cityView(city, now) });
         }
         if (path === "/api/city/property/buy" && req.method === "POST") {
           const building = String(b.building || "");
