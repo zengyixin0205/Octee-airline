@@ -154,7 +154,7 @@ function hub() {
   return [el("h2", {}, "The town"), el("p", { class: "note" }, "Click a building on the map, or in the list below. You can look at all of them for free."),
     cityMap(),
     el("h2", {}, "The buildings"),
-    el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb), el("p", { class: "note", style: "margin:4px 0 0" }, owners[b.id] ? "Owned by " + owners[b.id] : "For sale: " + economy.price + " CCT")))),
+    el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb), el("p", { class: "note", style: "margin:4px 0 0" }, owners[b.id] ? "Owned by " + owners[b.id] : "For sale: " + priceOf(b.id) + " CCT")))),
     el("h2", {}, "The Octee City Gazette"),
     el("div", { id: "city-news" }, el("p", { class: "note" }, "Loading the news…")),
     el("h2", {}, "Leaderboard"),
@@ -415,13 +415,17 @@ function render(app, view) {
 
 // Property: who owns each building, and what it costs and earns. Filled from the Worker before the first render.
 let owners = {};
+let terms = {};
 let economy = { price: 300, rent: 3 };
 async function loadOwners() {
   const j = await pub("/api/city/property");
   if (!j) return;
   economy = { price: j.price, rent: j.rent };
   owners = Object.fromEntries(j.owners.map((o) => [o.building, o.owner]));
+  terms = j.terms || {};
 }
+const priceOf = (id) => (terms[id] ? terms[id].price : economy.price);
+const rentOf = (id) => (terms[id] ? terms[id].rent : economy.rent);
 function propertyBlock(id) {
   const msg = el("p", { class: "note" });
   const owner = owners[id];
@@ -431,9 +435,9 @@ function propertyBlock(id) {
     catch (e) { msg.textContent = e.message; }
   };
   let body;
-  if (mine) body = [el("p", {}, `You own this building. It earns ${economy.rent} CCT a day, paid into your wallet each time you visit the city.`), el("button", { class: "btn ghost", type: "button", onclick: () => act("/api/city/property/sell") }, `Sell for ${Math.floor(economy.price / 2)} CCT`)];
+  if (mine) body = [el("p", {}, `You own this building. It earns ${rentOf(id)} CCT a day, paid into your wallet each time you visit the city.`), el("button", { class: "btn ghost", type: "button", onclick: () => act("/api/city/property/sell") }, `Sell for ${Math.floor(((state.view && state.view.paidFor && state.view.paidFor[id]) || priceOf(id)) / 2)} CCT`)];
   else if (owner) body = [el("p", {}, `Owned by ${owner}. Rent goes to them.`)];
-  else body = [el("p", {}, `For sale: ${economy.price} CCT. It earns ${economy.rent} CCT a day.`), loggedIn() ? el("button", { class: "btn", type: "button", onclick: () => act("/api/city/property/buy") }, "Buy this building") : el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to buy it.")];
+  else body = [el("p", {}, `For sale: ${priceOf(id)} CCT. It earns ${rentOf(id)} CCT a day.`), loggedIn() ? el("button", { class: "btn", type: "button", onclick: () => act("/api/city/property/buy") }, "Buy this building") : el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to buy it.")];
   return el("div", { class: "city-card", style: "cursor:auto" }, el("h3", {}, "Property"), ...body, msg);
 }
 
