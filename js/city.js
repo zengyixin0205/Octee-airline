@@ -439,6 +439,7 @@ function render(app, view) {
 let owners = {};   // building id -> [{ owner, shares }]
 let terms = {};
 let rules = {};    // building id -> fewest shares per purchase
+let shareRent = {}; // building id -> rent per share in cents a day, when the owner set one
 let economy = { price: 300, rent: 3 };
 async function loadOwners() {
   const j = await pub("/api/city/property");
@@ -448,6 +449,7 @@ async function loadOwners() {
   for (const o of j.owners) (owners[o.building] = owners[o.building] || []).push({ owner: o.owner, shares: Number(o.shares) });
   terms = j.terms || {};
   rules = j.rules || {};
+  shareRent = j.shareRent || {};
 }
 const SHARES = 10;
 const sharesSold = (id) => (owners[id] || []).reduce((t, o) => t + o.shares, 0);
@@ -459,7 +461,7 @@ function propertyBlock(id) {
   const msg = el("p", { class: "note" });
   const left = SHARES - sharesSold(id);
   const mine = (state.view && state.view.sharesFor && state.view.sharesFor[id]) || 0;
-  const perShare = priceOf(id) / SHARES, perShareRent = rentOf(id) / SHARES;
+  const perShare = priceOf(id) / SHARES, perShareRent = (shareRent[id] !== undefined ? shareRent[id] : rentOf(id) * 10) / 100;
   const act = async (path, n) => {
     try { await api("POST", path, { building: id, shares: n }); await loadOwners(); await refresh(); render(document.querySelector("#app"), id); }
     catch (e) { msg.textContent = e.message; }
@@ -483,7 +485,7 @@ async function loadSetup() {
   const j = await pub("/api/city/setup");
   if (!j) return;
   for (const b of j.buildings) if (!BUILDINGS.some((x) => x.id === b.id)) BUILDINGS.push({ id: b.id, name: b.name, blurb: b.blurb });
-  for (const jb of j.jobs) if (!JOBS[jb.id]) JOBS[jb.id] = { b: jb.building, title: jb.title, prompt: jb.prompt, right: jb.right, wrong: jb.wrong, hard: jb.hard };
+  for (const jb of j.jobs) if (!JOBS[jb.id]) JOBS[jb.id] = { b: jb.building, title: jb.title, prompt: jb.prompt, right: jb.right, wrong: jb.wrong, hard: jb.hard, ...(jb.prompt2 ? { prompt2: jb.prompt2, right2: jb.right2, wrong2: jb.wrong2 } : {}) };
 }
 
 async function boot() {

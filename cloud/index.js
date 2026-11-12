@@ -117,6 +117,10 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_reviews (user_id INTEGER NOT NULL, building TEXT NOT NULL, username TEXT NOT NULL, stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (user_id, building))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_game (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '')").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_buildings (id TEXT PRIMARY KEY, name TEXT NOT NULL, blurb TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_job_extra (job TEXT PRIMARY KEY, prompt2 TEXT NOT NULL, right2 TEXT NOT NULL, wrong2 TEXT NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_share_rent (building TEXT PRIMARY KEY, cents INTEGER NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_holidays (day TEXT PRIMARY KEY)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, username TEXT NOT NULL, score INTEGER NOT NULL, at INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_building_rules (building TEXT PRIMARY KEY, min_shares INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_tower (user_id INTEGER PRIMARY KEY, best INTEGER NOT NULL, at INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_shares (building TEXT NOT NULL, user_id INTEGER NOT NULL, shares INTEGER NOT NULL, paid INTEGER NOT NULL, collected_at INTEGER NOT NULL, carry INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (building, user_id))").run();
@@ -165,7 +169,8 @@ async function weeklyEdition(db) {
   const n = (x) => `${x} building${Number(x) === 1 ? "" : "s"}`;
   const text = `Weekly edition: ${n(bought.n)} bought, ${n(sold.n)} sold, and ${Math.round(Number(rent.c) / 100).toLocaleString("en-GB")} CCT of rent paid out. ` +
     (top ? `The biggest landlord is ${top.name}, with ${top.n} share${Number(top.n) === 1 ? "" : "s"}.` : "Nobody owns a share yet. The town is renting from itself.");
-  await cityNews(db, text);
+  const star = await db.prepare("SELECT username, score FROM city_scores WHERE at >= ? ORDER BY score DESC LIMIT 1").bind(since).first();
+  await cityNews(db, text + (star ? ` Tower of the week: ${star.username}, with ${star.score} blocks.` : ""));
 }
 async function cityStreak(db, uid) {
   const r = await db.prepare("SELECT last_day, streak FROM city_streak WHERE user_id=?").bind(uid).first();
@@ -173,11 +178,18 @@ async function cityStreak(db, uid) {
 }
 const cityNews = (db, text) => db.prepare("INSERT INTO city_news(at, text) VALUES(?, ?)").bind(Date.now(), text).run();
 // Interest for every whole day since the last payment, compounding, at the tier of each day's balance. Returns the new balance in hundredths.
-function accrue(bank_c, bank_at) {
+function accrue(bank_c, bank_at, hol = new Set()) {
   const days = Math.min(3650, Math.max(0, Math.floor((Date.now() - bank_at) / DAY)));
   let c = bank_c;
-  for (let i = 0; i < days; i++) c += Math.floor(c * tierFor(Math.floor(c / 100)).rate / 365);
+  for (let i = 0; i < days; i++) {
+    const double = hol.has(dayStr(bank_at + i * DAY)) ? 2 : 1; // a bank holiday pays double interest for its day
+    c += Math.floor((c * tierFor(Math.floor(c / 100)).rate * double) / 365);
+  }
   return { bank_c: c, days };
+}
+async function cityHolidays(db) {
+  const r = await db.prepare("SELECT day FROM city_holidays").all();
+  return new Set((r.results || []).map((x) => x.day));
 }
 async function cityAccount(db, uid) {
   await ensureCity(db);
@@ -185,16 +197,17 @@ async function cityAccount(db, uid) {
   const r = await db.prepare("SELECT * FROM city_accounts WHERE user_id=?").bind(uid).first();
   let shifts = {}; try { shifts = JSON.parse(r.shifts || "{}"); } catch { shifts = {}; }
   const a = { wallet: Number(r.wallet) || 0, bank_c: Number(r.bank_c) || 0, bank_at: Number(r.bank_at) || 0, jail_until: Number(r.jail_until) || 0, shifts, arrests: Number(r.arrests) || 0 };
-  const before = a.bank_c, acc = accrue(a.bank_c, a.bank_at);
+  const hol = await cityHolidays(db);
+  const before = a.bank_c, acc = accrue(a.bank_c, a.bank_at, hol);
   a.bank_c = acc.bank_c;
   if (acc.days > 0) a.bank_at += acc.days * DAY;
   if (acc.bank_c > before) await cityLog(db, uid, "interest", acc.bank_c - before, `${acc.days} day${acc.days === 1 ? "" : "s"} at ${tierFor(Math.floor(before / 100)).name}`);
   // rent: every share of every building pays a tenth of that building's rent a day. Kept in hundredths, so rounding loses nothing.
-  const owned = await db.prepare("SELECT s.building AS building, s.shares AS shares, s.collected_at AS collected_at, s.carry AS carry, COALESCE(t.rent, ?) AS rent FROM city_shares s LEFT JOIN city_building_terms t ON t.building = s.building WHERE s.user_id = ?").bind(CITY.rent, uid).all();
+  const owned = await db.prepare("SELECT s.building AS building, s.shares AS shares, s.collected_at AS collected_at, s.carry AS carry, COALESCE(sr.cents, COALESCE(t.rent, ?) * 10) AS cents FROM city_shares s LEFT JOIN city_building_terms t ON t.building = s.building LEFT JOIN city_share_rent sr ON sr.building = s.building WHERE s.user_id = ?").bind(CITY.rent, uid).all();
   for (const pr of owned.results || []) {
     const due = Math.min(3650, Math.floor((Date.now() - Number(pr.collected_at)) / DAY));
     if (due > 0) {
-      const cents = Number(pr.carry) + due * Number(pr.rent) * 10 * Number(pr.shares);
+      const cents = Number(pr.carry) + due * Number(pr.cents) * Number(pr.shares);
       const cct = Math.floor(cents / 100);
       a.wallet += cct;
       await db.prepare("UPDATE city_shares SET collected_at=?, carry=? WHERE building=? AND user_id=?").bind(Number(pr.collected_at) + due * DAY, cents % 100, pr.building, uid).run();
@@ -549,7 +562,8 @@ export default {
       if (path === "/api/city/leaderboard" && req.method === "GET") {
         await ensureCity(db);
         const rich = await db.prepare("SELECT u.username AS name, c.wallet AS wallet, c.bank_c AS bank, c.bank_at AS bank_at FROM city_accounts c JOIN users u ON u.id = c.user_id LIMIT 200").all();
-        const ranked = (rich.results || []).map((r) => ({ name: r.name, cct: Number(r.wallet) + accrue(Number(r.bank), Number(r.bank_at)).bank_c / 100 })).sort((x, y) => y.cct - x.cct).slice(0, 10);
+        const hol = await cityHolidays(db);
+        const ranked = (rich.results || []).map((r) => ({ name: r.name, cct: Number(r.wallet) + accrue(Number(r.bank), Number(r.bank_at), hol).bank_c / 100 })).sort((x, y) => y.cct - x.cct).slice(0, 10);
         const jailed = await db.prepare("SELECT u.username AS name, c.arrests AS arrests FROM city_accounts c JOIN users u ON u.id = c.user_id WHERE c.arrests > 0 ORDER BY c.arrests DESC LIMIT 10").all();
         return reply(req, {
           rich: ranked,
@@ -558,17 +572,18 @@ export default {
       if (path === "/api/city/setup" && req.method === "GET") {
         await ensureCity(db);
         const bs = await db.prepare("SELECT id, name, blurb FROM city_buildings ORDER BY at").all();
-        const js = await db.prepare("SELECT id, building, title, prompt, right_answer, wrong, hard FROM city_jobs ORDER BY at").all();
+        const js = await db.prepare("SELECT j.id AS id, j.building AS building, j.title AS title, j.prompt AS prompt, j.right_answer AS right_answer, j.wrong AS wrong, j.hard AS hard, x.prompt2 AS prompt2, x.right2 AS right2, x.wrong2 AS wrong2 FROM city_jobs j LEFT JOIN city_job_extra x ON x.job = j.id ORDER BY j.at").all();
         return reply(req, {
           buildings: bs.results || [],
-          jobs: (js.results || []).map((j) => ({ id: j.id, building: j.building, title: j.title, prompt: j.prompt, right: j.right_answer, wrong: JSON.parse(j.wrong || "[]"), hard: !!j.hard })) });
+          jobs: (js.results || []).map((j) => ({ id: j.id, building: j.building, title: j.title, prompt: j.prompt, right: j.right_answer, wrong: JSON.parse(j.wrong || "[]"), hard: !!j.hard, ...(j.prompt2 ? { prompt2: j.prompt2, right2: j.right2, wrong2: JSON.parse(j.wrong2 || "[]") } : {}) })) });
       }
       if (path === "/api/city/property" && req.method === "GET") {
         await ensureCity(db);
         const rows = await db.prepare("SELECT s.building AS building, u.username AS owner, s.shares AS shares FROM city_shares s JOIN users u ON u.id = s.user_id ORDER BY s.building, s.shares DESC").all();
         const terms = await db.prepare("SELECT building, price, rent FROM city_building_terms").all();
         const rules = await db.prepare("SELECT building, min_shares FROM city_building_rules").all();
-        return reply(req, { rules: Object.fromEntries((rules.results || []).map((r) => [r.building, Number(r.min_shares)])), price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
+        const shareRent = await db.prepare("SELECT building, cents FROM city_share_rent").all();
+        return reply(req, { shareRent: Object.fromEntries((shareRent.results || []).map((r) => [r.building, Number(r.cents)])), rules: Object.fromEntries((rules.results || []).map((r) => [r.building, Number(r.min_shares)])), price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
       }
       if (path === "/api/city/tower" && req.method === "GET") {
         await ensureCity(db);
@@ -612,7 +627,13 @@ export default {
             if (!(await cityBuildingExists(db, building))) return reply(req, { error: "no_building", message: "Pick a building that is in the city." }, 400);
             if (!title || !prompt || !right || wrong.length < 1 || wrong.some((x) => !x)) return reply(req, { error: "incomplete", message: "A job needs a title, a question, a right answer and at least one wrong answer." }, 400);
             if (await cityJob(db, id)) return reply(req, { error: "taken", message: "That job id is already in use." }, 409);
+            const p2 = clip(String(b.prompt2 ?? "").trim(), 200), r2 = clip(String(b.right2 ?? "").trim(), 120);
+            const w2 = Array.isArray(b.wrong2) ? b.wrong2.map((x) => clip(String(x ?? "").trim(), 120)).filter(Boolean) : [];
+            const second = !!(p2 || r2 || w2.length);
+            if (second && !b.hard) return reply(req, { error: "not_hard", message: "A second question is only for hard jobs." }, 400);
+            if (second && (!p2 || !r2 || !w2.length)) return reply(req, { error: "incomplete", message: "A second question needs a question, a right answer and at least one wrong answer." }, 400);
             await db.prepare("INSERT INTO city_jobs(id, building, title, prompt, right_answer, wrong, hard, at) VALUES(?, ?, ?, ?, ?, ?, ?, ?)").bind(id, building, title, prompt, right, JSON.stringify(wrong), b.hard ? 1 : 0, now).run();
+            if (second) await db.prepare("INSERT INTO city_job_extra(job, prompt2, right2, wrong2) VALUES(?, ?, ?, ?)").bind(id, p2, r2, JSON.stringify(w2)).run();
             return reply(req, { ok: true, id });
           }
           if (b.kind === "terms") {
@@ -623,12 +644,24 @@ export default {
             if (price % CITY.shares !== 0) return reply(req, { error: "bad_price", message: `The price must split into ${CITY.shares} equal shares, so a multiple of ${CITY.shares}.` }, 400);
             if (!(rent >= 1 && rent <= 50)) return reply(req, { error: "bad_rent", message: "Rent is between 1 and 50 CCT a day." }, 400);
             await db.prepare("INSERT INTO city_building_terms(building, price, rent) VALUES(?, ?, ?) ON CONFLICT(building) DO UPDATE SET price=excluded.price, rent=excluded.rent").bind(building, price, rent).run();
+            if (b.shareCents !== undefined && b.shareCents !== null && b.shareCents !== "") {
+              const cents = Math.floor(Number(b.shareCents));
+              if (!(cents >= 1 && cents <= 500)) return reply(req, { error: "bad_share_rent", message: "Rent per share is between 1 and 500 cents a day." }, 400);
+              await db.prepare("INSERT INTO city_share_rent(building, cents) VALUES(?, ?) ON CONFLICT(building) DO UPDATE SET cents=excluded.cents").bind(building, cents).run();
+            }
             const minShares = b.minShares === undefined ? null : Math.floor(Number(b.minShares));
             if (minShares !== null) {
               if (!(minShares >= 1 && minShares <= CITY.shares)) return reply(req, { error: "bad_min", message: `A lot is between 1 and ${CITY.shares} shares.` }, 400);
               await db.prepare("INSERT INTO city_building_rules(building, min_shares) VALUES(?, ?) ON CONFLICT(building) DO UPDATE SET min_shares=excluded.min_shares").bind(building, minShares).run();
             }
             return reply(req, { ok: true, building, price, rent, minShares });
+          }
+          if (b.kind === "holiday") {
+            const day = String(b.date || "");
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day < dayStr(Date.now())) return reply(req, { error: "bad_date", message: "Pick a date from today on." }, 400);
+            await db.prepare("INSERT OR IGNORE INTO city_holidays(day) VALUES(?)").bind(day).run();
+            await cityNews(db, `The city has declared a bank holiday on ${day}. Interest at OCT Bank is doubled for the day.`);
+            return reply(req, { ok: true, day });
           }
           return reply(req, { error: "bad_kind", message: "Say whether this is a building or a job." }, 400);
         }
@@ -676,6 +709,7 @@ export default {
           await ensureCity(db);
           const score = Math.floor(Number(b.score));
           if (!(score >= 0 && score <= 500)) return reply(req, { error: "bad_score", message: "That is not a real score. The tower is not that tall." }, 400);
+          if (score > 0) await db.prepare("INSERT INTO city_scores(user_id, username, score, at) VALUES(?, ?, ?, ?)").bind(u.id, u.username, score, Date.now()).run();
           await db.prepare("INSERT INTO city_tower(user_id, best, at) VALUES(?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET best=MAX(best, excluded.best), at=excluded.at").bind(u.id, score, Date.now()).run();
           const today = iso().slice(0, 10);
           const g = await db.prepare("SELECT last_day FROM city_game WHERE user_id=?").bind(u.id).first();
@@ -711,6 +745,8 @@ export default {
             city.wallet -= fine; city.arrests += 1; city.jail_until = now + CITY.jailMinutes * 60000;
             await cityLog(db, u.id, "fine", -fine * 100, "arrested: double shift at " + job.replace(/-/g, " "));
             await cityNews(db, `${u.username} was arrested for a double shift at ${job.replace(/-/g, " ")}. Fine: ${fine} CCT.`);
+            const week = await db.prepare("SELECT COUNT(*) AS n FROM city_log WHERE user_id=? AND kind = 'fine' AND note LIKE 'arrested:%' AND at >= ?").bind(u.id, Date.now() - 7 * DAY).first();
+            if (Number(week.n) === 3) await cityNews(db, `WANTED: ${u.username}, arrested three times this week. Please come quietly to the Police Station.`);
             if (city.arrests === 5 || city.arrests === 10) await cityNews(db, `${u.username} is now a repeat offender, with ${city.arrests} arrests. The cells have a chair with their name on it.`);
             await saveCity(db, u.id, city);
             return reply(req, { ok: false, arrested: true, fine, ...cityView(city, now), message: `Arrested. You already did that shift today. Fine: ${fine} CCT. Please wait in the cells.` });

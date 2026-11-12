@@ -1444,7 +1444,7 @@ Only the owner or a Control Tower admin can change the city. The page uses the s
 - remove an owner-made building (its jobs go too; the built-in town cannot be removed).
 
 ### Tables (created lazily in `ensureCity`, so there is no migration)
-`city_accounts`, `city_news`, `city_log`, `city_streak`, `city_chat`, `city_reviews`, `city_game`, `city_buildings`, `city_jobs`, `city_building_terms`, `city_shares`, `city_building_rules`, `city_tower`.
+`city_accounts`, `city_news`, `city_log`, `city_streak`, `city_chat`, `city_reviews`, `city_game`, `city_buildings`, `city_jobs`, `city_building_terms`, `city_shares`, `city_building_rules`, `city_tower`, `city_job_extra`, `city_share_rent`, `city_holidays`, `city_scores`.
 
 ### Deploying
 Change `cloud/index.js`, then run `npx wrangler deploy` from `cloud/` on your own machine. The sandbox cannot reach Cloudflare. Do not commit `cloud/wrangler.toml`.
@@ -1454,6 +1454,12 @@ Change `cloud/index.js`, then run `npx wrangler deploy` from `cloud/` on your ow
 - Police on duty (anyone who clocked in to a police job today) can remove a message from the Town Square, and so can the city's owner. Removals are logged in the Gazette without the message text.
 - The Game Tower has a high-score table (best score per citizen, top ten). Every score counts toward it, even when the daily reward has already been paid.
 - The five hard jobs (bank teller, vault guard, auditor, patrol officer, desk sergeant) ask two questions, both of which must be right. Owner-made hard jobs still ask one question.
+
+- Owner-made hard jobs can have a second question (set on `city-setup.html`), stored in `city_job_extra`.
+- Owners can set rent per share in cents a day (1 to 500) alongside the building rent. Without it, the building rent is split ten ways.
+- A WANTED notice appears in the Gazette the third time a citizen is arrested in seven days.
+- The Gazette's weekly edition names the tower of the week: the best single score in the last seven days (`city_scores`).
+- The owner can declare a bank holiday on a date from today on. Interest at OCT Bank is doubled for that day, and the Gazette announces it (`city_holidays`).
 
 ## Reviews: edit and delete from the Control Tower
 

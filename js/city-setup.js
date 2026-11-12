@@ -40,11 +40,21 @@ function termsForm(buildings) {
   const price = el("input", { type: "number", min: 50, max: 5000, step: 10, value: 300, style: "width:100%;box-sizing:border-box" });
   const rent = el("input", { type: "number", min: 1, max: 50, step: 1, value: 3, style: "width:100%;box-sizing:border-box" });
   const lot = el("input", { type: "number", min: 1, max: 10, step: 1, value: 1, style: "width:100%;box-sizing:border-box" });
+  const shareCents = el("input", { type: "number", min: 1, max: 500, step: 1, placeholder: "blank = building rent split ten ways", style: "width:100%;box-sizing:border-box" });
   const msg = el("p", { class: "note" });
   return el("div", { class: "city-card", style: "cursor:auto" }, el("h2", {}, "3. Set a price and rent"),
     el("p", { class: "note" }, "Citizens pay the price to buy the building, and it pays the rent into their wallet each day. Price 50 to 5,000 CCT, a multiple of 10 so it splits into ten shares; rent 1 to 50 CCT a day. The smallest lot is the fewest shares one citizen can buy at a time (the last shares left are always allowed). A building with no terms costs 300 CCT and earns 3 a day."),
-    field("Building", pick), field("Price (CCT)", price), field("Rent (CCT a day)", rent), field("Smallest lot (shares per purchase, 1 to 10)", lot),
-    el("button", { class: "btn", type: "button", onclick: () => run(msg, () => cloudAdminCall("POST", "/api/city/setup", { kind: "terms", building: pick.value, price: Number(price.value), rent: Number(rent.value), minShares: Number(lot.value) }), "Price, rent and the smallest lot are set.") }, "Set terms"), msg);
+    field("Building", pick), field("Price (CCT)", price), field("Rent (CCT a day, for the whole building)", rent), field("Rent per share (cents a day, 1 to 500, optional)", shareCents), field("Smallest lot (shares per purchase, 1 to 10)", lot),
+    el("button", { class: "btn", type: "button", onclick: () => run(msg, () => cloudAdminCall("POST", "/api/city/setup", { kind: "terms", building: pick.value, price: Number(price.value), rent: Number(rent.value), minShares: Number(lot.value), ...(shareCents.value ? { shareCents: Number(shareCents.value) } : {}) }), "Price, rent and the smallest lot are set.") }, "Set terms"), msg);
+}
+
+function holidayForm() {
+  const day = el("input", { type: "date", style: "width:100%;box-sizing:border-box" });
+  const msg = el("p", { class: "note" });
+  return el("div", { class: "city-card", style: "cursor:auto" }, el("h2", {}, "4. Declare a bank holiday"),
+    el("p", { class: "note" }, "On a bank holiday, interest at OCT Bank is doubled for that day. The Gazette announces it."),
+    field("Date", day),
+    el("button", { class: "btn", type: "button", onclick: () => { if (!day.value) { msg.textContent = "Pick a date first."; return; } run(msg, () => cloudAdminCall("POST", "/api/city/setup", { kind: "holiday", date: day.value }), "The bank holiday is declared. The Gazette has the news."); } }, "Declare it"), msg);
 }
 
 function jobForm(buildings) {
@@ -54,13 +64,17 @@ function jobForm(buildings) {
   const right = text({ maxlength: 120, placeholder: "The right answer (clocks them in)" });
   const wrong1 = text({ maxlength: 120, placeholder: "A wrong answer" }), wrong2 = text({ maxlength: 120, placeholder: "Another wrong answer (optional)" });
   const hard = el("input", { type: "checkbox" });
+  const prompt2 = text({ maxlength: 200, placeholder: "Second question (hard jobs only, optional)" });
+  const right2 = text({ maxlength: 120, placeholder: "Its right answer" }), wr2 = text({ maxlength: 120, placeholder: "A wrong answer to it" });
   const msg = el("p", { class: "note" });
   return el("div", { class: "city-card", style: "cursor:auto" }, el("h2", {}, "2. Give it a job"),
     el("p", { class: "note" }, "A job is one question with one right answer. A right answer clocks the citizen in and pays 10 CCT, or 15 if you tick hard."),
     field("Building", pick), field("Job id", id), field("Title", title), field("Question", prompt), field("Right answer", right), field("Wrong answer", wrong1), field("Another wrong answer", wrong2),
     el("label", { style: "display:block;margin:6px 0" }, hard, " Hard job (pays 15 CCT)"),
+    field("Second question (hard jobs only)", prompt2), field("Its right answer", right2), field("A wrong answer to it", wr2),
     el("button", { class: "btn", type: "button", onclick: () => {
       const v = { kind: "job", building: pick.value, id: id.value.trim().toLowerCase(), title: title.value.trim(), prompt: prompt.value.trim(), right: right.value.trim(), wrong: [wrong1.value.trim(), wrong2.value.trim()].filter(Boolean), hard: hard.checked };
+      if (prompt2.value.trim() || right2.value.trim() || wr2.value.trim()) Object.assign(v, { prompt2: prompt2.value.trim(), right2: right2.value.trim(), wrong2: [wr2.value.trim()].filter(Boolean) });
       if (!ID.test(v.id)) { msg.textContent = "The job id needs 3 to 21 characters: lower-case letters, numbers and dashes, starting with a letter."; return; }
       run(msg, () => cloudAdminCall("POST", "/api/city/setup", v), "The job is on the board.").then(() => { id.value = ""; title.value = ""; prompt.value = ""; right.value = ""; wrong1.value = ""; wrong2.value = ""; hard.checked = false; });
     } }, "Add job"), msg);
@@ -88,6 +102,6 @@ async function load() {
   const all = [...BUILT_IN, ...data.buildings.map((b) => [b.id, b.name])];
   const note = el("div", { class: "city-status" }, flash || "Changes show up in the city straight away.");
   flash = "";
-  app.replaceChildren(note, buildingForm(app), jobForm(all), termsForm(all), el("h2", {}, "Buildings of your own"), listing(data.buildings, data.jobs));
+  app.replaceChildren(note, buildingForm(app), jobForm(all), termsForm(all), holidayForm(), el("h2", {}, "Buildings of your own"), listing(data.buildings, data.jobs));
 }
 load();
