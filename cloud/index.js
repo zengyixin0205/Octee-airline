@@ -92,6 +92,8 @@ const CITY = {
   jobPay: 10,               // CCT paid for each finished shift
   fine: 5,                  // CCT taken when arrested
   jailMinutes: 30,          // how long an arrest keeps you from shifts
+  hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
+  hard: ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"],
   tiers: [{ name: "Bronze", min: 0, rate: 0.01 }, { name: "Silver", min: 1000, rate: 0.025 }, { name: "Gold", min: 10000, rate: 0.04 }],
   jobs: ["bank-teller", "bank-vault", "hall-stamp", "hall-notes", "clinic-nurse", "clinic-pharmacy", "fire-hose", "fire-dispatch", "post-parcel", "post-stamp",
     "bakery-assistant", "bakery-till", "library-shelf", "library-returns", "cinema-usher", "cinema-projector", "power-switch", "power-meter", "radio-dial", "radio-playlist",
@@ -104,18 +106,22 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_news (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)").run();
 }
 const cityNews = (db, text) => db.prepare("INSERT INTO city_news(at, text) VALUES(?, ?)").bind(Date.now(), text).run();
+// Interest for every whole day since the last payment, compounding, at the tier of each day's balance. Returns the new balance in hundredths.
+function accrue(bank_c, bank_at) {
+  const days = Math.min(3650, Math.max(0, Math.floor((Date.now() - bank_at) / DAY)));
+  let c = bank_c;
+  for (let i = 0; i < days; i++) c += Math.floor(c * tierFor(Math.floor(c / 100)).rate / 365);
+  return { bank_c: c, days };
+}
 async function cityAccount(db, uid) {
   await ensureCity(db);
   await db.prepare("INSERT OR IGNORE INTO city_accounts(user_id, bank_at) VALUES(?, ?)").bind(uid, Date.now()).run();
   const r = await db.prepare("SELECT * FROM city_accounts WHERE user_id=?").bind(uid).first();
   let shifts = {}; try { shifts = JSON.parse(r.shifts || "{}"); } catch { shifts = {}; }
   const a = { wallet: Number(r.wallet) || 0, bank_c: Number(r.bank_c) || 0, bank_at: Number(r.bank_at) || 0, jail_until: Number(r.jail_until) || 0, shifts, arrests: Number(r.arrests) || 0 };
-  // interest for every whole day since the last payment, paid into the bank (compounding), at the tier of the day's balance
-  const days = Math.min(3650, Math.floor((Date.now() - a.bank_at) / DAY));
-  if (days > 0) {
-    for (let i = 0; i < days; i++) a.bank_c += Math.floor(a.bank_c * tierFor(Math.floor(a.bank_c / 100)).rate / 365);
-    a.bank_at += days * DAY;
-  }
+  const acc = accrue(a.bank_c, a.bank_at);
+  a.bank_c = acc.bank_c;
+  if (acc.days > 0) a.bank_at += acc.days * DAY;
   return a;
 }
 async function saveCity(db, uid, a) {
@@ -462,10 +468,11 @@ export default {
       }
       if (path === "/api/city/leaderboard" && req.method === "GET") {
         await ensureCity(db);
-        const rich = await db.prepare("SELECT u.username AS name, c.wallet AS wallet, c.bank_c AS bank FROM city_accounts c JOIN users u ON u.id = c.user_id ORDER BY (c.wallet + c.bank_c / 100.0) DESC LIMIT 10").all();
+        const rich = await db.prepare("SELECT u.username AS name, c.wallet AS wallet, c.bank_c AS bank, c.bank_at AS bank_at FROM city_accounts c JOIN users u ON u.id = c.user_id LIMIT 200").all();
+        const ranked = (rich.results || []).map((r) => ({ name: r.name, cct: Number(r.wallet) + accrue(Number(r.bank), Number(r.bank_at)).bank_c / 100 })).sort((x, y) => y.cct - x.cct).slice(0, 10);
         const jailed = await db.prepare("SELECT u.username AS name, c.arrests AS arrests FROM city_accounts c JOIN users u ON u.id = c.user_id WHERE c.arrests > 0 ORDER BY c.arrests DESC LIMIT 10").all();
         return reply(req, {
-          rich: (rich.results || []).map((r) => ({ name: r.name, cct: Number(r.wallet) + Number(r.bank) / 100 })),
+          rich: ranked,
           arrests: (jailed.results || []).map((r) => ({ name: r.name, arrests: Number(r.arrests) })) });
       }
       if (path.startsWith("/api/city")) {
@@ -486,8 +493,9 @@ export default {
             await saveCity(db, u.id, city);
             return reply(req, { ok: false, arrested: true, fine, ...cityView(city, now), message: `Arrested. You already did that shift today. Fine: ${fine} CCT. Please wait in the cells.` });
           }
+          const pay = CITY.hard.includes(job) ? CITY.hardPay : CITY.jobPay;
           city.shifts = { [today]: [...done, job] };
-          city.wallet += CITY.jobPay;
+          city.wallet += pay;
           let spot = null;
           if (Math.random() < CITY.spotChance) {
             const rules = [
@@ -503,7 +511,7 @@ export default {
             if (failed) await cityNews(db, `${u.username} failed a police spot check: "${pick.rule}" Fine: ${fine} CCT.`);
           }
           await saveCity(db, u.id, city);
-          return reply(req, { ok: true, paid: CITY.jobPay, spot, ...cityView(city, now) });
+          return reply(req, { ok: true, paid: pay, spot, ...cityView(city, now) });
         }
         if (path === "/api/city/exchange" && req.method === "POST") {
           const units = Math.floor(Number(b.units));

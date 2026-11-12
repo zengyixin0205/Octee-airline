@@ -63,7 +63,10 @@ const JOBS = {
   "police-patrol": { b: "police", title: "Patrol officer", prompt: "A citizen has already clocked in twice today. What is the offence?", right: "Double shifting. Arrest, fine, and time in the cells.", wrong: ["Overtime. Pay them more", "Nothing. They are just very keen"] },
   "police-desk": { b: "police", title: "Desk sergeant", prompt: "A suspect asks for a lawyer. What does the desk say?", right: "A lawyer is on the way. The lawyer is also on the way to jail.", wrong: ["Here is a peanut, the matter is closed", "Lawyers are not in the leaflet"] }
 };
-const PAY = 10, RATE = 10, SELL = 8;
+const PAY = 10, HARD_PAY = 15, RATE = 10, SELL = 8;
+// Harder jobs pay more. Keep in step with CITY.hard in cloud/index.js.
+const HARD = ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"];
+const payOf = (id) => (HARD.includes(id) ? HARD_PAY : PAY);
 // The police spot-check rules. The Worker picks one at random for one clock-in in four; keep these in step with cloud/index.js.
 const SPOT_RULES = [
   "No more than 100 CCT on the street. Pockets are for lint.",
@@ -153,7 +156,7 @@ function hub() {
     el("h2", {}, "Leaderboard"),
     el("div", { id: "city-board" }, el("p", { class: "note" }, "Counting the money…")),
     el("h2", {}, "The rules"),
-    el("ul", {}, el("li", {}, "A job pays " + PAY + " CCT. One shift per job, per day."), el("li", {}, "Clocking in to the same job twice in one day is a crime. You will be fined and put in the cells for half an hour."), el("li", {}, "One clock-in in four may also be a police spot check. Fail it and you pay a fine."), el("li", {}, "Octmiles buy CCT at " + RATE + " to 1. CCT sell back at " + SELL + " to 1. The gap is the town's cut.")),
+    el("ul", {}, el("li", {}, "A job pays " + PAY + " CCT, or " + HARD_PAY + " for the bank, tax audit and police jobs. One shift per job, per day."), el("li", {}, "Clocking in to the same job twice in one day is a crime. You will be fined and put in the cells for half an hour."), el("li", {}, "One clock-in in four may also be a police spot check. Fail it and you pay a fine."), el("li", {}, "Octmiles buy CCT at " + RATE + " to 1. CCT sell back at " + SELL + " to 1. The gap is the town's cut.")),
     el("p", { class: "note" }, "Nothing here is real. The bank is not a real bank. The police are not a real police. The town is not a town. Everything you earn is parody money.")];
 }
 
@@ -185,7 +188,7 @@ function jobRow(jobId, onDone) {
     if (state.view && (state.view.todayJobs || []).includes(jobId)) { doneMsg.className = "city-warn"; doneMsg.textContent = "You already did this shift today. Clocking in again is a crime. Going ahead anyway…"; }
     pick.hidden = false;
   } }, "Clock in");
-  return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + PAY + " CCT")), start), pick, doneMsg);
+  return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT")), start), pick, doneMsg);
 }
 
 function buildingView(id, app) {
@@ -197,7 +200,10 @@ function buildingView(id, app) {
   else if (id === "police") card.append(el("p", {}, "The police in Octee City have one rule: no double shifts. Break it and you are arrested, fined 5 CCT, and sent to the cells for half an hour. You cannot clock in from the cells. The cells are free, but nobody has ever come back for their CCT."),
     el("h3", {}, "Spot checks"),
     el("p", { class: "note" }, "One clock-in in four is also a spot check. The police pick one of these rules at random. Fail it and you pay a fine, and the Gazette prints your name:"),
-    el("ul", {}, SPOT_RULES.map((r) => el("li", {}, r))));
+    el("ul", {}, SPOT_RULES.map((r) => el("li", {}, r))),
+    el("h3", {}, "Wanted"),
+    el("p", { class: "note" }, "Citizens with two or more arrests. The police would like a word."),
+    el("div", { id: "city-wanted" }, el("p", { class: "note" }, "Checking the files…")));
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
   card.append(el("p", { class: "note" }, el("a", { href: "#" }, "Back to the town")));
   return card;
@@ -245,11 +251,20 @@ function bankBits(app) {
   ];
 }
 
+async function loadWanted(app) {
+  const box = app.querySelector("#city-wanted");
+  if (!box) return;
+  const j = await pub("/api/city/leaderboard");
+  const wanted = j ? j.arrests.filter((r) => r.arrests >= 2) : [];
+  box.replaceChildren(...(j ? (wanted.length ? wanted.map((r) => el("p", {}, el("strong", {}, r.name), " · " + r.arrests + " arrests · Please come quietly.")) : [el("p", { class: "note" }, "Nobody on the wanted list. The police are checking their own list.")]) : [el("p", { class: "note" }, "The files are in the cells. Try again later.")]));
+}
+
 function render(app, view) {
   const top = status(app);
   const body = view === "home" || !view ? hub() : [buildingView(view, app)];
   app.replaceChildren(top, ...body.filter(Boolean));
   if (view === "home" || !view) loadPanels(app);
+  if (view === "police") loadWanted(app);
 }
 
 async function boot() {
