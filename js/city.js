@@ -154,7 +154,7 @@ function hub() {
   return [el("h2", {}, "The town"), el("p", { class: "note" }, "Click a building on the map, or in the list below. You can look at all of them for free."),
     cityMap(),
     el("h2", {}, "The buildings"),
-    el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb)))),
+    el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb), el("p", { class: "note", style: "margin:4px 0 0" }, owners[b.id] ? "Owned by " + owners[b.id] : "For sale: " + economy.price + " CCT")))),
     el("h2", {}, "The Octee City Gazette"),
     el("div", { id: "city-news" }, el("p", { class: "note" }, "Loading the news…")),
     el("h2", {}, "Leaderboard"),
@@ -220,6 +220,7 @@ function buildingView(id, app) {
   if (id === "square") card.append(chatBlock());
   if (id === "tower") card.append(gameBlock());
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
+  card.append(propertyBlock(id));
   card.append(el("h3", {}, "Reviews"), reviewsBlock(id));
   card.append(el("p", { class: "note" }, el("a", { href: "#" }, "Back to the town")));
   return card;
@@ -412,6 +413,30 @@ function render(app, view) {
   if (view !== "home" && cityIds().includes(view)) loadReviews(view);
 }
 
+// Property: who owns each building, and what it costs and earns. Filled from the Worker before the first render.
+let owners = {};
+let economy = { price: 300, rent: 3 };
+async function loadOwners() {
+  const j = await pub("/api/city/property");
+  if (!j) return;
+  economy = { price: j.price, rent: j.rent };
+  owners = Object.fromEntries(j.owners.map((o) => [o.building, o.owner]));
+}
+function propertyBlock(id) {
+  const msg = el("p", { class: "note" });
+  const owner = owners[id];
+  const mine = !!(state.view && (state.view.owned || []).includes(id));
+  const act = async (path) => {
+    try { await api("POST", path, { building: id }); await loadOwners(); await refresh(); render(document.querySelector("#app"), id); }
+    catch (e) { msg.textContent = e.message; }
+  };
+  let body;
+  if (mine) body = [el("p", {}, `You own this building. It earns ${economy.rent} CCT a day, paid into your wallet each time you visit the city.`), el("button", { class: "btn ghost", type: "button", onclick: () => act("/api/city/property/sell") }, `Sell for ${Math.floor(economy.price / 2)} CCT`)];
+  else if (owner) body = [el("p", {}, `Owned by ${owner}. Rent goes to them.`)];
+  else body = [el("p", {}, `For sale: ${economy.price} CCT. It earns ${economy.rent} CCT a day.`), loggedIn() ? el("button", { class: "btn", type: "button", onclick: () => act("/api/city/property/buy") }, "Buy this building") : el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to buy it.")];
+  return el("div", { class: "city-card", style: "cursor:auto" }, el("h3", {}, "Property"), ...body, msg);
+}
+
 // Buildings and jobs the city owner has set up. They join the built-in ones, and the Worker checks the same list.
 async function loadSetup() {
   const j = await pub("/api/city/setup");
@@ -424,6 +449,7 @@ async function boot() {
   const app = $("#app");
   if (!app) return;
   await loadSetup();
+  await loadOwners();
   const go = async () => {
     const h = (location.hash || "").replace("#", "");
     const view = cityIds().includes(h) ? h : "home";
