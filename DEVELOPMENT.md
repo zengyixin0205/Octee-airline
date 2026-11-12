@@ -1408,7 +1408,13 @@ Bo asked for themes the Control Tower can switch on: Christmas snow, Chinese New
 ### Follow-up: Deepavali added as a fourth theme
 Bo asked for "deepavali and stuff" as a follow-up to the themes above. Added as a fourth entry alongside Christmas/Chinese New Year/Halloween, same shape (on/off switch, optional date range, no reward field — he didn't ask for an interactive reward here the way he did for Chinese New Year). `THEME_KEYS` in both `js/theme.js` and `cloud/index.js` now reads `["christmas", "cny", "deepavali", "halloween"]` (the precedence order when more than one theme is left on), `data/theme.json` carries a fourth `deepavali` entry, and the Control Tower's Theme tab picks it up automatically (it maps over `THEME_KEYS`) with its own label. Effect: `🪔` diya lamps fading in and out at random spots on the page, plus two gold side ribbons with a couple of 🪔 each, echoing the Chinese New Year side decoration in gold instead of red — Bo's "and stuff" named no specific effect, so this is this session's own pick. Verified with the same mocked-`theme.json` Playwright approach as the original three themes (correct body class and elements, zero JS errors, and the precedence order checked both ways: Christmas still wins over Deepavali, and Deepavali still wins over Halloween) plus a re-check of the Control Tower's Theme tab showing all four cards.
 
-## Octee City (`city.html`, `city-setup.html`, `js/city.js`, `js/city-setup.js`)
+## Octee City (now its own repo: `octee-city`)
+
+The town's pages moved out of this repo. They live in the `octee-city` repo, served at https://zengyixin0205.github.io/octee-city/ (`index.html` for the town, `setup.html` for the owner). The menu link in `js/main.js` points there.
+The Worker stays here, in `cloud/index.js`, and every city change that touches the backend is still a patch to this repo followed by `cd cloud && npx wrangler deploy`. Changes to the pages go in the `octee-city` repo.
+Both sites are on the same GitHub Pages origin, so one login works on both. The city pages keep their own copies of `cloud.js`, `auth.js`, `store.js`, `published.js`, `crypto.js`, `config.js` and `dom.js`; if those change here, copy them there too.
+
+The rest of this section describes the town itself, whichever repo its pages are in.
 
 A small town next to FIA. Walking around is free. Working, the bank, the chat, the tower reward, and owning buildings need an Octee Cloud login. Every number that counts (CCT, pay, interest, fines, cells, rent, shares) is decided by the Worker in `cloud/index.js` under `/api/city/*`; the page only shows it and asks.
 
