@@ -219,6 +219,46 @@ function jobRow(jobId, onDone) {
   return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT" + (j.prompt2 ? " · two questions" : ""))), start), pick, doneMsg);
 }
 
+// Town Square poll: one vote each, results as counts. The owner or a Control Tower admin can start a new one.
+function pollBlock(app) {
+  const box = el("div", { class: "city-card", style: "cursor:auto" }, el("h3", {}, "Town poll"), el("p", { class: "note" }, "Checking the ballot box…"));
+  const draw = async () => {
+    const j = await pub("/api/city/poll");
+    if (!j) { box.replaceChildren(el("h3", {}, "Town poll"), el("p", { class: "note" }, "The ballot box is in the cells. Try again later.")); return; }
+    const msg = el("p", { class: "note" });
+    const p = j.poll;
+    const vote = async (k) => {
+      msg.textContent = "Counting your vote…";
+      try { const r = await api("POST", "/api/city/poll/vote", { choice: k }); msg.textContent = r.message; await draw(); }
+      catch (e) { msg.textContent = e.message; }
+    };
+    const results = p ? p.options.map((o, k) => {
+      const n = p.counts[k], pct = p.total ? Math.round((n / p.total) * 100) : 0;
+      return el("p", { style: "margin:4px 0" }, el("strong", {}, o), ` · ${n} vote${n === 1 ? "" : "s"} (${pct}%)`);
+    }) : [];
+    const pollBox = p ? [
+      el("p", {}, el("strong", {}, p.question)),
+      loggedIn() ? el("div", { class: "city-row" }, ...p.options.map((o, k) => el("button", { class: "btn ghost", type: "button", onclick: () => vote(k) }, o))) : el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#square") }, "Log in"), " to vote."),
+      ...results
+    ] : [el("p", { class: "note" }, "No poll is open. The town is undecided, as usual.")];
+    let adminBox = null;
+    if (state.view && state.view.canPoll) {
+      const q = el("input", { type: "text", maxlength: 120, placeholder: "Question, at least five characters", style: "width:100%" });
+      const opts = el("input", { type: "text", maxlength: 200, placeholder: "Options, separated by | (two to four)", style: "width:100%" });
+      const pm = el("p", { class: "note" });
+      adminBox = el("div", {}, el("h4", {}, "Start a new poll"), q, opts, el("div", { class: "city-row" }, el("button", { class: "btn", type: "button", onclick: async () => {
+        const options = opts.value.split("|").map((x) => x.trim()).filter(Boolean);
+        pm.textContent = "Starting the poll…";
+        try { await api("POST", "/api/city/poll", { question: q.value, options }); pm.textContent = "The poll is open, and the Gazette has the news."; await draw(); }
+        catch (e) { pm.textContent = e.message; }
+      } }, "Start the poll")), pm);
+    }
+    box.replaceChildren(el("h3", {}, "Town poll"), ...pollBox, msg, ...(adminBox ? [adminBox] : []));
+  };
+  draw();
+  return box;
+}
+
 // Lost Property: every fine from the last 50, with its claim status. A claim refunds half and returns an item, which may be worth a little CCT.
 async function claimsBlock(app) {
   const box = el("div", {}, el("p", { class: "note" }, "Checking the lost property shelves…"));
@@ -287,7 +327,7 @@ async function finishPlay(game, score, msg, onDone) {
   try { const r = await api("POST", "/api/city/play", { game, score }); msg.textContent = `${r.message} Score: ${score}.`; await refresh(); onDone && onDone(); }
   catch (e) { msg.textContent = e.message; }
 }
-const GAMES_NAME = { market: "The Night Market", laundry: "The Laundrette", pool: "The Swimming Pool" };
+const GAMES_NAME = { market: "The Night Market", laundry: "The Laundrette", pool: "The Swimming Pool", highdive: "The High Dive" };
 
 // A shared shell: an intro, a Start button, and the game itself. The game calls done(score) when it ends.
 function playArea(game, title, intro, makeGame) {
@@ -356,8 +396,8 @@ function laundryGame(done) {
 }
 
 // Pool: the marker bobs up and down. Press Dive while it is in the green ring. Ten dives.
-function poolGame(done) {
-  const DIVES = 10, TOP = 0, BOTTOM = 148, RING_TOP = 56, RING_BOTTOM = 96;
+function poolGame(done, opt = {}) {
+  const DIVES = opt.dives || 10, TOP = 0, BOTTOM = 148, RING = opt.ring || 40, RING_TOP = 76 - RING / 2, RING_BOTTOM = 76 + RING / 2, STEP = opt.step || 4;
   const track = el("div", { style: "position:relative;width:260px;height:160px;border:1px solid #9bd;border-radius:8px;background:#e8f4ff;overflow:hidden;touch-action:none" });
   const ring = el("div", { style: `position:absolute;left:0;right:0;top:${RING_TOP}px;height:${RING_BOTTOM - RING_TOP}px;background:rgba(0,160,80,.25)` });
   const marker = el("div", { style: "position:absolute;left:20px;width:40px;height:12px;border-radius:6px;background:#06c;top:0" });
@@ -368,7 +408,7 @@ function poolGame(done) {
   const stop = () => { clearInterval(timer); timer = null; };
   const move = () => {
     if (!track.isConnected) { stop(); return; }
-    y += dirY * 4; if (y < TOP) { y = TOP; dirY = 1; } if (y > BOTTOM) { y = BOTTOM; dirY = -1; }
+    y += dirY * STEP; if (y < TOP) { y = TOP; dirY = 1; } if (y > BOTTOM) { y = BOTTOM; dirY = -1; }
     marker.style.top = y + "px";
   };
   dive.onclick = () => {
@@ -401,8 +441,10 @@ function buildingView(id, app) {
   if (id === "lost") card.append(claimsBlock(app));
   if (id === "market") card.append(playArea("market", "Spot the genuine", "Five stalls. Pick the genuine item at each one. One point per right answer, up to 5 CCT a day.", marketGame));
   if (id === "laundry") card.append(playArea("laundry", "Sock pairs", "Turn the socks over and find the pairs before the machine finishes. Up to 6 CCT a day.", laundryGame));
-  if (id === "pool") card.append(playArea("pool", "Dive for the ring", "Press Dive while the marker is in the green ring. Ten dives. Up to 5 CCT a day.", poolGame));
-  if (id === "square") card.append(chatBlock());
+  if (id === "pool") card.append(
+    playArea("pool", "Dive for the ring", "Press Dive while the marker is in the green ring. Ten dives. Up to 5 CCT a day.", (done) => poolGame(done)),
+    playArea("highdive", "The High Dive", "A smaller ring and a faster marker. Five dives, one point per splash, up to 5 CCT a day, on top of the pool's own reward.", (done) => poolGame(done, { ring: 20, step: 7, dives: 5 })));
+  if (id === "square") card.append(pollBlock(app), chatBlock());
   if (id === "tower") card.append(gameBlock());
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
   card.append(propertyBlock(id));
@@ -547,8 +589,14 @@ async function loadReviews(id) {
 async function loadTowerBoard() {
   const box = document.querySelector("#city-tower-board");
   if (!box) return;
-  const j = await pub("/api/city/tower");
-  box.replaceChildren(el("h3", {}, "High scores"), ...(!j ? [el("p", { class: "note" }, "The scoreboard is in the cells. Try again later.")] : j.scores.length ? [table(["Citizen", "Best tower"], j.scores.map((r) => [r.name, r.best + " blocks"]))] : [el("p", { class: "note" }, "No scores yet. The first tower to stand is yours.")]));
+  const [j, w] = await Promise.all([pub("/api/city/tower"), pub("/api/city/tower/week")]);
+  box.replaceChildren(
+    el("h3", {}, "This week"),
+    el("p", { class: "note" }, "Best score this week. The week starts again every seven days, and the Gazette names the winner."),
+    ...(!w ? [el("p", { class: "note" }, "This week's scores are in the cells. Try again later.")] : w.week.length ? [table(["Citizen", "Best this week"], w.week.map((r) => [r.name, r.score + " blocks"]))] : [el("p", { class: "note" }, "Nobody has stacked a block this week yet.")]),
+    el("h3", {}, "All-time high scores"),
+    ...(!j ? [el("p", { class: "note" }, "The scoreboard is in the cells. Try again later.")] : j.scores.length ? [table(["Citizen", "Best tower"], j.scores.map((r) => [r.name, r.best + " blocks"]))] : [el("p", { class: "note" }, "No scores yet. The first tower to stand is yours.")])
+  );
 }
 function gameBlock() {
   const W = 320, H = 360, BLOCK = 18, GAP = 8;

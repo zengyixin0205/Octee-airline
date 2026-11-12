@@ -119,7 +119,8 @@ const pickLost = () => { let r = Math.random() * LOST_ITEMS.reduce((t, x) => t +
 const PLAYS = {
   market: { name: "The Night Market", max: 5, per: 1 },
   laundry: { name: "The Laundrette", max: 6, per: 1 },
-  pool: { name: "The Swimming Pool", max: 10, per: 0.5 }
+  pool: { name: "The Swimming Pool", max: 10, per: 0.5 },
+  highdive: { name: "The High Dive", max: 5, per: 1 }
 };
 const tierFor = (cct) => { let t = CITY.tiers[0]; for (const x of CITY.tiers) if (cct >= x.min) t = x; return t; };
 async function ensureCity(db) {
@@ -135,6 +136,8 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_share_rent (building TEXT PRIMARY KEY, cents INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_holidays (day TEXT PRIMARY KEY)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_claims (log_id INTEGER PRIMARY KEY)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_polls (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT NOT NULL, options TEXT NOT NULL, at INTEGER NOT NULL, closed INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_votes (poll_id INTEGER NOT NULL, user_id INTEGER NOT NULL, choice INTEGER NOT NULL, PRIMARY KEY (poll_id, user_id))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_plays (user_id INTEGER NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, reward INTEGER NOT NULL, PRIMARY KEY (user_id, game, day))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_challenge (user_id INTEGER NOT NULL, week INTEGER NOT NULL, PRIMARY KEY (user_id, week))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, username TEXT NOT NULL, score INTEGER NOT NULL, at INTEGER NOT NULL)").run();
@@ -606,6 +609,23 @@ export default {
         const shareRent = await db.prepare("SELECT building, cents FROM city_share_rent").all();
         return reply(req, { shareRent: Object.fromEntries((shareRent.results || []).map((r) => [r.building, Number(r.cents)])), rules: Object.fromEntries((rules.results || []).map((r) => [r.building, Number(r.min_shares)])), price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
       }
+      // This week's tower scores. Weeks are the same 7-day blocks as the tower target.
+      if (path === "/api/city/tower/week" && req.method === "GET") {
+        await ensureCity(db);
+        const start = Math.floor(Date.now() / (7 * DAY)) * 7 * DAY;
+        const rows = await db.prepare("SELECT username AS name, MAX(score) AS score FROM city_scores WHERE at >= ? GROUP BY user_id ORDER BY score DESC, MIN(at) ASC LIMIT 10").bind(start).all();
+        return reply(req, { week: [...(rows.results || []).map((r) => ({ name: r.name, score: Number(r.score) }))] });
+      }
+      // The latest Town Square poll, with the count for each option. Public.
+      if (path === "/api/city/poll" && req.method === "GET") {
+        await ensureCity(db);
+        const p = await db.prepare("SELECT id, question, options FROM city_polls ORDER BY id DESC LIMIT 1").first();
+        if (!p) return reply(req, { poll: null });
+        const options = JSON.parse(p.options);
+        const counts = await db.prepare("SELECT choice, COUNT(*) AS n FROM city_votes WHERE poll_id=? GROUP BY choice").bind(p.id).all();
+        const tally = options.map((_, k) => Number(((counts.results || []).find((c) => Number(c.choice) === k) || {}).n || 0));
+        return reply(req, { poll: { id: p.id, question: p.question, options, counts: tally, total: tally.reduce((t, x) => t + x, 0) } });
+      }
       if (path === "/api/city/report" && req.method === "GET") {
         await ensureCity(db);
         const rows = await db.prepare("SELECT l.at AS at, l.cents AS cents, l.note AS note, u.username AS name FROM city_log l JOIN users u ON u.id = l.user_id WHERE l.kind = 'fine' ORDER BY l.id DESC LIMIT 30").all();
@@ -769,7 +789,7 @@ export default {
           const live = st.last === dayStr(now) || st.last === yesterday ? st.streak : 0;
           const mine = await db.prepare("SELECT building, shares, paid FROM city_shares WHERE user_id=?").bind(u.id).all();
           const hols = await db.prepare("SELECT day FROM city_holidays WHERE day >= ? ORDER BY day LIMIT 10").bind(dayStr(now)).all();
-          return reply(req, { ...cityView(city, now), holidays: (hols.results || []).map((h) => h.day), canModerate: cityOnDuty(city) || !!(await adminRole()), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
+          return reply(req, { ...cityView(city, now), holidays: (hols.results || []).map((h) => h.day), canModerate: cityOnDuty(city) || !!(await adminRole()), canPoll: !!(await adminRole()), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
         }
         if (path === "/api/city/shift" && req.method === "POST") {
           const job = String(b.job || "");
@@ -836,6 +856,29 @@ export default {
           await cityLog(db, u.id, "sell", -units * 100, `${gain} Octmiles`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, sold: units, got: gain, octmiles: bal.octmiles + gain, ...cityView(city, now) });
+        }
+        // Vote in the latest poll: one vote each.
+        if (path === "/api/city/poll/vote" && req.method === "POST") {
+          await ensureCity(db);
+          const p = await db.prepare("SELECT id, options FROM city_polls ORDER BY id DESC LIMIT 1").first();
+          if (!p) return reply(req, { error: "no_poll", message: "There is no poll in the Town Square right now." }, 400);
+          const choice = Math.floor(Number(b.choice));
+          if (!(choice >= 0 && choice < JSON.parse(p.options).length)) return reply(req, { error: "bad_choice", message: "That is not one of the options." }, 400);
+          if (await db.prepare("SELECT 1 FROM city_votes WHERE poll_id=? AND user_id=?").bind(p.id, u.id).first()) return reply(req, { error: "voted", message: "You have already voted in this poll." }, 409);
+          await db.prepare("INSERT INTO city_votes(poll_id, user_id, choice) VALUES(?, ?, ?)").bind(p.id, u.id, choice).run();
+          return reply(req, { ok: true, message: "Vote counted." });
+        }
+        // Start a new poll (the city owner or a Control Tower admin). The last poll closes when a new one starts.
+        if (path === "/api/city/poll" && req.method === "POST") {
+          await ensureCity(db);
+          if (!(await adminRole())) return reply(req, { error: "not_allowed", message: "Only the city owner or a Control Tower admin can start a poll." }, 403);
+          const question = clip(b.question, 120).trim();
+          const options = Array.isArray(b.options) ? b.options.map((o) => clip(o, 40).trim()).filter(Boolean) : [];
+          if (question.length < 5) return reply(req, { error: "bad_question", message: "The question needs at least five characters." }, 400);
+          if (options.length < 2 || options.length > 4) return reply(req, { error: "bad_options", message: "A poll needs two to four options." }, 400);
+          await db.prepare("INSERT INTO city_polls(question, options, at) VALUES(?, ?, ?)").bind(question, JSON.stringify(options), Date.now()).run();
+          await cityNews(db, `New poll in the Town Square: ${question}`);
+          return reply(req, { ok: true, message: "The poll is open." });
         }
         if (path === "/api/city/play" && req.method === "POST") {
           await ensureCity(db);
