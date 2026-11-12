@@ -23,7 +23,9 @@ const BUILDINGS = [
   { id: "car", name: "Car Park", blurb: "Four floors, zero spaces, all of them full." },
   { id: "gym", name: "Gym", blurb: "Lifts things, puts them down, and says they were heavy." },
   { id: "museum", name: "Peanut Museum", blurb: "One exhibit, a peanut, under glass. It is very valuable." },
-  { id: "bus", name: "Airport Bus Stop", blurb: "The bus to FIA. It goes everywhere except FIA." }
+  { id: "bus", name: "Airport Bus Stop", blurb: "The bus to FIA. It goes everywhere except FIA." },
+  { id: "square", name: "Town Square", blurb: "The chat room. Everyone talks, nobody listens, and the bakery reads every word." },
+  { id: "tower", name: "Game Tower", blurb: "Stack the blocks as high as they go. The tower leans, but that is not your fault." }
 ];
 const JOBS = {
   "bank-teller": { b: "bank", title: "Bank teller", prompt: "A customer asks for their money back. What do you do?", right: "Count it twice, then say the bank is closed for money today.", wrong: ["Give them all of it in peanuts", "Ask them to come back next Tuesday, with a form"] },
@@ -74,7 +76,8 @@ const SPOT_RULES = [
   "Two jobs before going home. One job is a hobby."
 ];
 // The city map: five by four. The airport is off the edge of the town, next to the Ring Road.
-const MAP = ["tax", "car", "gym", "museum", "bus", "bank", "hall", "clinic", "fire", "post", "bakery", "library", "cinema", "power", "radio", "food", "harbour", "police", "FIA", "ring"];
+const MAP = ["tax", "car", "gym", "museum", "bus", "bank", "hall", "clinic", "fire", "post", "bakery", "library", "cinema", "power", "radio", "food", "harbour", "police", "square", "tower", "FIA", "ring", "park", "pond", "gate"];
+const SCENERY = { ring: ["Ring Road", "the bus does not stop here"], park: ["Park", "a bench, no pigeons"], pond: ["Pond", "one duck, under review"], gate: ["Gate", "the way out, if you can find it"] };
 const cityIds = () => BUILDINGS.map((b) => b.id);
 let state = { view: null }; // last city data from the Worker (logged-in only)
 
@@ -119,7 +122,7 @@ async function refresh() {
 function cityMap() {
   return el("div", { class: "city-map", role: "img", "aria-label": "Map of Octee City" }, MAP.map((id) => {
     if (id === "FIA") return el("div", { class: "city-cell fia" }, "FIA airport", el("small", {}, "the planes are that way"));
-    if (id === "ring") return el("div", { class: "city-cell road" }, "Ring Road", el("small", {}, "the bus does not stop here"));
+    if (SCENERY[id]) return el("div", { class: "city-cell road" }, SCENERY[id][0], el("small", {}, SCENERY[id][1]));
     const b = BUILDINGS.find((x) => x.id === id);
     return el("a", { class: "city-cell", href: "#" + id }, b.name);
   }));
@@ -214,7 +217,10 @@ function buildingView(id, app) {
     el("h3", {}, "Wanted"),
     el("p", { class: "note" }, "Citizens with two or more arrests. The police would like a word."),
     el("div", { id: "city-wanted" }, el("p", { class: "note" }, "Checking the files…")));
+  if (id === "square") card.append(chatBlock());
+  if (id === "tower") card.append(gameBlock());
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
+  card.append(el("h3", {}, "Reviews"), reviewsBlock(id));
   card.append(el("p", { class: "note" }, el("a", { href: "#" }, "Back to the town")));
   return card;
 }
@@ -284,12 +290,126 @@ async function loadWanted(app) {
   box.replaceChildren(...(j ? (wanted.length ? wanted.map((r) => el("p", {}, el("strong", {}, r.name), " · " + r.arrests + " arrests · Please come quietly.")) : [el("p", { class: "note" }, "Nobody on the wanted list. The police are checking their own list.")]) : [el("p", { class: "note" }, "The files are in the cells. Try again later.")]));
 }
 
+// ---- Town Square: a public chat, kept short and rate limited by the Worker ----
+function chatBlock() {
+  const list = el("div", { id: "city-chat-list" }, el("p", { class: "note" }, "Loading the square…"));
+  const input = el("input", { type: "text", maxlength: 200, placeholder: loggedIn() ? "Say something to the town" : "Log in to say something", style: "flex:1;min-width:0", ...(loggedIn() ? {} : { disabled: true }) });
+  const msg = el("p", { class: "note" });
+  const send = async () => {
+    const text = input.value.trim();
+    if (!text) return;
+    try { await api("POST", "/api/city/chat", { text }); input.value = ""; msg.textContent = ""; await loadChat(); }
+    catch (e) { msg.textContent = e.message; }
+  };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+  return el("div", {}, el("h3", {}, "The square"), list,
+    el("div", { class: "city-row" }, input, el("button", { class: "btn", type: "button", ...(loggedIn() ? {} : { disabled: true }), onclick: send }, "Send")),
+    msg,
+    el("p", { class: "note" }, "Public, short, and one message every ten seconds. Be nice, or the police will hear about it. The chat is kept for the town, which has no other records."));
+}
+async function loadChat() {
+  const box = document.querySelector("#city-chat-list");
+  if (!box) return;
+  const j = await pub("/api/city/chat");
+  if (!j) { box.replaceChildren(el("p", { class: "note" }, "The square is empty. The line is down.")); return; }
+  box.replaceChildren(...(j.messages.length ? j.messages.map((m) => el("p", {}, el("strong", {}, m.username + ": "), m.text)) : [el("p", { class: "note" }, "Nobody has said anything yet. The square is very quiet.")]));
+  box.scrollTop = box.scrollHeight;
+}
+
+// ---- Reviews, on every building ----
+function reviewsBlock(id) {
+  const summary = el("p", { class: "note" }, "Loading reviews…");
+  const list = el("div", { id: "city-reviews-list" });
+  const stars = el("select", { "aria-label": "Stars" }, [5, 4, 3, 2, 1].map((n) => el("option", { value: n }, "★".repeat(n) + "☆".repeat(5 - n))));
+  const text = el("input", { type: "text", maxlength: 280, placeholder: "What was it like? Keep it honest, keep it short.", style: "flex:1;min-width:0" });
+  const msg = el("p", { class: "note" });
+  const post = async () => {
+    try { await api("POST", "/api/city/review", { building: id, stars: Number(stars.value), text: text.value.trim() }); text.value = ""; msg.textContent = "Review saved. Posting again replaces yours."; await loadReviews(id); }
+    catch (e) { msg.textContent = e.message; }
+  };
+  return el("div", { id: "city-reviews", "data-building": id }, summary, list,
+    loggedIn() ? el("div", { class: "city-row" }, stars, text, el("button", { class: "btn", type: "button", onclick: post }, "Post review")) : el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to review this building."),
+    msg);
+}
+async function loadReviews(id) {
+  const box = document.querySelector(`#city-reviews[data-building="${id}"]`);
+  if (!box) return;
+  const j = await pub("/api/city/reviews?b=" + encodeURIComponent(id));
+  const summary = box.querySelector("p"), list = box.querySelector("#city-reviews-list");
+  if (!j) { summary.textContent = "The reviews are in the cells. Try again later."; list.replaceChildren(); return; }
+  summary.textContent = j.count ? `★ ${j.average.toFixed(1)} from ${j.count} review${j.count === 1 ? "" : "s"}` : "No reviews yet. Be the first to ruin the mood.";
+  list.replaceChildren(...j.reviews.map((r) => el("p", {}, el("strong", {}, r.username + " "), "★".repeat(Number(r.stars)) + "☆".repeat(5 - Number(r.stars)), r.text ? " · " + r.text : "")));
+}
+
+// ---- Game Tower: stack the blocks. The score is checked on the Worker; the daily reward is capped there. ----
+function gameBlock() {
+  const W = 320, H = 360, BLOCK = 18, GAP = 8;
+  const canvas = el("canvas", { width: W, height: H, "aria-label": "The tower game", style: "width:100%;max-width:320px;border:1px solid #ccc;border-radius:8px;background:#f8fbff;touch-action:none" });
+  const ctx = canvas.getContext("2d");
+  const best = el("p", { class: "note" }, "Press Drop, or click the tower, to stack a block. Miss by too much and the tower falls.");
+  const msg = el("p", { class: "note" });
+  let blocks = [], cur = null, dir = 1, speed = 2.2, running = false, raf = 0;
+  const top = () => blocks[blocks.length - 1];
+  const reset = () => { blocks = [{ x: 60, w: 200, row: 0 }]; cur = { x: 0, w: 200, row: 1 }; dir = 1; speed = 2.2; };
+  const draw = () => {
+    ctx.clearRect(0, 0, W, H);
+    const lift = Math.max(0, (blocks.length + 2) * BLOCK - H * 0.6);
+    ctx.save(); ctx.translate(0, lift);
+    blocks.forEach((b) => { ctx.fillStyle = `hsl(${(b.row * 23) % 360} 55% 60%)`; ctx.fillRect(b.x, H - (b.row + 1) * BLOCK, b.w, BLOCK - 2); });
+    if (cur && running) { ctx.fillStyle = "#222"; ctx.fillRect(cur.x, H - (cur.row + 1) * BLOCK, cur.w, BLOCK - 2); }
+    ctx.restore();
+    ctx.fillStyle = "#555"; ctx.font = "14px sans-serif"; ctx.fillText(`Blocks: ${Math.max(0, blocks.length - 1)}`, 8, 18);
+  };
+  const frame = () => {
+    if (!canvas.isConnected) return;
+    if (running && cur) {
+      cur.x += dir * speed;
+      if (cur.x < 0) { cur.x = 0; dir = 1; }
+      if (cur.x + cur.w > W) { cur.x = W - cur.w; dir = -1; }
+    }
+    draw();
+    if (running) raf = requestAnimationFrame(frame);
+  };
+  const finish = async () => {
+    running = false;
+    cancelAnimationFrame(raf);
+    const score = Math.max(0, blocks.length - 1);
+    draw();
+    msg.textContent = "The tower fell. Checking the score…";
+    try {
+      const r = await api("POST", "/api/city/game", { score });
+      msg.textContent = `${r.message} Score: ${score}.`;
+      await refresh();
+    } catch (e) { msg.textContent = (loggedIn() ? e.message : "Log in to earn from the tower. Your score was " + score + ".") ; }
+  };
+  const drop = () => {
+    if (!running || !cur) return;
+    const t = top();
+    const left = Math.max(cur.x, t.x), right = Math.min(cur.x + cur.w, t.x + t.w);
+    const overlap = right - left;
+    if (overlap < 4) { cur = null; finish(); return; }
+    blocks.push({ x: left, w: overlap, row: cur.row });
+    speed = 2.2 + (blocks.length - 1) * 0.15;
+    cur = { x: 0, w: overlap, row: cur.row + 1 };
+    dir = dir * -1;
+  };
+  canvas.addEventListener("click", drop);
+  const start = el("button", { class: "btn", type: "button", onclick: () => { reset(); running = true; msg.textContent = ""; frame(); } }, "Start");
+  const dropBtn = el("button", { class: "btn ghost", type: "button", onclick: drop }, "Drop");
+  reset(); draw();
+  document.addEventListener("keydown", (e) => { if (e.key === " " && canvas.isConnected) { e.preventDefault(); drop(); } });
+  return el("div", {}, el("h3", {}, "The Game Tower"), canvas, el("div", { class: "city-row" }, start, dropBtn), best, msg,
+    el("p", { class: "note" }, "Ten or more blocks earns 1 CCT. Each block after that earns 1 more, up to 5 CCT a day. Playing again today is for fun only."));
+}
+
 function render(app, view) {
   const top = status(app);
   const body = view === "home" || !view ? hub() : [buildingView(view, app)];
   app.replaceChildren(top, ...body.filter(Boolean));
   if (view === "home" || !view) loadPanels(app);
   if (view === "police") loadWanted(app);
+  if (view === "square") loadChat();
+  if (view !== "home" && cityIds().includes(view)) loadReviews(view);
 }
 
 async function boot() {

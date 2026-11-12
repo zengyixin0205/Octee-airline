@@ -93,6 +93,8 @@ const CITY = {
   fine: 5,                  // CCT taken when arrested
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
+  gameMax: 5,               // most CCT the Game Tower pays in one day
+  buildings: ["bank","hall","clinic","fire","post","bakery","library","cinema","power","radio","food","harbour","police","tax","car","gym","museum","bus","square","tower"],
   streakDays: 3,            // working this many days in a row earns the streak bonus
   streakBonus: 5,           // extra CCT on every shift while on a streak
   hard: ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"],
@@ -108,6 +110,9 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_news (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, at INTEGER NOT NULL, kind TEXT NOT NULL, cents INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '')").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_streak (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '', streak INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_chat (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, username TEXT NOT NULL, at INTEGER NOT NULL, text TEXT NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_reviews (user_id INTEGER NOT NULL, building TEXT NOT NULL, username TEXT NOT NULL, stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (user_id, building))").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_game (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '')").run();
 }
 // The bank statement: every movement of CCT, in hundredths. Written by the server only.
 const cityLog = (db, uid, kind, cents, note = "") => db.prepare("INSERT INTO city_log(user_id, at, kind, cents, note) VALUES(?, ?, ?, ?, ?)").bind(uid, Date.now(), kind, Math.round(cents), note).run();
@@ -487,9 +492,58 @@ export default {
           rich: ranked,
           arrests: (jailed.results || []).map((r) => ({ name: r.name, arrests: Number(r.arrests) })) });
       }
+      if (path === "/api/city/chat" && req.method === "GET") {
+        await ensureCity(db);
+        const rows = await db.prepare("SELECT at, username, text FROM city_chat ORDER BY id DESC LIMIT 50").all();
+        return reply(req, { messages: (rows.results || []).reverse() });
+      }
+      if (path === "/api/city/reviews" && req.method === "GET") {
+        await ensureCity(db);
+        const id = clip(url.searchParams.get("b"), 20);
+        const rows = await db.prepare("SELECT username, stars, text, at FROM city_reviews WHERE building=? ORDER BY at DESC LIMIT 30").bind(id).all();
+        const list = rows.results || [];
+        const avg = list.length ? list.reduce((t, r) => t + Number(r.stars), 0) / list.length : 0;
+        return reply(req, { building: id, average: Math.round(avg * 10) / 10, count: list.length, reviews: list });
+      }
       if (path.startsWith("/api/city")) {
         if (!u) return reply(req, { error: "login", message: "Log in to Octee Cloud first." }, 401);
         const b = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+        if (path === "/api/city/chat" && req.method === "POST") {
+          await ensureCity(db);
+          const text = clip(String(b.text ?? "").trim(), 200);
+          if (!text) return reply(req, { error: "bad_text", message: "Say something first. The square is listening." }, 400);
+          const last = await db.prepare("SELECT at FROM city_chat WHERE user_id=? ORDER BY id DESC LIMIT 1").bind(u.id).first();
+          if (last && Date.now() - Number(last.at) < 10000) return reply(req, { error: "slow", message: "Slow down. The square is busy and the bench is full." }, 429);
+          await db.prepare("INSERT INTO city_chat(user_id, username, at, text) VALUES(?, ?, ?, ?)").bind(u.id, u.username, Date.now(), text).run();
+          return reply(req, { ok: true });
+        }
+        if (path === "/api/city/review" && req.method === "POST") {
+          await ensureCity(db);
+          const building = String(b.building || "");
+          const stars = Math.floor(Number(b.stars));
+          const text = clip(String(b.text ?? "").trim(), 280);
+          if (!CITY.buildings.includes(building)) return reply(req, { error: "bad_building", message: "There is no such building." }, 400);
+          if (!(stars >= 1 && stars <= 5)) return reply(req, { error: "bad_stars", message: "Give one to five stars." }, 400);
+          await db.prepare("INSERT INTO city_reviews(user_id, building, username, stars, text, at) VALUES(?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, building) DO UPDATE SET stars=excluded.stars, text=excluded.text, at=excluded.at, username=excluded.username").bind(u.id, building, u.username, stars, text, Date.now()).run();
+          return reply(req, { ok: true });
+        }
+        if (path === "/api/city/game" && req.method === "POST") {
+          await ensureCity(db);
+          const score = Math.floor(Number(b.score));
+          if (!(score >= 0 && score <= 500)) return reply(req, { error: "bad_score", message: "That is not a real score. The tower is not that tall." }, 400);
+          const today = iso().slice(0, 10);
+          const g = await db.prepare("SELECT last_day FROM city_game WHERE user_id=?").bind(u.id).first();
+          if (g && g.last_day === today) return reply(req, { ok: true, reward: 0, score, message: "You already earned from the tower today. You can still play for fun." });
+          const reward = score >= 10 ? Math.min(CITY.gameMax, Math.floor(score / 10)) : 0;
+          if (reward > 0) {
+            const city = await cityAccount(db, u.id);
+            city.wallet += reward;
+            await cityLog(db, u.id, "game", reward * 100, `tower, ${score} blocks`);
+            await saveCity(db, u.id, city);
+            await db.prepare("INSERT INTO city_game(user_id, last_day) VALUES(?, ?) ON CONFLICT(user_id) DO UPDATE SET last_day=excluded.last_day").bind(u.id, today).run();
+          }
+          return reply(req, { ok: true, reward, score, message: reward ? `The tower stood. You earned ${reward} CCT.` : "The tower fell over. It was not your fault." });
+        }
         const city = await cityAccount(db, u.id), now = Date.now();
         if (path === "/api/city" && req.method === "GET") {
           await saveCity(db, u.id, city);
