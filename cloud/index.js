@@ -93,6 +93,8 @@ const CITY = {
   fine: 5,                  // CCT taken when arrested
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
+  streakDays: 3,            // working this many days in a row earns the streak bonus
+  streakBonus: 5,           // extra CCT on every shift while on a streak
   hard: ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"],
   tiers: [{ name: "Bronze", min: 0, rate: 0.01 }, { name: "Silver", min: 1000, rate: 0.025 }, { name: "Gold", min: 10000, rate: 0.04 }],
   jobs: ["bank-teller", "bank-vault", "hall-stamp", "hall-notes", "clinic-nurse", "clinic-pharmacy", "fire-hose", "fire-dispatch", "post-parcel", "post-stamp",
@@ -104,6 +106,15 @@ const tierFor = (cct) => { let t = CITY.tiers[0]; for (const x of CITY.tiers) if
 async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_accounts (user_id INTEGER PRIMARY KEY, wallet INTEGER NOT NULL DEFAULT 0, bank_c INTEGER NOT NULL DEFAULT 0, bank_at INTEGER NOT NULL DEFAULT 0, jail_until INTEGER NOT NULL DEFAULT 0, shifts TEXT NOT NULL DEFAULT '{}', arrests INTEGER NOT NULL DEFAULT 0)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_news (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, at INTEGER NOT NULL, kind TEXT NOT NULL, cents INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '')").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_streak (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '', streak INTEGER NOT NULL DEFAULT 0)").run();
+}
+// The bank statement: every movement of CCT, in hundredths. Written by the server only.
+const cityLog = (db, uid, kind, cents, note = "") => db.prepare("INSERT INTO city_log(user_id, at, kind, cents, note) VALUES(?, ?, ?, ?, ?)").bind(uid, Date.now(), kind, Math.round(cents), note).run();
+const dayStr = (ms) => new Date(ms).toISOString().slice(0, 10);
+async function cityStreak(db, uid) {
+  const r = await db.prepare("SELECT last_day, streak FROM city_streak WHERE user_id=?").bind(uid).first();
+  return r ? { last: r.last_day, streak: Number(r.streak) || 0 } : { last: "", streak: 0 };
 }
 const cityNews = (db, text) => db.prepare("INSERT INTO city_news(at, text) VALUES(?, ?)").bind(Date.now(), text).run();
 // Interest for every whole day since the last payment, compounding, at the tier of each day's balance. Returns the new balance in hundredths.
@@ -119,9 +130,10 @@ async function cityAccount(db, uid) {
   const r = await db.prepare("SELECT * FROM city_accounts WHERE user_id=?").bind(uid).first();
   let shifts = {}; try { shifts = JSON.parse(r.shifts || "{}"); } catch { shifts = {}; }
   const a = { wallet: Number(r.wallet) || 0, bank_c: Number(r.bank_c) || 0, bank_at: Number(r.bank_at) || 0, jail_until: Number(r.jail_until) || 0, shifts, arrests: Number(r.arrests) || 0 };
-  const acc = accrue(a.bank_c, a.bank_at);
+  const before = a.bank_c, acc = accrue(a.bank_c, a.bank_at);
   a.bank_c = acc.bank_c;
   if (acc.days > 0) a.bank_at += acc.days * DAY;
+  if (acc.bank_c > before) await cityLog(db, uid, "interest", acc.bank_c - before, `${acc.days} day${acc.days === 1 ? "" : "s"} at ${tierFor(Math.floor(before / 100)).name}`);
   return a;
 }
 async function saveCity(db, uid, a) {
@@ -479,7 +491,13 @@ export default {
         if (!u) return reply(req, { error: "login", message: "Log in to Octee Cloud first." }, 401);
         const b = req.method === "POST" ? await req.json().catch(() => ({})) : {};
         const city = await cityAccount(db, u.id), now = Date.now();
-        if (path === "/api/city" && req.method === "GET") { await saveCity(db, u.id, city); return reply(req, cityView(city, now)); }
+        if (path === "/api/city" && req.method === "GET") {
+          await saveCity(db, u.id, city);
+          const log = await db.prepare("SELECT at, kind, cents, note FROM city_log WHERE user_id=? ORDER BY id DESC LIMIT 20").bind(u.id).all();
+          const st = await cityStreak(db, u.id), yesterday = dayStr(now - DAY);
+          const live = st.last === dayStr(now) || st.last === yesterday ? st.streak : 0;
+          return reply(req, { ...cityView(city, now), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays });
+        }
         if (path === "/api/city/shift" && req.method === "POST") {
           const job = String(b.job || "");
           if (!CITY.jobs.includes(job)) return reply(req, { error: "bad_job", message: "There is no such job." }, 400);
@@ -489,14 +507,20 @@ export default {
             // a second shift on the same job in one day is a rule break: arrested, fined, locked up for a while
             const fine = Math.min(CITY.fine, city.wallet);
             city.wallet -= fine; city.arrests += 1; city.jail_until = now + CITY.jailMinutes * 60000;
+            await cityLog(db, u.id, "fine", -fine * 100, "arrested: double shift at " + job.replace(/-/g, " "));
             await cityNews(db, `${u.username} was arrested for a double shift at ${job.replace(/-/g, " ")}. Fine: ${fine} CCT.`);
             if (city.arrests === 5 || city.arrests === 10) await cityNews(db, `${u.username} is now a repeat offender, with ${city.arrests} arrests. The cells have a chair with their name on it.`);
             await saveCity(db, u.id, city);
             return reply(req, { ok: false, arrested: true, fine, ...cityView(city, now), message: `Arrested. You already did that shift today. Fine: ${fine} CCT. Please wait in the cells.` });
           }
-          const pay = CITY.hard.includes(job) ? CITY.hardPay : CITY.jobPay;
+          const st = await cityStreak(db, u.id);
+          const streak = st.last === today ? st.streak : st.last === dayStr(now - DAY) ? st.streak + 1 : 1;
+          await db.prepare("INSERT INTO city_streak(user_id, last_day, streak) VALUES(?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET last_day=excluded.last_day, streak=excluded.streak").bind(u.id, today, streak).run();
+          const bonus = streak >= CITY.streakDays ? CITY.streakBonus : 0;
+          const pay = (CITY.hard.includes(job) ? CITY.hardPay : CITY.jobPay) + bonus;
           city.shifts = { [today]: [...done, job] };
           city.wallet += pay;
+          await cityLog(db, u.id, "shift", pay * 100, job.replace(/-/g, " ") + (bonus ? ` (day ${streak} streak bonus)` : ""));
           let spot = null;
           if (Math.random() < CITY.spotChance) {
             const rules = [
@@ -508,11 +532,12 @@ export default {
             const failed = pick.fails();
             const fine = failed ? Math.min(CITY.fine, city.wallet) : 0;
             city.wallet -= fine;
+            if (fine > 0) await cityLog(db, u.id, "fine", -fine * 100, "spot check failed");
             spot = { rule: pick.rule, failed, fine };
             if (failed) await cityNews(db, `${u.username} failed a police spot check: "${pick.rule}" Fine: ${fine} CCT.`);
           }
           await saveCity(db, u.id, city);
-          return reply(req, { ok: true, paid: pay, spot, ...cityView(city, now) });
+          return reply(req, { ok: true, paid: pay, bonus, streak, spot, ...cityView(city, now) });
         }
         if (path === "/api/city/exchange" && req.method === "POST") {
           const units = Math.floor(Number(b.units));
@@ -521,6 +546,7 @@ export default {
           if (bal.octmiles < cost) return reply(req, { error: "short", message: `That needs ${cost.toLocaleString("en-GB")} Octmiles. You have ${bal.octmiles.toLocaleString("en-GB")}. Nothing was changed.` }, 402);
           await saveBalances(db, { ...bal, octmiles: bal.octmiles - cost }).run();
           city.wallet += units;
+          await cityLog(db, u.id, "buy", units * 100, `${cost} Octmiles`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, bought: units, octmiles: bal.octmiles - cost, ...cityView(city, now) });
         }
@@ -531,6 +557,7 @@ export default {
           const gain = units * CITY.sell, bal = await getBalances(db, env, u);
           await saveBalances(db, { ...bal, octmiles: bal.octmiles + gain }).run();
           city.wallet -= units;
+          await cityLog(db, u.id, "sell", -units * 100, `${gain} Octmiles`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, sold: units, got: gain, octmiles: bal.octmiles + gain, ...cityView(city, now) });
         }
@@ -541,10 +568,12 @@ export default {
             if (city.wallet < amount) return reply(req, { error: "short", message: `You only have ${city.wallet} CCT in your wallet. Nothing was moved.` }, 402);
             const before = tierFor(Math.floor(city.bank_c / 100)).name;
             city.wallet -= amount; city.bank_c += amount * 100;
+            await cityLog(db, u.id, "deposit", amount * 100, "into OCT Bank");
             if (before !== "Gold" && tierFor(Math.floor(city.bank_c / 100)).name === "Gold") await cityNews(db, `${u.username} has reached Gold tier at OCT Bank. The bank has bought a second pen.`);
           } else {
             if (Math.floor(city.bank_c / 100) < amount) return reply(req, { error: "short", message: "The bank does not hold that much for you. Nothing was moved." }, 402);
             city.bank_c -= amount * 100; city.wallet += amount;
+            await cityLog(db, u.id, "withdraw", -amount * 100, "out of OCT Bank");
           }
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, ...cityView(city, now) });

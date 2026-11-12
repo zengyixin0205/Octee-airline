@@ -105,6 +105,7 @@ function status(app) {
   const v = state.view;
   if (!v) { box.textContent = "Loading your city card…"; return box; }
   const parts = [`Wallet: ${fmtCct(v.wallet)}`, `Bank: ${fmtBank(v.bank)} (${v.tier}, ${(v.rate * 100).toFixed(1)}% a year, paid daily)`];
+  if (v.streak) parts.push(`Streak: ${v.streak} day${v.streak === 1 ? "" : "s"}${v.streak >= (v.streakDays || 3) ? " (bonus on every shift)" : ""}`);
   if (v.jailUntil) parts.push(`You are in the cells until ${new Date(v.jailUntil).toLocaleTimeString("en-GB")}.`);
   box.replaceChildren(parts.join(" · "));
   return box;
@@ -156,7 +157,7 @@ function hub() {
     el("h2", {}, "Leaderboard"),
     el("div", { id: "city-board" }, el("p", { class: "note" }, "Counting the money…")),
     el("h2", {}, "The rules"),
-    el("ul", {}, el("li", {}, "A job pays " + PAY + " CCT, or " + HARD_PAY + " for the bank, tax audit and police jobs. One shift per job, per day."), el("li", {}, "Clocking in to the same job twice in one day is a crime. You will be fined and put in the cells for half an hour."), el("li", {}, "One clock-in in four may also be a police spot check. Fail it and you pay a fine."), el("li", {}, "Octmiles buy CCT at " + RATE + " to 1. CCT sell back at " + SELL + " to 1. The gap is the town's cut.")),
+    el("ul", {}, el("li", {}, "A job pays " + PAY + " CCT, or " + HARD_PAY + " for the bank, tax audit and police jobs. One shift per job, per day."), el("li", {}, "Clocking in to the same job twice in one day is a crime. You will be fined and put in the cells for half an hour."), el("li", {}, "One clock-in in four may also be a police spot check. Fail it and you pay a fine."), el("li", {}, "Work three days in a row for a streak bonus of 5 CCT on every shift. Miss a day and the streak starts again."), el("li", {}, "Octmiles buy CCT at " + RATE + " to 1. CCT sell back at " + SELL + " to 1. The gap is the town's cut.")),
     el("p", { class: "note" }, "Nothing here is real. The bank is not a real bank. The police are not a real police. The town is not a town. Everything you earn is parody money.")];
 }
 
@@ -173,12 +174,12 @@ function jobRow(jobId, onDone) {
       if (r.arrested) { doneMsg.className = "city-warn"; doneMsg.textContent = r.message; }
       else if (r.ok === false) { doneMsg.textContent = r.message || "No pay. Nothing was changed."; }
       else {
-        let text = `Shift done. You earned ${r.paid} CCT.`;
+        let text = `Shift done. You earned ${r.paid} CCT${r.bonus ? ` (${r.bonus} of it is the streak bonus, day ${r.streak})` : ""}.`;
         if (r.spot) text += r.spot.failed ? ` Spot check failed: "${r.spot.rule}" Fine: ${r.spot.fine} CCT.` : ` Spot check passed: "${r.spot.rule}"`;
         doneMsg.className = r.spot && r.spot.failed ? "city-warn" : "note";
         doneMsg.textContent = text + " Please go and be useful somewhere else.";
       }
-      state.view = r.wallet !== undefined ? r : state.view;
+      await refresh();
       if (onDone) onDone();
     } catch (e) { doneMsg.textContent = e.message; }
   } }, o)));
@@ -225,21 +226,21 @@ function bankBits(app) {
   const msg = el("p", { class: "note" });
   const move = (dir) => async () => {
     msg.textContent = "Moving…";
-    try { const r = await api("POST", "/api/city/bank", { dir, amount: Number(amount.value) }); state.view = r; msg.textContent = dir === "in" ? "Deposited. Your bank is paying interest every day." : "Withdrawn. The bank says goodbye."; render(app, "bank"); }
+    try { const r = await api("POST", "/api/city/bank", { dir, amount: Number(amount.value) }); await refresh(); msg.textContent = dir === "in" ? "Deposited. Your bank is paying interest every day." : "Withdrawn. The bank says goodbye."; render(app, "bank"); }
     catch (e) { msg.textContent = e.message; }
   };
   const ex = el("input", { type: "number", min: 1, step: 1, value: 10 });
   const exMsg = el("p", { class: "note" });
   const exchange = async () => {
     exMsg.textContent = "Exchanging…";
-    try { const r = await api("POST", "/api/city/exchange", { units: Number(ex.value) }); state.view = r; exMsg.textContent = `Bought ${r.bought} CCT. You have ${r.octmiles.toLocaleString("en-GB")} Octmiles left.`; render(app, "bank"); }
+    try { const r = await api("POST", "/api/city/exchange", { units: Number(ex.value) }); await refresh(); exMsg.textContent = `Bought ${r.bought} CCT. You have ${r.octmiles.toLocaleString("en-GB")} Octmiles left.`; render(app, "bank"); }
     catch (e) { exMsg.textContent = e.message; }
   };
   const sell = el("input", { type: "number", min: 1, step: 1, value: 10 });
   const sellMsg = el("p", { class: "note" });
   const sellCct = async () => {
     sellMsg.textContent = "Selling…";
-    try { const r = await api("POST", "/api/city/sell", { units: Number(sell.value) }); state.view = r; sellMsg.textContent = `Sold ${r.sold} CCT for ${r.got} Octmiles. You have ${r.octmiles.toLocaleString("en-GB")} Octmiles now.`; render(app, "bank"); }
+    try { const r = await api("POST", "/api/city/sell", { units: Number(sell.value) }); await refresh(); sellMsg.textContent = `Sold ${r.sold} CCT for ${r.got} Octmiles. You have ${r.octmiles.toLocaleString("en-GB")} Octmiles now.`; render(app, "bank"); }
     catch (e) { sellMsg.textContent = e.message; }
   };
   return [
@@ -248,6 +249,7 @@ function bankBits(app) {
     el("table", { class: "city-table" }, el("tr", {}, el("th", {}, "Tier"), el("th", {}, "From"), el("th", {}, "Yearly rate")), ...(v.tiers || []).map((t) => el("tr", {}, el("td", {}, t.name), el("td", {}, t.min.toLocaleString("en-GB") + " CCT"), el("td", {}, (t.rate * 100).toFixed(1) + "%")))),
     el("p", { class: "note" }, "No limit on deposits or withdrawals. The bank has, to its credit, never refused anyone."),
     el("div", { class: "city-row" }, amount, el("button", { class: "btn", type: "button", onclick: move("in") }, "Deposit CCT"), el("button", { class: "btn", type: "button", onclick: move("out") }, "Withdraw CCT")),
+    el("div", { class: "city-row" }, el("button", { class: "btn ghost", type: "button", onclick: () => { amount.value = Math.max(1, Math.floor(v.wallet)); move("in")(); } }, "Deposit everything"), el("button", { class: "btn ghost", type: "button", onclick: () => { amount.value = Math.max(1, Math.floor(v.bank)); move("out")(); } }, "Withdraw everything")),
     msg,
     el("h3", {}, "Swap Octmiles for CCT"),
     el("p", { class: "note" }, `${RATE} Octmiles buys 1 CCT. This is the rate the city has set. It is not a good rate, but it is the one we have.`),
@@ -256,8 +258,22 @@ function bankBits(app) {
     el("h3", {}, "Sell CCT back"),
     el("p", { class: "note" }, `Selling pays ${SELL} Octmiles per CCT. The town keeps the other ${RATE - SELL}, which it calls a fee.`),
     el("div", { class: "city-row" }, sell, el("button", { class: "btn", type: "button", onclick: sellCct }, "Sell CCT")),
-    sellMsg
+    sellMsg,
+    el("h3", {}, "Bank statement"),
+    el("p", { class: "note" }, "Every movement of your CCT, newest first. The bank keeps the receipts, and the bank is always right."),
+    statementTable(v.statement || [])
   ];
+}
+
+const KIND = { shift: "Shift", interest: "Interest", deposit: "Deposit", withdraw: "Withdrawal", buy: "Bought", sell: "Sold", fine: "Fine" };
+function statementTable(rows) {
+  if (!rows.length) return el("p", { class: "note" }, "Nothing yet. Your statement is empty, which the bank considers a good sign.");
+  return table(["When", "What", "CCT", "Note"], rows.map((r) => [
+    new Date(r.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+    KIND[r.kind] || r.kind,
+    (r.cents < 0 ? "−" : "+") + (Math.abs(r.cents) / 100).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    r.note || ""
+  ]));
 }
 
 async function loadWanted(app) {
