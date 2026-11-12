@@ -68,7 +68,7 @@ const JOBS = {
 const PAY = 10, HARD_PAY = 15, RATE = 10, SELL = 8;
 // Harder jobs pay more. Keep in step with CITY.hard in cloud/index.js.
 const HARD = ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"];
-const payOf = (id) => (HARD.includes(id) ? HARD_PAY : PAY);
+const payOf = (id) => (HARD.includes(id) || (JOBS[id] && JOBS[id].hard) ? HARD_PAY : PAY);
 // The police spot-check rules. The Worker picks one at random for one clock-in in four; keep these in step with cloud/index.js.
 const SPOT_RULES = [
   "No more than 100 CCT on the street. Pockets are for lint.",
@@ -412,9 +412,18 @@ function render(app, view) {
   if (view !== "home" && cityIds().includes(view)) loadReviews(view);
 }
 
+// Buildings and jobs the city owner has set up. They join the built-in ones, and the Worker checks the same list.
+async function loadSetup() {
+  const j = await pub("/api/city/setup");
+  if (!j) return;
+  for (const b of j.buildings) if (!BUILDINGS.some((x) => x.id === b.id)) BUILDINGS.push({ id: b.id, name: b.name, blurb: b.blurb });
+  for (const jb of j.jobs) if (!JOBS[jb.id]) JOBS[jb.id] = { b: jb.building, title: jb.title, prompt: jb.prompt, right: jb.right, wrong: jb.wrong, hard: jb.hard };
+}
+
 async function boot() {
   const app = $("#app");
   if (!app) return;
+  await loadSetup();
   const go = async () => {
     const h = (location.hash || "").replace("#", "");
     const view = cityIds().includes(h) ? h : "home";

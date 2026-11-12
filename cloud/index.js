@@ -113,6 +113,19 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_chat (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, username TEXT NOT NULL, at INTEGER NOT NULL, text TEXT NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_reviews (user_id INTEGER NOT NULL, building TEXT NOT NULL, username TEXT NOT NULL, stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (user_id, building))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_game (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '')").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_buildings (id TEXT PRIMARY KEY, name TEXT NOT NULL, blurb TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_jobs (id TEXT PRIMARY KEY, building TEXT NOT NULL, title TEXT NOT NULL, prompt TEXT NOT NULL, right_answer TEXT NOT NULL, wrong TEXT NOT NULL, hard INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL)").run();
+}
+// Buildings and jobs made by the city's owner. The built-in ones above are never stored here.
+const CITY_ID = /^[a-z][a-z0-9-]{2,20}$/;
+async function cityBuildingExists(db, id) {
+  if (CITY.buildings.includes(id)) return true;
+  return !!(await db.prepare("SELECT id FROM city_buildings WHERE id=?").bind(id).first());
+}
+async function cityJob(db, id) {
+  if (CITY.jobs.includes(id)) return { hard: CITY.hard.includes(id) };
+  const r = await db.prepare("SELECT hard FROM city_jobs WHERE id=?").bind(id).first();
+  return r ? { hard: !!r.hard } : null;
 }
 // The bank statement: every movement of CCT, in hundredths. Written by the server only.
 const cityLog = (db, uid, kind, cents, note = "") => db.prepare("INSERT INTO city_log(user_id, at, kind, cents, note) VALUES(?, ?, ?, ?, ?)").bind(uid, Date.now(), kind, Math.round(cents), note).run();
@@ -492,6 +505,14 @@ export default {
           rich: ranked,
           arrests: (jailed.results || []).map((r) => ({ name: r.name, arrests: Number(r.arrests) })) });
       }
+      if (path === "/api/city/setup" && req.method === "GET") {
+        await ensureCity(db);
+        const bs = await db.prepare("SELECT id, name, blurb FROM city_buildings ORDER BY at").all();
+        const js = await db.prepare("SELECT id, building, title, prompt, right_answer, wrong, hard FROM city_jobs ORDER BY at").all();
+        return reply(req, {
+          buildings: bs.results || [],
+          jobs: (js.results || []).map((j) => ({ id: j.id, building: j.building, title: j.title, prompt: j.prompt, right: j.right_answer, wrong: JSON.parse(j.wrong || "[]"), hard: !!j.hard })) });
+      }
       if (path === "/api/city/chat" && req.method === "GET") {
         await ensureCity(db);
         const rows = await db.prepare("SELECT at, username, text FROM city_chat ORDER BY id DESC LIMIT 50").all();
@@ -508,6 +529,42 @@ export default {
       if (path.startsWith("/api/city")) {
         if (!u) return reply(req, { error: "login", message: "Log in to Octee Cloud first." }, 401);
         const b = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+        if (path === "/api/city/setup" && req.method === "POST") {
+          if (!(await adminRole())) return reply(req, { error: "forbidden", message: "Only the city's owner can set up buildings." }, 403);
+          await ensureCity(db);
+          const now = Date.now();
+          if (b.kind === "building") {
+            const id = String(b.id || "").toLowerCase().trim();
+            const name = clip(String(b.name ?? "").trim(), 40), blurb = clip(String(b.blurb ?? "").trim(), 160);
+            if (!CITY_ID.test(id)) return reply(req, { error: "bad_id", message: "Ids are 3 to 21 characters: lower-case letters, numbers and dashes, starting with a letter." }, 400);
+            if (!name) return reply(req, { error: "bad_name", message: "Give the building a name." }, 400);
+            if (await cityBuildingExists(db, id)) return reply(req, { error: "taken", message: "That id is already a building in the city." }, 409);
+            await db.prepare("INSERT INTO city_buildings(id, name, blurb, at) VALUES(?, ?, ?, ?)").bind(id, name, blurb, now).run();
+            return reply(req, { ok: true, id });
+          }
+          if (b.kind === "job") {
+            const id = String(b.id || "").toLowerCase().trim(), building = String(b.building || "");
+            const title = clip(String(b.title ?? "").trim(), 40), prompt = clip(String(b.prompt ?? "").trim(), 200), right = clip(String(b.right ?? "").trim(), 120);
+            const wrong = Array.isArray(b.wrong) ? b.wrong.map((x) => clip(String(x ?? "").trim(), 120)) : [];
+            if (!CITY_ID.test(id)) return reply(req, { error: "bad_id", message: "Ids are 3 to 21 characters: lower-case letters, numbers and dashes, starting with a letter." }, 400);
+            if (!(await cityBuildingExists(db, building))) return reply(req, { error: "no_building", message: "Pick a building that is in the city." }, 400);
+            if (!title || !prompt || !right || wrong.length < 1 || wrong.some((x) => !x)) return reply(req, { error: "incomplete", message: "A job needs a title, a question, a right answer and at least one wrong answer." }, 400);
+            if (await cityJob(db, id)) return reply(req, { error: "taken", message: "That job id is already in use." }, 409);
+            await db.prepare("INSERT INTO city_jobs(id, building, title, prompt, right_answer, wrong, hard, at) VALUES(?, ?, ?, ?, ?, ?, ?, ?)").bind(id, building, title, prompt, right, JSON.stringify(wrong), b.hard ? 1 : 0, now).run();
+            return reply(req, { ok: true, id });
+          }
+          return reply(req, { error: "bad_kind", message: "Say whether this is a building or a job." }, 400);
+        }
+        if (path.startsWith("/api/city/setup/") && req.method === "DELETE") {
+          if (!(await adminRole())) return reply(req, { error: "forbidden", message: "Only the city's owner can remove buildings." }, 403);
+          await ensureCity(db);
+          const id = decodeURIComponent(path.slice("/api/city/setup/".length)).toLowerCase();
+          if (CITY.buildings.includes(id) || CITY.jobs.includes(id)) return reply(req, { error: "builtin", message: "The built-in parts of the city cannot be removed." }, 400);
+          await db.prepare("DELETE FROM city_jobs WHERE building=?").bind(id).run();
+          await db.prepare("DELETE FROM city_jobs WHERE id=?").bind(id).run();
+          await db.prepare("DELETE FROM city_buildings WHERE id=?").bind(id).run();
+          return reply(req, { ok: true });
+        }
         if (path === "/api/city/chat" && req.method === "POST") {
           await ensureCity(db);
           const text = clip(String(b.text ?? "").trim(), 200);
@@ -522,7 +579,7 @@ export default {
           const building = String(b.building || "");
           const stars = Math.floor(Number(b.stars));
           const text = clip(String(b.text ?? "").trim(), 280);
-          if (!CITY.buildings.includes(building)) return reply(req, { error: "bad_building", message: "There is no such building." }, 400);
+          if (!(await cityBuildingExists(db, building))) return reply(req, { error: "bad_building", message: "There is no such building." }, 400);
           if (!(stars >= 1 && stars <= 5)) return reply(req, { error: "bad_stars", message: "Give one to five stars." }, 400);
           await db.prepare("INSERT INTO city_reviews(user_id, building, username, stars, text, at) VALUES(?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, building) DO UPDATE SET stars=excluded.stars, text=excluded.text, at=excluded.at, username=excluded.username").bind(u.id, building, u.username, stars, text, Date.now()).run();
           return reply(req, { ok: true });
@@ -554,7 +611,8 @@ export default {
         }
         if (path === "/api/city/shift" && req.method === "POST") {
           const job = String(b.job || "");
-          if (!CITY.jobs.includes(job)) return reply(req, { error: "bad_job", message: "There is no such job." }, 400);
+          const known = await cityJob(db, job);
+          if (!known) return reply(req, { error: "bad_job", message: "There is no such job." }, 400);
           if (city.jail_until > now) return reply(req, { error: "jailed", message: "You are in the cells. No shifts until your time is up. Nothing was paid.", jailUntil: city.jail_until }, 403);
           const today = iso().slice(0, 10), done = city.shifts[today] || [];
           if (done.includes(job)) {
@@ -571,7 +629,7 @@ export default {
           const streak = st.last === today ? st.streak : st.last === dayStr(now - DAY) ? st.streak + 1 : 1;
           await db.prepare("INSERT INTO city_streak(user_id, last_day, streak) VALUES(?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET last_day=excluded.last_day, streak=excluded.streak").bind(u.id, today, streak).run();
           const bonus = streak >= CITY.streakDays ? CITY.streakBonus : 0;
-          const pay = (CITY.hard.includes(job) ? CITY.hardPay : CITY.jobPay) + bonus;
+          const pay = (known.hard ? CITY.hardPay : CITY.jobPay) + bonus;
           city.shifts = { [today]: [...done, job] };
           city.wallet += pay;
           await cityLog(db, u.id, "shift", pay * 100, job.replace(/-/g, " ") + (bonus ? ` (day ${streak} streak bonus)` : ""));
