@@ -1078,7 +1078,7 @@ All three work on a booked flight (a "leg" of a trip) and are found with `?t=<tr
 
 ## All Pages hub
 
-- `allpages.html` (`js/allpages.js`): a hub listing every extra page as its own card, in four groups. It is in the main menu ("All Pages") and the footer "More:" row. When a new page is added, add it to `GROUPS` here too.
+- `allpages.html` (`js/allpages.js`) was removed: it was unlinked from the menu and the footer, and the Worker has no route to it.
 
 ## Menus and Search
 
@@ -1407,3 +1407,52 @@ Bo asked for themes the Control Tower can switch on: Christmas snow, Chinese New
 
 ### Follow-up: Deepavali added as a fourth theme
 Bo asked for "deepavali and stuff" as a follow-up to the themes above. Added as a fourth entry alongside Christmas/Chinese New Year/Halloween, same shape (on/off switch, optional date range, no reward field — he didn't ask for an interactive reward here the way he did for Chinese New Year). `THEME_KEYS` in both `js/theme.js` and `cloud/index.js` now reads `["christmas", "cny", "deepavali", "halloween"]` (the precedence order when more than one theme is left on), `data/theme.json` carries a fourth `deepavali` entry, and the Control Tower's Theme tab picks it up automatically (it maps over `THEME_KEYS`) with its own label. Effect: `🪔` diya lamps fading in and out at random spots on the page, plus two gold side ribbons with a couple of 🪔 each, echoing the Chinese New Year side decoration in gold instead of red — Bo's "and stuff" named no specific effect, so this is this session's own pick. Verified with the same mocked-`theme.json` Playwright approach as the original three themes (correct body class and elements, zero JS errors, and the precedence order checked both ways: Christmas still wins over Deepavali, and Deepavali still wins over Halloween) plus a re-check of the Control Tower's Theme tab showing all four cards.
+
+## Octee City (`city.html`, `city-setup.html`, `js/city.js`, `js/city-setup.js`)
+
+A small town next to FIA. Walking around is free. Working, the bank, the chat, the tower reward, and owning buildings need an Octee Cloud login. Every number that counts (CCT, pay, interest, fines, cells, rent, shares) is decided by the Worker in `cloud/index.js` under `/api/city/*`; the page only shows it and asks.
+
+### Currency and rules
+- CCT is the city currency. Octmiles buy CCT at 10 to 1 (`CITY.rate`); CCT sell back at 8 Octmiles each (`CITY.sell`). The gap is the town's cut.
+- A job pays 10 CCT, or 15 for the hard ones (`CITY.hard`). One paid shift per job per day.
+- Clocking in to the same job twice in a day is a double shift: a 5 CCT fine and 30 minutes in the cells (`CITY.fine`, `CITY.jailMinutes`).
+- One clock-in in four (`CITY.spotChance`) is also a police spot check. The rule is picked at random from three, and a failed check is a fine and a Gazette headline.
+- Working three days in a row earns a 5 CCT bonus on every shift (`CITY.streakDays`, `CITY.streakBonus`).
+- The Game Tower pays 1 CCT for ten blocks, plus 1 per block, capped at 5 CCT a day (`CITY.gameMax`). The score is checked only for range; the cap limits what a cheat can earn.
+
+### OCT Bank
+- Deposits and withdrawals have no limit. Interest is paid every day, compounding, at the tier's yearly rate: Bronze 1% (0+ CCT), Silver 2.5% (1,000+), Gold 4% (10,000+). The Worker pays it on each visit (`accrue`).
+- Every movement is on the statement (`city_log`), shown on the bank page, newest first.
+
+### Buildings, shares and rent
+- Twenty built-in buildings, plus any the owner sets up, each with a map cell or a card in the hub.
+- Each building has ten shares. Default terms: 300 CCT for the building (30 a share), 3 CCT a day in rent (0.3 a share).
+- The owner can set a building's price (50 to 5,000, a multiple of 10) and rent (1 to 50 a day) on `city-setup.html`.
+- Rent is paid to each share holder for each share they hold. The fraction of a CCT left over is kept in hundredths, so nothing is lost to rounding.
+- Selling shares returns half of what they cost. Shares bought after others have started earning share in the rent accrued since the last visit, paid in whole days.
+
+### Gazette and chat
+- The Gazette (`city_news`) prints arrests, repeat offenders (5 and 10), Gold tier, building sales, and a weekly edition. The weekly edition is written the first time the Gazette is read after a week has passed, not on a timer.
+- Town Square is a public chat: 200 characters, one message every ten seconds per citizen.
+- Every building has reviews: one to five stars and 280 characters, one review per citizen per building.
+
+### Owner setup (`city-setup.html`)
+Only the owner or a Control Tower admin can change the city. The page uses the same `adminRole()` check as the Control Tower. It can:
+- add a building (id, name, blurb),
+- add a job to any building (question, right answer, one or two wrong answers, hard flag),
+- set a building's price and rent,
+- remove an owner-made building (its jobs go too; the built-in town cannot be removed).
+
+### Tables (created lazily in `ensureCity`, so there is no migration)
+`city_accounts`, `city_news`, `city_log`, `city_streak`, `city_chat`, `city_reviews`, `city_game`, `city_buildings`, `city_jobs`, `city_building_terms`, `city_shares`.
+
+### Deploying
+Change `cloud/index.js`, then run `npx wrangler deploy` from `cloud/` on your own machine. The sandbox cannot reach Cloudflare. Do not commit `cloud/wrangler.toml`.
+
+## Reviews: edit and delete from the Control Tower
+
+Reviews on `reviews.html` can be edited and deleted by the owner or a Control Tower admin from the Control Tower's Reviews tab (`js/control-tower.js`).
+- Worker: `PUT /api/review/<id>` (staff edit) keeps the author, date and trip reference; `DELETE /api/review/<id>` removes it. Both check `adminRole()`. Ordinary users still edit and delete only their own reviews through `/api/review`.
+- An edited review shows an "edited" tag on the site. The Worker sets it when `updated_at` differs from `created_at`, so no schema change was needed.
+- `GET /api/reviews` returns the `edited` flag for every review.
+

@@ -120,7 +120,8 @@ async function refresh() {
 }
 
 function cityMap() {
-  return el("div", { class: "city-map", role: "img", "aria-label": "Map of Octee City" }, MAP.map((id) => {
+  const extra = BUILDINGS.filter((b) => !MAP.includes(b.id)).map((b) => b.id);
+  return el("div", { class: "city-map", role: "img", "aria-label": "Map of Octee City" }, [...MAP, ...extra].map((id) => {
     if (id === "FIA") return el("div", { class: "city-cell fia" }, "FIA airport", el("small", {}, "the planes are that way"));
     if (SCENERY[id]) return el("div", { class: "city-cell road" }, SCENERY[id][0], el("small", {}, SCENERY[id][1]));
     const b = BUILDINGS.find((x) => x.id === id);
@@ -154,7 +155,7 @@ function hub() {
   return [el("h2", {}, "The town"), el("p", { class: "note" }, "Click a building on the map, or in the list below. You can look at all of them for free."),
     cityMap(),
     el("h2", {}, "The buildings"),
-    el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb), el("p", { class: "note", style: "margin:4px 0 0" }, owners[b.id] ? "Owned by " + owners[b.id] : "For sale: " + priceOf(b.id) + " CCT")))),
+    el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb), el("p", { class: "note", style: "margin:4px 0 0" }, sharesSold(b.id) ? "Owners: " + ownersText(b.id) + " · " + (SHARES - sharesSold(b.id)) + " shares for sale" : "All " + SHARES + " shares for sale · " + priceOf(b.id) / SHARES + " CCT each")))),
     el("h2", {}, "The Octee City Gazette"),
     el("div", { id: "city-news" }, el("p", { class: "note" }, "Loading the news…")),
     el("h2", {}, "Leaderboard"),
@@ -414,30 +415,41 @@ function render(app, view) {
 }
 
 // Property: who owns each building, and what it costs and earns. Filled from the Worker before the first render.
-let owners = {};
+let owners = {};   // building id -> [{ owner, shares }]
 let terms = {};
 let economy = { price: 300, rent: 3 };
 async function loadOwners() {
   const j = await pub("/api/city/property");
   if (!j) return;
   economy = { price: j.price, rent: j.rent };
-  owners = Object.fromEntries(j.owners.map((o) => [o.building, o.owner]));
+  owners = {};
+  for (const o of j.owners) (owners[o.building] = owners[o.building] || []).push({ owner: o.owner, shares: Number(o.shares) });
   terms = j.terms || {};
 }
+const SHARES = 10;
+const sharesSold = (id) => (owners[id] || []).reduce((t, o) => t + o.shares, 0);
+const ownersText = (id) => (owners[id] || []).map((o) => `${o.owner} (${o.shares})`).join(", ");
 const priceOf = (id) => (terms[id] ? terms[id].price : economy.price);
 const rentOf = (id) => (terms[id] ? terms[id].rent : economy.rent);
 function propertyBlock(id) {
   const msg = el("p", { class: "note" });
-  const owner = owners[id];
-  const mine = !!(state.view && (state.view.owned || []).includes(id));
-  const act = async (path) => {
-    try { await api("POST", path, { building: id }); await loadOwners(); await refresh(); render(document.querySelector("#app"), id); }
+  const left = SHARES - sharesSold(id);
+  const mine = (state.view && state.view.sharesFor && state.view.sharesFor[id]) || 0;
+  const perShare = priceOf(id) / SHARES, perShareRent = rentOf(id) / SHARES;
+  const act = async (path, n) => {
+    try { await api("POST", path, { building: id, shares: n }); await loadOwners(); await refresh(); render(document.querySelector("#app"), id); }
     catch (e) { msg.textContent = e.message; }
   };
-  let body;
-  if (mine) body = [el("p", {}, `You own this building. It earns ${rentOf(id)} CCT a day, paid into your wallet each time you visit the city.`), el("button", { class: "btn ghost", type: "button", onclick: () => act("/api/city/property/sell") }, `Sell for ${Math.floor(((state.view && state.view.paidFor && state.view.paidFor[id]) || priceOf(id)) / 2)} CCT`)];
-  else if (owner) body = [el("p", {}, `Owned by ${owner}. Rent goes to them.`)];
-  else body = [el("p", {}, `For sale: ${priceOf(id)} CCT. It earns ${rentOf(id)} CCT a day.`), loggedIn() ? el("button", { class: "btn", type: "button", onclick: () => act("/api/city/property/buy") }, "Buy this building") : el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to buy it.")];
+  const buyN = el("input", { type: "number", min: 1, max: Math.max(1, left), step: 1, value: 1, style: "width:90px" });
+  const sellN = el("input", { type: "number", min: 1, max: Math.max(1, mine), step: 1, value: mine || 1, style: "width:90px" });
+  const body = [
+    el("p", {}, `${SHARES} shares in this building. ${sharesSold(id)} sold, ${left} for sale. A share costs ${perShare} CCT and earns ${perShareRent} CCT a day.`),
+    ownersText(id) ? el("p", { class: "note" }, "Owners: " + ownersText(id) + ".") : el("p", { class: "note" }, "Nobody owns a share yet."),
+    mine ? el("p", {}, `You own ${mine} share${mine === 1 ? "" : "s"}. Rent is paid into your wallet each time you visit the city.`) : null,
+    left && loggedIn() ? el("div", { class: "city-row" }, buyN, el("button", { class: "btn", type: "button", onclick: () => act("/api/city/property/buy", Number(buyN.value)) }, "Buy shares")) : null,
+    left && !loggedIn() ? el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#" + id) }, "Log in"), " to buy a share.") : null,
+    mine && loggedIn() ? el("div", { class: "city-row" }, sellN, el("button", { class: "btn ghost", type: "button", onclick: () => act("/api/city/property/sell", Number(sellN.value)) }, "Sell shares (half of what you paid)")) : null
+  ];
   return el("div", { class: "city-card", style: "cursor:auto" }, el("h3", {}, "Property"), ...body, msg);
 }
 

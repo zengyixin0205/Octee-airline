@@ -37,11 +37,11 @@ function buildingForm(app) {
 
 function termsForm(buildings) {
   const pick = el("select", { style: "width:100%;box-sizing:border-box" }, buildings.map(([id, n]) => el("option", { value: id }, n + " (" + id + ")")));
-  const price = el("input", { type: "number", min: 50, max: 5000, step: 1, value: 300, style: "width:100%;box-sizing:border-box" });
+  const price = el("input", { type: "number", min: 50, max: 5000, step: 10, value: 300, style: "width:100%;box-sizing:border-box" });
   const rent = el("input", { type: "number", min: 1, max: 50, step: 1, value: 3, style: "width:100%;box-sizing:border-box" });
   const msg = el("p", { class: "note" });
   return el("div", { class: "city-card", style: "cursor:auto" }, el("h2", {}, "3. Set a price and rent"),
-    el("p", { class: "note" }, "Citizens pay the price to buy the building, and it pays the rent into their wallet each day. Price 50 to 5,000 CCT; rent 1 to 50 CCT a day. A building with no terms costs 300 CCT and earns 3 a day."),
+    el("p", { class: "note" }, "Citizens pay the price to buy the building, and it pays the rent into their wallet each day. Price 50 to 5,000 CCT, a multiple of 10 so it splits into ten shares; rent 1 to 50 CCT a day. A building with no terms costs 300 CCT and earns 3 a day."),
     field("Building", pick), field("Price (CCT)", price), field("Rent (CCT a day)", rent),
     el("button", { class: "btn", type: "button", onclick: () => run(msg, () => cloudAdminCall("POST", "/api/city/setup", { kind: "terms", building: pick.value, price: Number(price.value), rent: Number(rent.value) }), "Price and rent are set.") }, "Set terms"), msg);
 }

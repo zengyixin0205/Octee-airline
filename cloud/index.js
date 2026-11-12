@@ -94,7 +94,8 @@ const CITY = {
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
   gameMax: 5,               // most CCT the Game Tower pays in one day
-  price: 300,               // CCT to buy a building
+  price: 300,               // CCT for a whole building (ten shares)
+  shares: 10,               // shares in every building; each share earns a tenth of the rent
   rent: 3,                  // CCT a day that a building earns for its owner
   buildings: ["bank","hall","clinic","fire","post","bakery","library","cinema","power","radio","food","harbour","police","tax","car","gym","museum","bus","square","tower"],
   streakDays: 3,            // working this many days in a row earns the streak bonus
@@ -116,7 +117,7 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_reviews (user_id INTEGER NOT NULL, building TEXT NOT NULL, username TEXT NOT NULL, stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL, PRIMARY KEY (user_id, building))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_game (user_id INTEGER PRIMARY KEY, last_day TEXT NOT NULL DEFAULT '')").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_buildings (id TEXT PRIMARY KEY, name TEXT NOT NULL, blurb TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)").run();
-  await db.prepare("CREATE TABLE IF NOT EXISTS city_property (building TEXT PRIMARY KEY, user_id INTEGER NOT NULL, collected_at INTEGER NOT NULL, bought_at INTEGER NOT NULL, paid INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_shares (building TEXT NOT NULL, user_id INTEGER NOT NULL, shares INTEGER NOT NULL, paid INTEGER NOT NULL, collected_at INTEGER NOT NULL, carry INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (building, user_id))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_building_terms (building TEXT PRIMARY KEY, price INTEGER NOT NULL, rent INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_jobs (id TEXT PRIMARY KEY, building TEXT NOT NULL, title TEXT NOT NULL, prompt TEXT NOT NULL, right_answer TEXT NOT NULL, wrong TEXT NOT NULL, hard INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL)").run();
 }
@@ -147,10 +148,10 @@ async function weeklyEdition(db) {
   const rent = await db.prepare("SELECT COALESCE(SUM(cents), 0) AS c FROM city_log WHERE kind = 'rent' AND at >= ?").bind(since).first();
   const bought = await db.prepare("SELECT COUNT(*) AS n FROM city_log WHERE kind = 'buy' AND note LIKE 'bought the %' AND at >= ?").bind(since).first();
   const sold = await db.prepare("SELECT COUNT(*) AS n FROM city_log WHERE kind = 'sell' AND note LIKE 'sold the %' AND at >= ?").bind(since).first();
-  const top = await db.prepare("SELECT u.username AS name, COUNT(*) AS n FROM city_property p JOIN users u ON u.id = p.user_id GROUP BY p.user_id ORDER BY n DESC LIMIT 1").first();
+  const top = await db.prepare("SELECT u.username AS name, SUM(s.shares) AS n FROM city_shares s JOIN users u ON u.id = s.user_id GROUP BY s.user_id ORDER BY n DESC LIMIT 1").first();
   const n = (x) => `${x} building${Number(x) === 1 ? "" : "s"}`;
   const text = `Weekly edition: ${n(bought.n)} bought, ${n(sold.n)} sold, and ${Math.round(Number(rent.c) / 100).toLocaleString("en-GB")} CCT of rent paid out. ` +
-    (top ? `The biggest landlord is ${top.name}, with ${n(top.n)}.` : "Nobody owns a building yet. The town is renting from itself.");
+    (top ? `The biggest landlord is ${top.name}, with ${top.n} share${Number(top.n) === 1 ? "" : "s"}.` : "Nobody owns a share yet. The town is renting from itself.");
   await cityNews(db, text);
 }
 async function cityStreak(db, uid) {
@@ -175,14 +176,16 @@ async function cityAccount(db, uid) {
   a.bank_c = acc.bank_c;
   if (acc.days > 0) a.bank_at += acc.days * DAY;
   if (acc.bank_c > before) await cityLog(db, uid, "interest", acc.bank_c - before, `${acc.days} day${acc.days === 1 ? "" : "s"} at ${tierFor(Math.floor(before / 100)).name}`);
-  // rent: each building the citizen owns pays CITY.rent a day, collected here the same way as interest
-  const owned = await db.prepare("SELECT p.building AS building, p.collected_at AS collected_at, COALESCE(t.rent, ?) AS rent FROM city_property p LEFT JOIN city_building_terms t ON t.building = p.building WHERE p.user_id = ?").bind(CITY.rent, uid).all();
+  // rent: every share of every building pays a tenth of that building's rent a day. Kept in hundredths, so rounding loses nothing.
+  const owned = await db.prepare("SELECT s.building AS building, s.shares AS shares, s.collected_at AS collected_at, s.carry AS carry, COALESCE(t.rent, ?) AS rent FROM city_shares s LEFT JOIN city_building_terms t ON t.building = s.building WHERE s.user_id = ?").bind(CITY.rent, uid).all();
   for (const pr of owned.results || []) {
     const due = Math.min(3650, Math.floor((Date.now() - Number(pr.collected_at)) / DAY));
     if (due > 0) {
-      a.wallet += due * Number(pr.rent);
-      await db.prepare("UPDATE city_property SET collected_at=? WHERE building=?").bind(Number(pr.collected_at) + due * DAY, pr.building).run();
-      await cityLog(db, uid, "rent", due * Number(pr.rent) * 100, `${pr.building} · ${due} day${due === 1 ? "" : "s"}`);
+      const cents = Number(pr.carry) + due * Number(pr.rent) * 10 * Number(pr.shares);
+      const cct = Math.floor(cents / 100);
+      a.wallet += cct;
+      await db.prepare("UPDATE city_shares SET collected_at=?, carry=? WHERE building=? AND user_id=?").bind(Number(pr.collected_at) + due * DAY, cents % 100, pr.building, uid).run();
+      if (cct > 0) await cityLog(db, uid, "rent", cct * 100, `${pr.building} · ${due} day${due === 1 ? "" : "s"}, ${pr.shares} share${Number(pr.shares) === 1 ? "" : "s"}`);
     }
   }
   return a;
@@ -549,7 +552,7 @@ export default {
       }
       if (path === "/api/city/property" && req.method === "GET") {
         await ensureCity(db);
-        const rows = await db.prepare("SELECT p.building AS building, u.username AS owner FROM city_property p JOIN users u ON u.id = p.user_id").all();
+        const rows = await db.prepare("SELECT s.building AS building, u.username AS owner, s.shares AS shares FROM city_shares s JOIN users u ON u.id = s.user_id ORDER BY s.building, s.shares DESC").all();
         const terms = await db.prepare("SELECT building, price, rent FROM city_building_terms").all();
         return reply(req, { price: CITY.price, rent: CITY.rent, owners: rows.results || [], terms: Object.fromEntries((terms.results || []).map((t) => [t.building, { price: Number(t.price), rent: Number(t.rent) }])) });
       }
@@ -598,6 +601,7 @@ export default {
             const price = Math.floor(Number(b.price)), rent = Math.floor(Number(b.rent));
             if (!(await cityBuildingExists(db, building))) return reply(req, { error: "no_building", message: "Pick a building that is in the city." }, 400);
             if (!(price >= 50 && price <= 5000)) return reply(req, { error: "bad_price", message: "A building costs between 50 and 5,000 CCT." }, 400);
+            if (price % CITY.shares !== 0) return reply(req, { error: "bad_price", message: `The price must split into ${CITY.shares} equal shares, so a multiple of ${CITY.shares}.` }, 400);
             if (!(rent >= 1 && rent <= 50)) return reply(req, { error: "bad_rent", message: "Rent is between 1 and 50 CCT a day." }, 400);
             await db.prepare("INSERT INTO city_building_terms(building, price, rent) VALUES(?, ?, ?) ON CONFLICT(building) DO UPDATE SET price=excluded.price, rent=excluded.rent").bind(building, price, rent).run();
             return reply(req, { ok: true, building, price, rent });
@@ -656,8 +660,8 @@ export default {
           const log = await db.prepare("SELECT at, kind, cents, note FROM city_log WHERE user_id=? ORDER BY id DESC LIMIT 20").bind(u.id).all();
           const st = await cityStreak(db, u.id), yesterday = dayStr(now - DAY);
           const live = st.last === dayStr(now) || st.last === yesterday ? st.streak : 0;
-          const mine = await db.prepare("SELECT building, paid FROM city_property WHERE user_id=?").bind(u.id).all();
-          return reply(req, { ...cityView(city, now), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
+          const mine = await db.prepare("SELECT building, shares, paid FROM city_shares WHERE user_id=?").bind(u.id).all();
+          return reply(req, { ...cityView(city, now), statement: log.results || [], streak: live, streakBonus: CITY.streakBonus, streakDays: CITY.streakDays, owned: (mine.results || []).map((r) => r.building), sharesFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.shares)])), paidFor: Object.fromEntries((mine.results || []).map((r) => [r.building, Number(r.paid)])), price: CITY.price, rent: CITY.rent });
         }
         if (path === "/api/city/shift" && req.method === "POST") {
           const job = String(b.job || "");
@@ -725,25 +729,36 @@ export default {
         }
         if (path === "/api/city/property/buy" && req.method === "POST") {
           const building = String(b.building || "");
+          const n = Math.floor(Number(b.shares ?? 1));
           if (!(await cityBuildingExists(db, building))) return reply(req, { error: "no_building", message: "There is no such building." }, 400);
-          if (await db.prepare("SELECT user_id FROM city_property WHERE building=?").bind(building).first()) return reply(req, { error: "taken", message: "Someone already owns it. Ask them nicely." }, 409);
+          if (!(n >= 1 && n <= CITY.shares)) return reply(req, { error: "bad_shares", message: `Buy between 1 and ${CITY.shares} shares.` }, 400);
+          const sold = await db.prepare("SELECT COALESCE(SUM(shares), 0) AS n FROM city_shares WHERE building=?").bind(building).first();
+          const left = CITY.shares - Number(sold.n);
+          if (n > left) return reply(req, { error: "taken", message: left ? `Only ${left} share${left === 1 ? "" : "s"} left.` : "Every share is taken. Ask an owner nicely." }, 409);
           const terms = await cityTerms(db, building);
-          if (city.wallet < terms.price) return reply(req, { error: "short", message: `It costs ${terms.price} CCT. You have ${city.wallet}. Nothing was changed.` }, 402);
-          city.wallet -= terms.price;
-          await db.prepare("INSERT INTO city_property(building, user_id, collected_at, bought_at, paid) VALUES(?, ?, ?, ?, ?)").bind(building, u.id, now, now, terms.price).run();
-          await cityLog(db, u.id, "buy", -terms.price * 100, `bought the ${building} building`);
-          await cityNews(db, `${u.username} bought the ${building} building for ${terms.price} CCT. It earns ${terms.rent} CCT a day.`);
+          const cost = Math.round((terms.price / CITY.shares) * n);
+          if (city.wallet < cost) return reply(req, { error: "short", message: `${n} share${n === 1 ? "" : "s"} cost ${cost} CCT. You have ${city.wallet}. Nothing was changed.` }, 402);
+          city.wallet -= cost;
+          const mine = await db.prepare("SELECT shares FROM city_shares WHERE building=? AND user_id=?").bind(building, u.id).first();
+          if (mine) await db.prepare("UPDATE city_shares SET shares=shares+?, paid=paid+? WHERE building=? AND user_id=?").bind(n, cost, building, u.id).run();
+          else await db.prepare("INSERT INTO city_shares(building, user_id, shares, paid, collected_at, carry) VALUES(?, ?, ?, ?, ?, 0)").bind(building, u.id, n, cost, now).run();
+          await cityLog(db, u.id, "buy", -cost * 100, `bought ${n} share${n === 1 ? "" : "s"} of the ${building} building`);
+          await cityNews(db, `${u.username} bought ${n} share${n === 1 ? "" : "s"} of the ${building} building. The building earns ${terms.rent} CCT a day, shared out between its owners.`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, ...cityView(city, now) });
         }
         if (path === "/api/city/property/sell" && req.method === "POST") {
           const building = String(b.building || "");
-          const own = await db.prepare("SELECT user_id, paid FROM city_property WHERE building=?").bind(building).first();
-          if (!own || Number(own.user_id) !== u.id) return reply(req, { error: "not_owner", message: "You do not own that building." }, 403);
-          const refund = Math.floor(Number(own.paid) / 2);
+          const n = Math.floor(Number(b.shares ?? 1));
+          const mine = await db.prepare("SELECT shares, paid FROM city_shares WHERE building=? AND user_id=?").bind(building, u.id).first();
+          if (!mine || Number(mine.shares) < 1) return reply(req, { error: "not_owner", message: "You do not own a share in that building." }, 403);
+          if (!(n >= 1 && n <= Number(mine.shares))) return reply(req, { error: "bad_shares", message: `You have ${mine.shares} share${Number(mine.shares) === 1 ? "" : "s"} there.` }, 400);
+          const paidPart = Math.round((Number(mine.paid) * n) / Number(mine.shares));
+          const refund = Math.floor(paidPart / 2);
           city.wallet += refund;
-          await db.prepare("DELETE FROM city_property WHERE building=?").bind(building).run();
-          await cityLog(db, u.id, "sell", refund * 100, `sold the ${building} building, half price back`);
+          if (Number(mine.shares) === n) await db.prepare("DELETE FROM city_shares WHERE building=? AND user_id=?").bind(building, u.id).run();
+          else await db.prepare("UPDATE city_shares SET shares=shares-?, paid=paid-? WHERE building=? AND user_id=?").bind(n, paidPart, building, u.id).run();
+          await cityLog(db, u.id, "sell", refund * 100, `sold ${n} share${n === 1 ? "" : "s"} of the ${building} building, half of what they cost`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, refund, ...cityView(city, now) });
         }
