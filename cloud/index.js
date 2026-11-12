@@ -94,12 +94,11 @@ const CITY = {
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
   gameMax: 5,               // most CCT the Game Tower pays in one day
-  towerTarget: 20,          // blocks needed for the weekly tower challenge
   challengeBonus: 10,       // CCT paid once a week to each citizen who reaches the target
   price: 300,               // CCT for a whole building (ten shares)
   shares: 10,               // shares in every building; each share earns a tenth of the rent
   rent: 3,                  // CCT a day that a building earns for its owner
-  buildings: ["bank","hall","clinic","fire","post","bakery","library","cinema","power","radio","food","harbour","police","tax","car","gym","museum","bus","square","tower","lost"],
+  buildings: ["bank","hall","clinic","fire","post","bakery","library","cinema","power","radio","food","harbour","police","tax","car","gym","museum","bus","square","tower","lost","laundry","pool","market"],
   streakDays: 3,            // working this many days in a row earns the streak bonus
   streakBonus: 5,           // extra CCT on every shift while on a streak
   hard: ["bank-teller", "bank-vault", "tax-audit", "police-patrol", "police-desk"],
@@ -107,8 +106,14 @@ const CITY = {
   jobs: ["bank-teller", "bank-vault", "hall-stamp", "hall-notes", "clinic-nurse", "clinic-pharmacy", "fire-hose", "fire-dispatch", "post-parcel", "post-stamp",
     "bakery-assistant", "bakery-till", "library-shelf", "library-returns", "cinema-usher", "cinema-projector", "power-switch", "power-meter", "radio-dial", "radio-playlist",
     "food-waiter", "food-dish", "harbour-crane", "harbour-dock", "police-patrol", "police-desk",
-    "tax-clerk", "tax-audit", "car-attendant", "car-ticket", "gym-instructor", "gym-towel", "museum-guide", "museum-cleaner", "bus-driver", "bus-timetable"]
+    "tax-clerk", "tax-audit", "car-attendant", "car-ticket", "gym-instructor", "gym-towel", "museum-guide", "museum-cleaner", "bus-driver", "bus-timetable",
+    "laundry-attendant", "lifeguard", "stallholder"]
 };
+// The tower target changes every week: 15, 20, 25, 30, then round again. Weeks are counted in whole 7-day blocks from the epoch (UTC).
+const towerTargetFor = (now) => [15, 20, 25, 30][Math.floor(now / (7 * DAY)) % 4];
+// Lost property: a claim also returns one item from the office. Weights are not shown to citizens.
+const LOST_ITEMS = [{ name: "umbrella", cct: 1, w: 5 }, { name: "left glove", cct: 2, w: 4 }, { name: "sunglasses", cct: 3, w: 2 }, { name: "gold watch", cct: 5, w: 1 }, { name: "a single shoe", cct: 0, w: 3 }];
+const pickLost = () => { let r = Math.random() * LOST_ITEMS.reduce((t, x) => t + x.w, 0); for (const x of LOST_ITEMS) { if ((r -= x.w) < 0) return x; } return LOST_ITEMS[0]; };
 const tierFor = (cct) => { let t = CITY.tiers[0]; for (const x of CITY.tiers) if (cct >= x.min) t = x; return t; };
 async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_accounts (user_id INTEGER PRIMARY KEY, wallet INTEGER NOT NULL DEFAULT 0, bank_c INTEGER NOT NULL DEFAULT 0, bank_at INTEGER NOT NULL DEFAULT 0, jail_until INTEGER NOT NULL DEFAULT 0, shifts TEXT NOT NULL DEFAULT '{}', arrests INTEGER NOT NULL DEFAULT 0)").run();
@@ -601,7 +606,7 @@ export default {
       if (path === "/api/city/tower" && req.method === "GET") {
         await ensureCity(db);
         const rows = await db.prepare("SELECT u.username AS name, t.best AS best FROM city_tower t JOIN users u ON u.id = t.user_id ORDER BY t.best DESC, t.at ASC LIMIT 10").all();
-        return reply(req, { scores: (rows.results || []).map((r) => ({ name: r.name, best: Number(r.best) })), challenge: { target: CITY.towerTarget, bonus: CITY.challengeBonus } });
+        return reply(req, { scores: (rows.results || []).map((r) => ({ name: r.name, best: Number(r.best) })), challenge: { target: towerTargetFor(Date.now()), bonus: CITY.challengeBonus } });
       }
       if (path === "/api/city/chat" && req.method === "GET") {
         await ensureCity(db);
@@ -724,12 +729,13 @@ export default {
           if (!(score >= 0 && score <= 500)) return reply(req, { error: "bad_score", message: "That is not a real score. The tower is not that tall." }, 400);
           let bonus = 0;
           const week = Math.floor(Date.now() / (7 * DAY));
-          if (score >= CITY.towerTarget && !(await db.prepare("SELECT 1 FROM city_challenge WHERE user_id=? AND week=?").bind(u.id, week).first())) {
+          const target = towerTargetFor(Date.now());
+          if (score >= target && !(await db.prepare("SELECT 1 FROM city_challenge WHERE user_id=? AND week=?").bind(u.id, week).first())) {
             await db.prepare("INSERT INTO city_challenge(user_id, week) VALUES(?, ?)").bind(u.id, week).run();
             const cz = await cityAccount(db, u.id);
             cz.wallet += CITY.challengeBonus;
             bonus = CITY.challengeBonus;
-            await cityLog(db, u.id, "bonus", bonus * 100, `weekly tower challenge, ${CITY.towerTarget} blocks`);
+            await cityLog(db, u.id, "bonus", bonus * 100, `weekly tower challenge, ${target} blocks`);
             await saveCity(db, u.id, cz);
           }
           if (score > 0) await db.prepare("INSERT INTO city_scores(user_id, username, score, at) VALUES(?, ?, ?, ?)").bind(u.id, u.username, score, Date.now()).run();
@@ -824,8 +830,13 @@ export default {
           return reply(req, { ok: true, sold: units, got: gain, octmiles: bal.octmiles + gain, ...cityView(city, now) });
         }
         if (path === "/api/city/claims" && req.method === "GET") {
-          const rows = await db.prepare("SELECT l.id AS id, l.at AS at, l.cents AS cents, l.note AS note FROM city_log l LEFT JOIN city_claims c ON c.log_id = l.id WHERE l.user_id = ? AND l.kind = 'fine' AND l.cents < 0 AND l.at >= ? AND c.log_id IS NULL ORDER BY l.id DESC LIMIT 20").bind(u.id, Date.now() - 7 * DAY).all();
-          return reply(req, { claims: (rows.results || []).map((r) => ({ id: r.id, at: r.at, fine: -Number(r.cents) / 100, refund: Math.floor(-Number(r.cents) / 200), note: r.note })) });
+          const rows = await db.prepare("SELECT l.id AS id, l.at AS at, l.cents AS cents, l.note AS note, c.log_id AS claimed FROM city_log l LEFT JOIN city_claims c ON c.log_id = l.id WHERE l.user_id = ? AND l.kind = 'fine' AND l.cents < 0 ORDER BY l.id DESC LIMIT 50").bind(u.id).all();
+          const cutoff = Date.now() - 7 * DAY;
+          return reply(req, { claims: (rows.results || []).map((r) => {
+            const fine = -Number(r.cents) / 100;
+            const status = r.claimed ? "claimed" : Number(r.at) >= cutoff ? "claimable" : "expired";
+            return { id: r.id, at: Number(r.at), fine, refund: Math.floor(fine / 2), note: r.note, status };
+          }) });
         }
         if (path === "/api/city/claim" && req.method === "POST") {
           const id = Math.floor(Number(b.log));
@@ -833,12 +844,13 @@ export default {
           if (!f) return reply(req, { error: "no_claim", message: "That fine cannot be claimed. Fines can be claimed within a week, once." }, 400);
           if (await db.prepare("SELECT 1 FROM city_claims WHERE log_id=?").bind(id).first()) return reply(req, { error: "claimed", message: "You have already claimed that one." }, 409);
           const refund = Math.floor(-Number(f.cents) / 200);
+          const found = pickLost();
           await db.prepare("INSERT INTO city_claims(log_id) VALUES(?)").bind(id).run();
           const city = await cityAccount(db, u.id), now = Date.now();
-          city.wallet += refund;
-          await cityLog(db, u.id, "claim", refund * 100, "lost property refund, half a fine");
+          city.wallet += refund + found.cct;
+          await cityLog(db, u.id, "claim", (refund + found.cct) * 100, `lost property refund, half a fine${found.cct ? `, and a ${found.name} worth ${found.cct} CCT` : `, and ${found.name}, which is not worth anything`}`);
           await saveCity(db, u.id, city);
-          return reply(req, { ok: true, refund, ...cityView(city, now) });
+          return reply(req, { ok: true, refund, found: found.name, prize: found.cct, ...cityView(city, now) });
         }
         if (path === "/api/city/property/buy" && req.method === "POST") {
           const building = String(b.building || "");

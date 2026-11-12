@@ -26,7 +26,10 @@ const BUILDINGS = [
   { id: "bus", name: "Airport Bus Stop", blurb: "The bus to FIA. It goes everywhere except FIA." },
   { id: "square", name: "Town Square", blurb: "The chat room. Everyone talks, nobody listens, and the bakery reads every word." },
   { id: "tower", name: "Game Tower", blurb: "Stack the blocks as high as they go. The tower leans, but that is not your fault." },
-  { id: "lost", name: "Lost Property Office", blurb: "Lost your fine? Come and claim half of it back. The form is very long, and the pen is on a string." }
+  { id: "lost", name: "Lost Property Office", blurb: "Lost your fine? Come and claim half of it back. The form is very long, and the pen is on a string." },
+  { id: "laundry", name: "Laundrette", blurb: "Everything comes out cleaner, except the socks, which were never in." },
+  { id: "pool", name: "Swimming Pool", blurb: "Thirty metres long, one metre deep, and the lifeguard has a very serious whistle." },
+  { id: "market", name: "Night Market", blurb: "Stalls selling things you did not know you needed, at prices you will not believe." }
 ];
 const JOBS = {
   "bank-teller": { b: "bank", title: "Bank teller", prompt: "A customer asks for their money back. What do you do?", right: "Count it twice, then say the bank is closed for money today.", wrong: ["Give them all of it in peanuts", "Ask them to come back next Tuesday, with a form"], prompt2: "A second customer asks for a loan. You say…", right2: "Of course. Interest is paid in peanuts.", wrong2: ["No, the loan is on holiday", "Give them the bank"] },
@@ -63,6 +66,9 @@ const JOBS = {
   "museum-cleaner": { b: "museum", title: "Museum cleaner", prompt: "The exhibit's sign has fallen off. Your move?", right: "Put the sign back, next to the exhibit it describes.", wrong: ["Put the exhibit on the sign", "Sweep the sign into the bakery"] },
   "bus-driver": { b: "bus", title: "Bus driver", prompt: "Passengers ask to go to FIA. The bus goes to the sea. You…", right: "Drive to the sea. FIA is a state of mind.", wrong: ["Turn round politely, FIA is a short walk", "Charge the passengers double for the scenic route"] },
   "bus-timetable": { b: "bus", title: "Timetable keeper", prompt: "The timetable says the next bus is 'soon'. How soon?", right: "Soon is a time. Check the clock.", wrong: ["Exactly as soon as you get here", "It is printed on a bun"] },
+  "laundry-attendant": { b: "laundry", title: "Laundry attendant", prompt: "A customer's sock is missing. What do you tell them?", right: "It is in the other machine, which is the machine that is always on fire.", wrong: ["It went to FIA", "It was never a sock, it was a glove"] },
+  "lifeguard": { b: "pool", title: "Lifeguard", prompt: "Someone shouts that they cannot swim. What do you do?", right: "Blow the whistle, throw the ring, and say the pool is one metre deep.", wrong: ["Shout that the pool is thirty metres long", "Join them in the deep end for moral support"] },
+  "stallholder": { b: "market", title: "Stallholder", prompt: "A customer asks if the lamp is genuine. What do you say?", right: "It is genuine, it is just not the lamp you think it is.", wrong: ["Yes, it is the lamp from the airport", "The lamp is free if you pretend it is not"] },
   "police-patrol": { b: "police", title: "Patrol officer", prompt: "A citizen has already clocked in twice today. What is the offence?", right: "Double shifting. Arrest, fine, and time in the cells.", wrong: ["Overtime. Pay them more", "Nothing. They are just very keen"], prompt2: "The citizen says they only did it for the bun. Next step?", right2: "Write down the bun. The bun is evidence now.", wrong2: ["Give them a second bun", "Let them go, buns are not a crime"] },
   "police-desk": { b: "police", title: "Desk sergeant", prompt: "A suspect asks for a lawyer. What does the desk say?", right: "A lawyer is on the way. The lawyer is also on the way to jail.", wrong: ["Here is a peanut, the matter is closed", "Lawyers are not in the leaflet"], prompt2: "The cells are full. Where does the next suspect wait?", right2: "In the Park. The Park has a bench.", wrong2: ["In the bakery's oven", "They are released with a peanut"] }
 };
@@ -213,23 +219,33 @@ function jobRow(jobId, onDone) {
   return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT" + (j.prompt2 ? " · two questions" : ""))), start), pick, doneMsg);
 }
 
-// Lost Property: claim half of any fine from the last week, once per fine.
+// Lost Property: every fine from the last 50, with its claim status. A claim refunds half and returns an item, which may be worth a little CCT.
 async function claimsBlock(app) {
   const box = el("div", {}, el("p", { class: "note" }, "Checking the lost property shelves…"));
-  if (!loggedIn()) { box.replaceChildren(el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#lost") }, "Log in"), " to see your claims.")); return box; }
+  if (!loggedIn()) { box.replaceChildren(el("p", { class: "note" }, el("a", { href: "login.html?next=" + encodeURIComponent("city.html#lost") }, "Log in"), " to see your fines.")); return box; }
   const draw = async () => {
     let j;
     try { j = await api("GET", "/api/city/claims"); } catch (e) { box.replaceChildren(el("p", { class: "note" }, e.message)); return; }
     const msg = el("p", { class: "note" });
-    const rows = (j.claims || []).map((c) => el("tr", {}, el("td", {}, new Date(c.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })), el("td", {}, c.note || "Fine"), el("td", {}, fmtCct(c.fine)), el("td", {}, fmtCct(c.refund)), el("td", {}, el("button", { class: "btn ghost", type: "button", onclick: async () => {
-      msg.textContent = "Filing the claim…";
-      try { const r = await api("POST", "/api/city/claim", { log: c.id }); await refresh(); msg.textContent = `Claimed ${fmtCct(r.refund)}. The office stamps it twice.`; await draw(); render(app, "lost"); }
-      catch (e) { msg.textContent = e.message; }
-    } }, "Claim")))); 
+    const label = { claimable: "Claim now", claimed: "Claimed", expired: "Too late" };
+    const rows = (j.claims || []).map((c) => el("tr", {},
+      el("td", {}, new Date(c.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })),
+      el("td", {}, c.note || "Fine"),
+      el("td", {}, fmtCct(c.fine)),
+      el("td", {}, c.status === "claimable" ? fmtCct(c.refund) + " back" : c.status === "claimed" ? "Done" : "—"),
+      el("td", {}, c.status === "claimable" ? el("button", { class: "btn ghost", type: "button", onclick: async () => {
+        msg.textContent = "Filing the claim…";
+        try {
+          const r = await api("POST", "/api/city/claim", { log: c.id });
+          await refresh();
+          msg.textContent = `Claimed ${fmtCct(r.refund)}. The office also found ${r.prize ? `a ${r.found} worth ${fmtCct(r.prize)}` : `${r.found}, which is not worth anything`}.`;
+          await draw(); render(app, "lost");
+        } catch (e) { msg.textContent = e.message; }
+      } }, "Claim") : el("span", { class: "note" }, label[c.status] || ""))));
     box.replaceChildren(
-      el("h3", {}, "Your claimable fines"),
-      el("p", { class: "note" }, "A claim refunds half the fine, once. Fines can be claimed for seven days after they are paid."),
-      rows.length ? el("table", { class: "city-table" }, el("tr", {}, el("th", {}, "Fined"), el("th", {}, "For"), el("th", {}, "Paid"), el("th", {}, "Refund"), el("th", {}, "")), ...rows) : el("p", { class: "note" }, "Nothing to claim. Either you have been very well behaved, or you have already claimed it."),
+      el("h3", {}, "Your fines"),
+      el("p", { class: "note" }, "Claim half a fine back within seven days. Each fine can be claimed once. The office also returns one lost item with every claim, sometimes worth a little CCT."),
+      rows.length ? el("table", { class: "city-table" }, el("tr", {}, el("th", {}, "Date"), el("th", {}, "For"), el("th", {}, "Fined"), el("th", {}, "Refund"), el("th", {}, "")), ...rows) : el("p", { class: "note" }, "No fines on record. Either you have been very well behaved, or the police have not checked yet."),
       msg
     );
   };
@@ -246,6 +262,13 @@ async function loadReport(app) {
 }
 function reportBlock() {
   return el("div", { class: "city-card", style: "cursor:auto" }, el("h2", {}, "Police report"), el("p", { class: "note" }, "Recent arrests and fines, newest first. Public, because the town has nothing to hide, except the bakery."), el("div", { id: "city-report" }, el("p", { class: "note" }, "Reading the file…")), el("p", { class: "note" }, el("a", { href: "#police" }, "Back to the police station"), " · ", el("a", { href: "#" }, "Back to the town")));
+}
+
+// The cells notice on the police page: who is locked up right now, from the Worker's city card.
+function cellsNote() {
+  const v = state.view;
+  if (v && v.jailUntil && v.jailUntil > Date.now()) return "The cells are not empty. You are in them until " + new Date(v.jailUntil).toLocaleTimeString("en-GB") + ".";
+  return "The cells are empty. The police are very pleased about it.";
 }
 
 function buildingView(id, app) {
@@ -331,12 +354,21 @@ function statementTable(rows) {
   ]));
 }
 
+// A drawn poster, not a photo: a plain silhouette with a hat, drawn here in SVG. It is for the most arrested citizen.
+function posterBlock(name, arrests) {
+  const svg = '<svg viewBox="0 0 120 150" width="120" height="150" aria-hidden="true"><rect x="4" y="4" width="112" height="142" fill="#f4ecd8" stroke="#333" stroke-width="3"/><rect x="30" y="20" width="60" height="10" fill="#333"/><rect x="38" y="6" width="44" height="16" fill="#333"/><circle cx="60" cy="58" r="20" fill="#555"/><path d="M26 130 Q26 88 60 84 Q94 88 94 130 Z" fill="#555"/></svg>';
+  const pic = el("div", { class: "city-poster-pic" });
+  pic.innerHTML = svg;
+  return el("div", { class: "city-poster" }, el("p", { class: "city-poster-title" }, "WANTED"), pic, el("p", { class: "city-poster-name" }, name), el("p", { class: "note", style: "margin:0" }, arrests + " arrests · Reward: a stern look from the desk sergeant"));
+}
+
 async function loadWanted(app) {
   const box = app.querySelector("#city-wanted");
   if (!box) return;
   const j = await pub("/api/city/leaderboard");
   const wanted = j ? j.arrests.filter((r) => r.arrests >= 2) : [];
-  box.replaceChildren(...(j ? (wanted.length ? wanted.map((r) => el("p", {}, el("strong", {}, r.name), " · " + r.arrests + " arrests · Please come quietly.")) : [el("p", { class: "note" }, "Nobody on the wanted list. The police are checking their own list.")]) : [el("p", { class: "note" }, "The files are in the cells. Try again later.")]));
+  const top = j && j.arrests[0] && j.arrests[0].arrests >= 2 ? j.arrests[0] : null;
+  box.replaceChildren(...(top ? [posterBlock(top.name, top.arrests)] : []), ...(j ? (wanted.length ? wanted.map((r) => el("p", {}, el("strong", {}, r.name), " · " + r.arrests + " arrests · Please come quietly.")) : [el("p", { class: "note" }, "Nobody on the wanted list. The police are checking their own list.")]) : [el("p", { class: "note" }, "The files are in the cells. Try again later.")]));
 }
 
 // ---- Town Square: a public chat, kept short and rate limited by the Worker ----
@@ -461,7 +493,7 @@ function gameBlock() {
   reset(); draw();
   document.addEventListener("keydown", (e) => { if (e.key === " " && canvas.isConnected) { e.preventDefault(); drop(); } });
   return el("div", {}, el("h3", {}, "The Game Tower"), canvas, el("div", { class: "city-row" }, start, dropBtn), best, msg,
-    el("p", { class: "note" }, `Weekly challenge: reach ${TOWER_TARGET} blocks and earn a ${CHALLENGE_BONUS} CCT bonus. Once per citizen, per week.`),
+    el("p", { class: "note" }, `This week's challenge: reach ${towerTargetFor(Date.now())} blocks and earn a ${CHALLENGE_BONUS} CCT bonus. The target changes every week. Once per citizen, per week.`),
     el("p", { class: "note" }, "Ten or more blocks earns 1 CCT. Each block after that earns 1 more, up to 5 CCT a day. Playing again today is for fun only. Your best score goes on the board either way."), el("div", { id: "city-tower-board" }));
 }
 
@@ -494,7 +526,10 @@ async function loadOwners() {
   shareRent = j.shareRent || {};
 }
 const SHARES = 10;
-const TOWER_TARGET = 20, CHALLENGE_BONUS = 10; // keep in step with cloud/index.js (towerTarget, challengeBonus)
+const CHALLENGE_BONUS = 10; // keep in step with cloud/index.js (challengeBonus)
+const DAY_MS = 86400000;
+// The weekly target: 15, 20, 25, 30, then round again. Same formula as cloud/index.js (towerTargetFor).
+const towerTargetFor = (now) => [15, 20, 25, 30][Math.floor(now / (7 * DAY_MS)) % 4];
 const sharesSold = (id) => (owners[id] || []).reduce((t, o) => t + o.shares, 0);
 const ownersText = (id) => (owners[id] || []).map((o) => `${o.owner} (${o.shares})`).join(", ");
 const minOf = (id) => rules[id] || 1;

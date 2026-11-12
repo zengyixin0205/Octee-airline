@@ -1462,9 +1462,11 @@ Change `cloud/index.js`, then run `npx wrangler deploy` from `cloud/` on your ow
 - The owner can declare a bank holiday on a date from today on. Interest at OCT Bank is doubled for that day, and the Gazette announces it (`city_holidays`).
 - The weekly edition also names the richest citizen: wallet plus bank, with interest counted up to the moment of the edition, holidays included.
 - The bank page lists the next ten bank holidays, so citizens can plan deposits. The list comes from `GET /api/city` as `holidays`.
-- Lost Property Office (`lost`): a citizen can claim back half of any fine paid in the last seven days, once per fine (`city_claims`, keyed by the fine's log id). A claim is logged as "Lost property" on the statement.
-- Game Tower weekly challenge: the first time in a week that a citizen reaches `CITY.towerTarget` (20 blocks), they get `CITY.challengeBonus` (10 CCT). Once per citizen per week (`city_challenge`). The reply carries `bonus`, and the board shows the target.
+- Lost Property Office (`lost`): lists the last 50 fines with a status (claimable within seven days, claimed, or too late). A claim refunds half the fine, once per fine (`city_claims`, keyed by the fine's log id), and returns one lost item picked from `LOST_ITEMS` (some are worth 1 to 5 CCT, one is worth nothing). The statement logs it as "Lost property".
+- Game Tower weekly challenge: the target changes each week, 15, 20, 25, 30, then round again (`towerTargetFor`, weeks counted in whole UTC 7-day blocks from the epoch). The first time in a week a citizen reaches it, they get `CITY.challengeBonus` (10 CCT). Once per citizen per week (`city_challenge`). The client copy of the formula is `towerTargetFor` in `js/city.js`; keep the two in step.
 - Police report (`#report`): public. `GET /api/city/report` returns the last 30 fines and arrests, newest first. The police station links to it.
+- Most wanted poster: the police station shows a WANTED poster for the most arrested citizen (two or more arrests). It is a drawn SVG silhouette, not a photo.
+- New areas: Laundrette (`laundry`), Swimming Pool (`pool`) and Night Market (`market`), each with one job (`laundry-attendant`, `lifeguard`, `stallholder`). Their ids are in `CITY.buildings` and `CITY.jobs` on the Worker, and in `BUILDINGS` and `JOBS` in `js/city.js`.
 
 ## Reviews: edit and delete from the Control Tower
 
