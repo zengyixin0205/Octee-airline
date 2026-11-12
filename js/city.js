@@ -271,6 +271,118 @@ function cellsNote() {
   return "The cells are empty. The police are very pleased about it.";
 }
 
+// ---- Playable areas. Anyone can play for fun. Logged-in citizens earn once a day per game; the Worker pays and caps it. ----
+const SYMBOLS = ["◆", "●", "▲", "■", "★", "✚"];
+const LAMP_ROUNDS = [
+  { q: "Stall 1: which lamp is genuine?", opts: ["Genuine lamp from FIA, with receipt", "Lamp that says genuine on the box", "Lamp, probably from the bus"], right: 0 },
+  { q: "Stall 2: which watch is real?", opts: ["Watch that is exactly on time", "Watch with four hands", "Watch that says it is a watch"], right: 0 },
+  { q: "Stall 3: which bag is the designer one?", opts: ["Bag with a logo of a bag", "Bag that is clearly a bag", "Bag with the word 'designer' printed on it"], right: 1 },
+  { q: "Stall 4: which phone charger works?", opts: ["Charger with no cable", "Charger that is plugged in", "Charger shaped like a peanut"], right: 1 },
+  { q: "Stall 5: which painting is by a famous artist?", opts: ["A painting of a peanut, signed 'Famous'", "A painting of the market, signed by the market", "A blank canvas that is very expensive"], right: 1 },
+  { q: "Stall 6: which umbrella keeps you dry?", opts: ["An umbrella with holes, to let the rain out", "A large umbrella that is actually a parasol", "Any umbrella, if you hold it over your head"], right: 2 }
+];
+async function finishPlay(game, score, msg, onDone) {
+  if (!loggedIn()) { msg.textContent = `Score ${score}. Log in to earn from ${GAMES_NAME[game]}.`; return; }
+  msg.textContent = "Counting the score…";
+  try { const r = await api("POST", "/api/city/play", { game, score }); msg.textContent = `${r.message} Score: ${score}.`; await refresh(); onDone && onDone(); }
+  catch (e) { msg.textContent = e.message; }
+}
+const GAMES_NAME = { market: "The Night Market", laundry: "The Laundrette", pool: "The Swimming Pool" };
+
+// A shared shell: an intro, a Start button, and the game itself. The game calls done(score) when it ends.
+function playArea(game, title, intro, makeGame) {
+  const msg = el("p", { class: "note" });
+  const host = el("div", {});
+  const startBtn = el("button", { class: "btn", type: "button" }, "Start");
+  const begin = () => {
+    msg.textContent = "";
+    startBtn.disabled = true;
+    host.replaceChildren(makeGame((score) => {
+      startBtn.disabled = false;
+      startBtn.textContent = "Play again (for fun)";
+      finishPlay(game, score, msg, () => {});
+    }));
+  };
+  startBtn.onclick = begin;
+  return el("div", {}, el("h3", {}, title), el("p", { class: "note" }, intro), host, el("div", { class: "city-row" }, startBtn), msg);
+}
+
+// Market: five stalls, pick the genuine item at each. One point per right answer.
+function marketGame(done) {
+  const rounds = [...LAMP_ROUNDS].sort(() => Math.random() - 0.5).slice(0, 5);
+  const box = el("div", {}), tally = el("p", { class: "note" });
+  let i = 0, score = 0, locked = false;
+  const show = () => {
+    if (i >= rounds.length) { box.replaceChildren(el("p", {}, "That is all the stalls. The stallholders are very sorry about the lamp.")); return done(score); }
+    locked = false;
+    const r = rounds[i];
+    tally.textContent = `Stall ${i + 1} of ${rounds.length} · ${score} right so far`;
+    box.replaceChildren(el("p", {}, r.q), ...r.opts.map((o, k) => el("button", { class: "btn ghost", type: "button", style: "display:block;margin:6px 0", onclick: () => {
+      if (locked) return; locked = true;
+      const ok = k === r.right; if (ok) score++;
+      box.append(el("p", { class: "note" }, ok ? "Genuine. Well spotted." : "Fake. The stallholder is hurt, but not very."));
+      i++; setTimeout(show, 700);
+    } }, o)));
+  };
+  show();
+  return el("div", {}, box, tally);
+}
+
+// Laundrette: memory pairs. Twelve tries (two socks each). Each pair found is one point.
+function laundryGame(done) {
+  const TRIES = 12;
+  const board = el("div", { class: "city-row", style: "flex-wrap:wrap;max-width:320px" });
+  const msg = el("p", { class: "note" });
+  let cards = [], first = null, lock = false, tries = 0, matched = 0, over = false;
+  const finish = () => { if (over) return; over = true; lock = true; msg.textContent = `${matched} pair${matched === 1 ? "" : "s"} found.`; done(matched); };
+  const flip = (k) => {
+    const c = cards[k];
+    if (lock || over || c.up || c.done) return;
+    c.up = true; c.btn.textContent = c.s;
+    if (first === null) { first = k; return; }
+    const a = cards[first]; tries++; lock = true;
+    if (a.s === c.s) { a.done = c.done = true; matched++; first = null; lock = false; msg.textContent = "A matching pair. The machine is very pleased."; }
+    else {
+      setTimeout(() => { a.up = c.up = false; a.btn.textContent = c.btn.textContent = "?"; first = null; lock = false; }, 600);
+      msg.textContent = `${TRIES - tries} tries left.`;
+    }
+    if (matched === SYMBOLS.length || tries >= TRIES) setTimeout(finish, 650);
+  };
+  const deck = [...SYMBOLS, ...SYMBOLS].sort(() => Math.random() - 0.5);
+  cards = deck.map((s, k) => ({ s, up: false, done: false, btn: el("button", { class: "btn ghost", type: "button", style: "width:52px;height:52px;font-size:20px;margin:3px", onclick: () => flip(k) }, "?") }));
+  board.replaceChildren(...cards.map((c) => c.btn));
+  msg.textContent = `Find the matching socks in ${TRIES} tries.`;
+  return el("div", {}, board, msg);
+}
+
+// Pool: the marker bobs up and down. Press Dive while it is in the green ring. Ten dives.
+function poolGame(done) {
+  const DIVES = 10, TOP = 0, BOTTOM = 148, RING_TOP = 56, RING_BOTTOM = 96;
+  const track = el("div", { style: "position:relative;width:260px;height:160px;border:1px solid #9bd;border-radius:8px;background:#e8f4ff;overflow:hidden;touch-action:none" });
+  const ring = el("div", { style: `position:absolute;left:0;right:0;top:${RING_TOP}px;height:${RING_BOTTOM - RING_TOP}px;background:rgba(0,160,80,.25)` });
+  const marker = el("div", { style: "position:absolute;left:20px;width:40px;height:12px;border-radius:6px;background:#06c;top:0" });
+  track.append(ring, marker);
+  const msg = el("p", { class: "note" });
+  const dive = el("button", { class: "btn", type: "button" }, "Dive");
+  let y = 0, dirY = 1, timer = null, dives = 0, hits = 0, over = false;
+  const stop = () => { clearInterval(timer); timer = null; };
+  const move = () => {
+    if (!track.isConnected) { stop(); return; }
+    y += dirY * 4; if (y < TOP) { y = TOP; dirY = 1; } if (y > BOTTOM) { y = BOTTOM; dirY = -1; }
+    marker.style.top = y + "px";
+  };
+  dive.onclick = () => {
+    if (over || !timer) return;
+    dives++;
+    const mid = y + 6, hit = mid >= RING_TOP && mid <= RING_BOTTOM;
+    if (hit) hits++;
+    msg.textContent = hit ? `Splash! ${hits} in the ring.` : "Splosh. Missed the ring.";
+    if (dives >= DIVES) { over = true; stop(); dive.disabled = true; msg.textContent = `${hits} of ${DIVES} in the ring.`; done(hits); }
+  };
+  timer = setInterval(move, 25);
+  return el("div", {}, track, el("div", { class: "city-row" }, dive), msg);
+}
+
 function buildingView(id, app) {
   const b = BUILDINGS.find((x) => x.id === id);
   const jobsHere = Object.entries(JOBS).filter(([, j]) => j.b === id).map(([k]) => k);
@@ -287,6 +399,9 @@ function buildingView(id, app) {
     el("div", { id: "city-wanted" }, el("p", { class: "note" }, "Checking the files…")));
   if (id === "police") card.append(el("p", {}, el("a", { href: "#report" }, "Read the police report"), " · the last 30 fines and arrests, on the record."));
   if (id === "lost") card.append(claimsBlock(app));
+  if (id === "market") card.append(playArea("market", "Spot the genuine", "Five stalls. Pick the genuine item at each one. One point per right answer, up to 5 CCT a day.", marketGame));
+  if (id === "laundry") card.append(playArea("laundry", "Sock pairs", "Turn the socks over and find the pairs before the machine finishes. Up to 6 CCT a day.", laundryGame));
+  if (id === "pool") card.append(playArea("pool", "Dive for the ring", "Press Dive while the marker is in the green ring. Ten dives. Up to 5 CCT a day.", poolGame));
   if (id === "square") card.append(chatBlock());
   if (id === "tower") card.append(gameBlock());
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
@@ -343,7 +458,7 @@ function bankBits(app) {
   ];
 }
 
-const KIND = { shift: "Shift", interest: "Interest", deposit: "Deposit", withdraw: "Withdrawal", buy: "Bought", sell: "Sold", fine: "Fine", rent: "Rent", claim: "Lost property", bonus: "Bonus" };
+const KIND = { shift: "Shift", interest: "Interest", deposit: "Deposit", withdraw: "Withdrawal", buy: "Bought", sell: "Sold", fine: "Fine", rent: "Rent", claim: "Lost property", bonus: "Bonus", play: "Game" };
 function statementTable(rows) {
   if (!rows.length) return el("p", { class: "note" }, "Nothing yet. Your statement is empty, which the bank considers a good sign.");
   return table(["When", "What", "CCT", "Note"], rows.map((r) => [

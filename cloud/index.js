@@ -94,6 +94,7 @@ const CITY = {
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   hardPay: 15,              // CCT for the harder jobs (bank, tax audit, police)
   gameMax: 5,               // most CCT the Game Tower pays in one day
+  playMax: 5,               // most CCT one playable area pays in a day
   challengeBonus: 10,       // CCT paid once a week to each citizen who reaches the target
   price: 300,               // CCT for a whole building (ten shares)
   shares: 10,               // shares in every building; each share earns a tenth of the rent
@@ -114,6 +115,12 @@ const towerTargetFor = (now) => [15, 20, 25, 30][Math.floor(now / (7 * DAY)) % 4
 // Lost property: a claim also returns one item from the office. Weights are not shown to citizens.
 const LOST_ITEMS = [{ name: "umbrella", cct: 1, w: 5 }, { name: "left glove", cct: 2, w: 4 }, { name: "sunglasses", cct: 3, w: 2 }, { name: "gold watch", cct: 5, w: 1 }, { name: "a single shoe", cct: 0, w: 3 }];
 const pickLost = () => { let r = Math.random() * LOST_ITEMS.reduce((t, x) => t + x.w, 0); for (const x of LOST_ITEMS) { if ((r -= x.w) < 0) return x; } return LOST_ITEMS[0]; };
+// The playable areas. "max" is the highest legal score; "per" is CCT per point before the daily cap (CITY.playMax).
+const PLAYS = {
+  market: { name: "The Night Market", max: 5, per: 1 },
+  laundry: { name: "The Laundrette", max: 6, per: 1 },
+  pool: { name: "The Swimming Pool", max: 10, per: 0.5 }
+};
 const tierFor = (cct) => { let t = CITY.tiers[0]; for (const x of CITY.tiers) if (cct >= x.min) t = x; return t; };
 async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_accounts (user_id INTEGER PRIMARY KEY, wallet INTEGER NOT NULL DEFAULT 0, bank_c INTEGER NOT NULL DEFAULT 0, bank_at INTEGER NOT NULL DEFAULT 0, jail_until INTEGER NOT NULL DEFAULT 0, shifts TEXT NOT NULL DEFAULT '{}', arrests INTEGER NOT NULL DEFAULT 0)").run();
@@ -128,6 +135,7 @@ async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_share_rent (building TEXT PRIMARY KEY, cents INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_holidays (day TEXT PRIMARY KEY)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_claims (log_id INTEGER PRIMARY KEY)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_plays (user_id INTEGER NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, reward INTEGER NOT NULL, PRIMARY KEY (user_id, game, day))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_challenge (user_id INTEGER NOT NULL, week INTEGER NOT NULL, PRIMARY KEY (user_id, week))").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, username TEXT NOT NULL, score INTEGER NOT NULL, at INTEGER NOT NULL)").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS city_building_rules (building TEXT PRIMARY KEY, min_shares INTEGER NOT NULL)").run();
@@ -828,6 +836,24 @@ export default {
           await cityLog(db, u.id, "sell", -units * 100, `${gain} Octmiles`);
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, sold: units, got: gain, octmiles: bal.octmiles + gain, ...cityView(city, now) });
+        }
+        if (path === "/api/city/play" && req.method === "POST") {
+          await ensureCity(db);
+          const game = Object.hasOwn(PLAYS, b.game) ? PLAYS[b.game] : null;
+          if (!game) return reply(req, { error: "bad_game", message: "There is no game like that in the city." }, 400);
+          const score = Math.floor(Number(b.score));
+          if (!(score >= 0 && score <= game.max)) return reply(req, { error: "bad_score", message: "That is not a real score for this game." }, 400);
+          const today = iso().slice(0, 10);
+          if (await db.prepare("SELECT 1 FROM city_plays WHERE user_id=? AND game=? AND day=?").bind(u.id, b.game, today).first()) return reply(req, { ok: true, reward: 0, score, message: `You already earned from ${game.name} today. You can still play for fun.` });
+          const reward = Math.min(CITY.playMax, Math.floor(score * game.per));
+          await db.prepare("INSERT INTO city_plays(user_id, game, day, reward) VALUES(?, ?, ?, ?)").bind(u.id, b.game, today, reward).run();
+          if (reward > 0) {
+            const cz = await cityAccount(db, u.id);
+            cz.wallet += reward;
+            await cityLog(db, u.id, "play", reward * 100, `${game.name}: ${score} of ${game.max}`);
+            await saveCity(db, u.id, cz);
+          }
+          return reply(req, { ok: true, reward, score, message: reward ? `${game.name} paid you ${reward} CCT.` : `${game.name} paid nothing this time.` });
         }
         if (path === "/api/city/claims" && req.method === "GET") {
           const rows = await db.prepare("SELECT l.id AS id, l.at AS at, l.cents AS cents, l.note AS note, c.log_id AS claimed FROM city_log l LEFT JOIN city_claims c ON c.log_id = l.id WHERE l.user_id = ? AND l.kind = 'fine' AND l.cents < 0 ORDER BY l.id DESC LIMIT 50").bind(u.id).all();
