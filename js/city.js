@@ -4,7 +4,6 @@ import { $, el } from "./dom.js";
 import { CONFIG } from "./config.js";
 import { cloudState, cloudLinked } from "./cloud.js";
 
-const PAY = 10, RATE = 10;
 // The buildings. Each job is a one-question quiz; a right answer clocks you in (the server pays), a wrong answer costs nothing.
 const BUILDINGS = [
   { id: "bank", name: "OCT Bank", blurb: "Keep your CCT here and it grows every day. Do not ask how." },
@@ -19,7 +18,12 @@ const BUILDINGS = [
   { id: "radio", name: "Radio Tower", blurb: "Octee Radio's city branch. The playlist is one song, on loop, very politely." },
   { id: "food", name: "Food Court", blurb: "Every dish is peanuts in a different hat." },
   { id: "harbour", name: "Harbour", blurb: "A harbour with no sea. The cranes are very committed anyway." },
-  { id: "police", name: "Police Station", blurb: "Keeps the town orderly. Breaking the rules gets you arrested. Ask anyone who has tried." }
+  { id: "police", name: "Police Station", blurb: "Keeps the town orderly. Breaking the rules gets you arrested. Ask anyone who has tried." },
+  { id: "tax", name: "Tax Office", blurb: "Every peanut is taxed. Some peanuts are taxed twice." },
+  { id: "car", name: "Car Park", blurb: "Four floors, zero spaces, all of them full." },
+  { id: "gym", name: "Gym", blurb: "Lifts things, puts them down, and says they were heavy." },
+  { id: "museum", name: "Peanut Museum", blurb: "One exhibit, a peanut, under glass. It is very valuable." },
+  { id: "bus", name: "Airport Bus Stop", blurb: "The bus to FIA. It goes everywhere except FIA." }
 ];
 const JOBS = {
   "bank-teller": { b: "bank", title: "Bank teller", prompt: "A customer asks for their money back. What do you do?", right: "Count it twice, then say the bank is closed for money today.", wrong: ["Give them all of it in peanuts", "Ask them to come back next Tuesday, with a form"] },
@@ -46,10 +50,28 @@ const JOBS = {
   "food-dish": { b: "food", title: "Dish chef", prompt: "The recipe says 'add peanuts until it is right'. When is it right?", right: "When the customer stops asking.", wrong: ["When the bakery says so", "When the hat fits"] },
   "harbour-crane": { b: "harbour", title: "Crane operator", prompt: "A crane lifts a box marked 'do not lift'. You…", right: "Lift it higher. It was rude to say so.", wrong: ["Lower it into the empty harbour", "Lift it to the cinema"] },
   "harbour-dock": { b: "harbour", title: "Dock hand", prompt: "A ship arrives at a harbour with no sea. Where does it dock?", right: "On the car park. Ships love a car park.", wrong: ["In the library", "Back out. It is a plane"] },
+  "tax-clerk": { b: "tax", title: "Tax clerk", prompt: "A citizen says their tax is 'whatever the peanuts say'. You…", right: "Ask the peanuts for a receipt.", wrong: ["Accept it. Peanuts are reliable", "Tax them back, twice"] },
+  "tax-audit": { b: "tax", title: "Auditor", prompt: "The audit finds 3 CCT missing. Where did it go?", right: "A spot check, probably. Write it down.", wrong: ["In the bakery's bun", "It was never there. Audits do not count air"] },
+  "car-attendant": { b: "car", title: "Car park attendant", prompt: "A car has been in the bus lane for three days. Ticket?", right: "A ticket, and a note that the bus is also parked.", wrong: ["Clamp the bus", "The car is a monument now"] },
+  "car-ticket": { b: "car", title: "Ticket machine", prompt: "The machine says 'insert coin' but has no slot. What do you do?", right: "Insert the coin into the machine's opinion.", wrong: ["Shake the machine", "Give up. Parking is a state of mind"] },
+  "gym-instructor": { b: "gym", title: "Gym instructor", prompt: "A member asks how many reps to do. You say…", right: "Until the bench gives up first.", wrong: ["Zero. Resting is the workout", "All of them, in one go"] },
+  "gym-towel": { b: "gym", title: "Lost property, gym", prompt: "A towel is lost in the sauna. Lost property says…", right: "Check the sauna is not the towel.", wrong: ["The towel is in the cinema", "Towels do not get lost, they go on holiday"] },
+  "museum-guide": { b: "museum", title: "Museum guide", prompt: "A visitor asks what the peanut exhibit is. You say…", right: "It is a peanut. Please do not touch it, it is valuable.", wrong: ["It is a bus timetable", "It is the exhibit from the bakery"] },
+  "museum-cleaner": { b: "museum", title: "Museum cleaner", prompt: "The exhibit's sign has fallen off. Your move?", right: "Put the sign back, next to the exhibit it describes.", wrong: ["Put the exhibit on the sign", "Sweep the sign into the bakery"] },
+  "bus-driver": { b: "bus", title: "Bus driver", prompt: "Passengers ask to go to FIA. The bus goes to the sea. You…", right: "Drive to the sea. FIA is a state of mind.", wrong: ["Turn round politely, FIA is a short walk", "Charge the passengers double for the scenic route"] },
+  "bus-timetable": { b: "bus", title: "Timetable keeper", prompt: "The timetable says the next bus is 'soon'. How soon?", right: "Soon is a time. Check the clock.", wrong: ["Exactly as soon as you get here", "It is printed on a bun"] },
   "police-patrol": { b: "police", title: "Patrol officer", prompt: "A citizen has already clocked in twice today. What is the offence?", right: "Double shifting. Arrest, fine, and time in the cells.", wrong: ["Overtime. Pay them more", "Nothing. They are just very keen"] },
   "police-desk": { b: "police", title: "Desk sergeant", prompt: "A suspect asks for a lawyer. What does the desk say?", right: "A lawyer is on the way. The lawyer is also on the way to jail.", wrong: ["Here is a peanut, the matter is closed", "Lawyers are not in the leaflet"] }
 };
-const esc = (s) => String(s);
+const PAY = 10, RATE = 10, SELL = 8;
+// The police spot-check rules. The Worker picks one at random for one clock-in in four; keep these in step with cloud/index.js.
+const SPOT_RULES = [
+  "No more than 100 CCT on the street. Pockets are for lint.",
+  "The bank must not hold 1,000 CCT or more on a shift day.",
+  "Two jobs before going home. One job is a hobby."
+];
+// The city map: five by four. The airport is off the edge of the town, next to the Ring Road.
+const MAP = ["tax", "car", "gym", "museum", "bus", "bank", "hall", "clinic", "fire", "post", "bakery", "library", "cinema", "power", "radio", "food", "harbour", "police", "FIA", "ring"];
 const cityIds = () => BUILDINGS.map((b) => b.id);
 let state = { view: null }; // last city data from the Worker (logged-in only)
 
@@ -63,6 +85,10 @@ async function api(method, path, body) {
   if (res.status === 401) throw new Error("Log in to Octee Cloud to use the city. Walking around is still free.");
   if (!res.ok && !j.arrested) throw new Error(j.message || "Nothing was changed.");
   return j;
+}
+// Public reads (news, leaderboard) need no login. A failed read shows nothing rather than an error.
+async function pub(path) {
+  try { const r = await fetch(CONFIG.CLOUD_URL + path); return r.ok ? await r.json() : null; } catch { return null; }
 }
 
 const loggedIn = () => cloudLinked();
@@ -86,11 +112,48 @@ async function refresh() {
   try { state.view = await api("GET", "/api/city"); } catch (e) { state.view = null; }
 }
 
+function cityMap() {
+  return el("div", { class: "city-map", role: "img", "aria-label": "Map of Octee City" }, MAP.map((id) => {
+    if (id === "FIA") return el("div", { class: "city-cell fia" }, "FIA airport", el("small", {}, "the planes are that way"));
+    if (id === "ring") return el("div", { class: "city-cell road" }, "Ring Road", el("small", {}, "the bus does not stop here"));
+    const b = BUILDINGS.find((x) => x.id === id);
+    return el("a", { class: "city-cell", href: "#" + id }, b.name);
+  }));
+}
+
+function table(head, rows) {
+  return el("table", { class: "city-table" }, el("tr", {}, head.map((h) => el("th", {}, h))), ...rows.map((r) => el("tr", {}, r.map((c) => el("td", {}, c)))));
+}
+
+async function loadPanels(app) {
+  const news = app.querySelector("#city-news"), board = app.querySelector("#city-board");
+  if (news) {
+    const j = await pub("/api/city/news");
+    news.replaceChildren(...(j && j.news && j.news.length ? j.news.map((x) => el("p", { class: "note" }, x.text)) : [el("p", { class: "note" }, "No news yet. The town is quiet, which is suspicious.")]));
+  }
+  if (board) {
+    const j = await pub("/api/city/leaderboard");
+    if (!j) { board.replaceChildren(el("p", { class: "note" }, "The leaderboard is in the cells. Try again later.")); return; }
+    board.replaceChildren(
+      el("h3", {}, "Richest citizens"),
+      j.rich.length ? table(["Citizen", "Wallet + bank"], j.rich.map((r) => [r.name, fmtCct(r.cct)])) : el("p", { class: "note" }, "Nobody has any money yet. Give it time."),
+      el("h3", {}, "Most arrested"),
+      j.arrests.length ? table(["Citizen", "Arrests"], j.arrests.map((r) => [r.name, String(r.arrests)])) : el("p", { class: "note" }, "Nobody has been arrested. The police are very disappointed.")
+    );
+  }
+}
+
 function hub() {
-  return [el("h2", {}, "The buildings"), el("p", { class: "note" }, "Click a building to see its jobs. You can look at all of them for free."),
+  return [el("h2", {}, "The town"), el("p", { class: "note" }, "Click a building on the map, or in the list below. You can look at all of them for free."),
+    cityMap(),
+    el("h2", {}, "The buildings"),
     el("div", { class: "city-grid" }, BUILDINGS.map((b) => el("a", { class: "city-card", href: "#" + b.id }, el("h3", {}, b.name), el("p", { class: "note", style: "margin:0" }, b.blurb)))),
+    el("h2", {}, "The Octee City Gazette"),
+    el("div", { id: "city-news" }, el("p", { class: "note" }, "Loading the news…")),
+    el("h2", {}, "Leaderboard"),
+    el("div", { id: "city-board" }, el("p", { class: "note" }, "Counting the money…")),
     el("h2", {}, "The rules"),
-    el("ul", {}, el("li", {}, "A job pays " + PAY + " CCT. One shift per job, per day."), el("li", {}, "Clocking in to the same job twice in one day is a crime. You will be fined and put in the cells for half an hour."), el("li", {}, "CCT are earned here, and can go into the OCT Bank. Octmiles can be swapped for CCT at " + RATE + " to 1.")),
+    el("ul", {}, el("li", {}, "A job pays " + PAY + " CCT. One shift per job, per day."), el("li", {}, "Clocking in to the same job twice in one day is a crime. You will be fined and put in the cells for half an hour."), el("li", {}, "One clock-in in four may also be a police spot check. Fail it and you pay a fine."), el("li", {}, "Octmiles buy CCT at " + RATE + " to 1. CCT sell back at " + SELL + " to 1. The gap is the town's cut.")),
     el("p", { class: "note" }, "Nothing here is real. The bank is not a real bank. The police are not a real police. The town is not a town. Everything you earn is parody money.")];
 }
 
@@ -106,7 +169,12 @@ function jobRow(jobId, onDone) {
       const r = await api("POST", "/api/city/shift", { job: jobId });
       if (r.arrested) { doneMsg.className = "city-warn"; doneMsg.textContent = r.message; }
       else if (r.ok === false) { doneMsg.textContent = r.message || "No pay. Nothing was changed."; }
-      else { doneMsg.className = "note"; doneMsg.textContent = `Shift done. You earned ${r.paid} CCT. Please go and be useful somewhere else.`; }
+      else {
+        let text = `Shift done. You earned ${r.paid} CCT.`;
+        if (r.spot) text += r.spot.failed ? ` Spot check failed: "${r.spot.rule}" Fine: ${r.spot.fine} CCT.` : ` Spot check passed: "${r.spot.rule}"`;
+        doneMsg.className = r.spot && r.spot.failed ? "city-warn" : "note";
+        doneMsg.textContent = text + " Please go and be useful somewhere else.";
+      }
       state.view = r.wallet !== undefined ? r : state.view;
       if (onDone) onDone();
     } catch (e) { doneMsg.textContent = e.message; }
@@ -116,7 +184,6 @@ function jobRow(jobId, onDone) {
     if (state.view && state.view.jailUntil) { doneMsg.className = "city-warn"; doneMsg.textContent = "You are in the cells. No shifts until your time is up."; return; }
     if (state.view && (state.view.todayJobs || []).includes(jobId)) { doneMsg.className = "city-warn"; doneMsg.textContent = "You already did this shift today. Clocking in again is a crime. Going ahead anyway…"; }
     pick.hidden = false;
-    doneMsg.className = doneMsg.className || "note";
   } }, "Clock in");
   return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + PAY + " CCT")), start), pick, doneMsg);
 }
@@ -127,7 +194,10 @@ function buildingView(id, app) {
   const card = el("div", { class: "city-card", style: "cursor:auto" });
   card.append(el("h2", {}, b.name), el("p", {}, b.blurb));
   if (id === "bank") card.append(...bankBits(app));
-  else if (id === "police") card.append(el("p", {}, "The police in Octee City have one rule: no double shifts. Break it and you are arrested, fined " + 5 + " CCT, and sent to the cells for half an hour. You cannot clock in from the cells. The cells are free, but nobody has ever come back for their CCT."));
+  else if (id === "police") card.append(el("p", {}, "The police in Octee City have one rule: no double shifts. Break it and you are arrested, fined 5 CCT, and sent to the cells for half an hour. You cannot clock in from the cells. The cells are free, but nobody has ever come back for their CCT."),
+    el("h3", {}, "Spot checks"),
+    el("p", { class: "note" }, "One clock-in in four is also a spot check. The police pick one of these rules at random. Fail it and you pay a fine, and the Gazette prints your name:"),
+    el("ul", {}, SPOT_RULES.map((r) => el("li", {}, r))));
   jobsHere.forEach((jid) => card.append(jobRow(jid, () => render(app, id))));
   card.append(el("p", { class: "note" }, el("a", { href: "#" }, "Back to the town")));
   return card;
@@ -150,6 +220,13 @@ function bankBits(app) {
     try { const r = await api("POST", "/api/city/exchange", { units: Number(ex.value) }); state.view = r; exMsg.textContent = `Bought ${r.bought} CCT. You have ${r.octmiles.toLocaleString("en-GB")} Octmiles left.`; render(app, "bank"); }
     catch (e) { exMsg.textContent = e.message; }
   };
+  const sell = el("input", { type: "number", min: 1, step: 1, value: 10 });
+  const sellMsg = el("p", { class: "note" });
+  const sellCct = async () => {
+    sellMsg.textContent = "Selling…";
+    try { const r = await api("POST", "/api/city/sell", { units: Number(sell.value) }); state.view = r; sellMsg.textContent = `Sold ${r.sold} CCT for ${r.got} Octmiles. You have ${r.octmiles.toLocaleString("en-GB")} Octmiles now.`; render(app, "bank"); }
+    catch (e) { sellMsg.textContent = e.message; }
+  };
   return [
     el("p", {}, `Wallet: ${fmtCct(v.wallet)}. Bank: ${fmtBank(v.bank)}. You are a ${v.tier} customer.`),
     el("p", { class: "note" }, "Interest is paid every day at your tier's yearly rate. The bank does the sums, not you."),
@@ -160,7 +237,11 @@ function bankBits(app) {
     el("h3", {}, "Swap Octmiles for CCT"),
     el("p", { class: "note" }, `${RATE} Octmiles buys 1 CCT. This is the rate the city has set. It is not a good rate, but it is the one we have.`),
     el("div", { class: "city-row" }, ex, el("button", { class: "btn", type: "button", onclick: exchange }, "Buy CCT")),
-    exMsg
+    exMsg,
+    el("h3", {}, "Sell CCT back"),
+    el("p", { class: "note" }, `Selling pays ${SELL} Octmiles per CCT. The town keeps the other ${RATE - SELL}, which it calls a fee.`),
+    el("div", { class: "city-row" }, sell, el("button", { class: "btn", type: "button", onclick: sellCct }, "Sell CCT")),
+    sellMsg
   ];
 }
 
@@ -168,6 +249,7 @@ function render(app, view) {
   const top = status(app);
   const body = view === "home" || !view ? hub() : [buildingView(view, app)];
   app.replaceChildren(top, ...body.filter(Boolean));
+  if (view === "home" || !view) loadPanels(app);
 }
 
 async function boot() {
@@ -176,7 +258,6 @@ async function boot() {
   const go = async () => {
     const h = (location.hash || "").replace("#", "");
     const view = cityIds().includes(h) ? h : "home";
-    if (view !== "home" && !cityIds().includes(view)) return;
     if (loggedIn() && !state.view) await refresh();
     render(app, view);
   };

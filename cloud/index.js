@@ -86,18 +86,26 @@ const clip = (v, n) => String(v ?? "").slice(0, n);
 // interest every day at the tier's yearly rate, and never sends the interest through the browser.
 const DAY = 86400000;
 const CITY = {
-  rate: 10,                 // Octmiles for 1 CCT
+  rate: 10,                 // Octmiles for 1 CCT (buying)
+  sell: 8,                  // Octmiles for 1 CCT (selling back; the 2 gap stops round trips making money)
+  spotChance: 0.25,         // chance that a clock-in is also a police spot check
   jobPay: 10,               // CCT paid for each finished shift
   fine: 5,                  // CCT taken when arrested
   jailMinutes: 30,          // how long an arrest keeps you from shifts
   tiers: [{ name: "Bronze", min: 0, rate: 0.01 }, { name: "Silver", min: 1000, rate: 0.025 }, { name: "Gold", min: 10000, rate: 0.04 }],
   jobs: ["bank-teller", "bank-vault", "hall-stamp", "hall-notes", "clinic-nurse", "clinic-pharmacy", "fire-hose", "fire-dispatch", "post-parcel", "post-stamp",
     "bakery-assistant", "bakery-till", "library-shelf", "library-returns", "cinema-usher", "cinema-projector", "power-switch", "power-meter", "radio-dial", "radio-playlist",
-    "food-waiter", "food-dish", "harbour-crane", "harbour-dock", "police-patrol", "police-desk"]
+    "food-waiter", "food-dish", "harbour-crane", "harbour-dock", "police-patrol", "police-desk",
+    "tax-clerk", "tax-audit", "car-attendant", "car-ticket", "gym-instructor", "gym-towel", "museum-guide", "museum-cleaner", "bus-driver", "bus-timetable"]
 };
 const tierFor = (cct) => { let t = CITY.tiers[0]; for (const x of CITY.tiers) if (cct >= x.min) t = x; return t; };
-async function cityAccount(db, uid) {
+async function ensureCity(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS city_accounts (user_id INTEGER PRIMARY KEY, wallet INTEGER NOT NULL DEFAULT 0, bank_c INTEGER NOT NULL DEFAULT 0, bank_at INTEGER NOT NULL DEFAULT 0, jail_until INTEGER NOT NULL DEFAULT 0, shifts TEXT NOT NULL DEFAULT '{}', arrests INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS city_news (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)").run();
+}
+const cityNews = (db, text) => db.prepare("INSERT INTO city_news(at, text) VALUES(?, ?)").bind(Date.now(), text).run();
+async function cityAccount(db, uid) {
+  await ensureCity(db);
   await db.prepare("INSERT OR IGNORE INTO city_accounts(user_id, bank_at) VALUES(?, ?)").bind(uid, Date.now()).run();
   const r = await db.prepare("SELECT * FROM city_accounts WHERE user_id=?").bind(uid).first();
   let shifts = {}; try { shifts = JSON.parse(r.shifts || "{}"); } catch { shifts = {}; }
@@ -116,7 +124,7 @@ async function saveCity(db, uid, a) {
 }
 const cityView = (a, now) => {
   const t = tierFor(Math.floor(a.bank_c / 100)), today = iso().slice(0, 10);
-  return { wallet: a.wallet, bank: a.bank_c / 100, bankCents: a.bank_c, tier: t.name, rate: t.rate, tiers: CITY.tiers, pay: CITY.jobPay, rateOcts: CITY.rate,
+  return { wallet: a.wallet, bank: a.bank_c / 100, bankCents: a.bank_c, tier: t.name, rate: t.rate, tiers: CITY.tiers, pay: CITY.jobPay, rateOcts: CITY.rate, sellOcts: CITY.sell,
     todayJobs: a.shifts[today] || [], jailUntil: a.jail_until > now ? a.jail_until : 0, arrests: a.arrests };
 };
 
@@ -447,6 +455,19 @@ export default {
       }
       // JoelTokens <-> Joelmiles (the other currencies are checked from the saved account, see applyWallet). units = Joelmiles.
       // ---- Octee City: CCT wallet, shifts, exchange from Octmiles, and the OCT Bank. Log in first. ----
+      if (path === "/api/city/news" && req.method === "GET") {
+        await ensureCity(db);
+        const rows = await db.prepare("SELECT at, text FROM city_news ORDER BY id DESC LIMIT 12").all();
+        return reply(req, { news: rows.results || [] });
+      }
+      if (path === "/api/city/leaderboard" && req.method === "GET") {
+        await ensureCity(db);
+        const rich = await db.prepare("SELECT u.username AS name, c.wallet AS wallet, c.bank_c AS bank FROM city_accounts c JOIN users u ON u.id = c.user_id ORDER BY (c.wallet + c.bank_c / 100.0) DESC LIMIT 10").all();
+        const jailed = await db.prepare("SELECT u.username AS name, c.arrests AS arrests FROM city_accounts c JOIN users u ON u.id = c.user_id WHERE c.arrests > 0 ORDER BY c.arrests DESC LIMIT 10").all();
+        return reply(req, {
+          rich: (rich.results || []).map((r) => ({ name: r.name, cct: Number(r.wallet) + Number(r.bank) / 100 })),
+          arrests: (jailed.results || []).map((r) => ({ name: r.name, arrests: Number(r.arrests) })) });
+      }
       if (path.startsWith("/api/city")) {
         if (!u) return reply(req, { error: "login", message: "Log in to Octee Cloud first." }, 401);
         const b = req.method === "POST" ? await req.json().catch(() => ({})) : {};
@@ -461,13 +482,28 @@ export default {
             // a second shift on the same job in one day is a rule break: arrested, fined, locked up for a while
             const fine = Math.min(CITY.fine, city.wallet);
             city.wallet -= fine; city.arrests += 1; city.jail_until = now + CITY.jailMinutes * 60000;
+            await cityNews(db, `${u.username} was arrested for a double shift at ${job.replace(/-/g, " ")}. Fine: ${fine} CCT.`);
             await saveCity(db, u.id, city);
             return reply(req, { ok: false, arrested: true, fine, ...cityView(city, now), message: `Arrested. You already did that shift today. Fine: ${fine} CCT. Please wait in the cells.` });
           }
           city.shifts = { [today]: [...done, job] };
           city.wallet += CITY.jobPay;
+          let spot = null;
+          if (Math.random() < CITY.spotChance) {
+            const rules = [
+              { rule: "No more than 100 CCT on the street. Pockets are for lint.", fails: () => city.wallet > 100 },
+              { rule: "The bank must not hold 1,000 CCT or more on a shift day.", fails: () => Math.floor(city.bank_c / 100) >= 1000 },
+              { rule: "Two jobs before going home. One job is a hobby.", fails: () => (city.shifts[today] || []).length < 2 }
+            ];
+            const pick = rules[Math.floor(Math.random() * rules.length)];
+            const failed = pick.fails();
+            const fine = failed ? Math.min(CITY.fine, city.wallet) : 0;
+            city.wallet -= fine;
+            spot = { rule: pick.rule, failed, fine };
+            if (failed) await cityNews(db, `${u.username} failed a police spot check: "${pick.rule}" Fine: ${fine} CCT.`);
+          }
           await saveCity(db, u.id, city);
-          return reply(req, { ok: true, paid: CITY.jobPay, ...cityView(city, now) });
+          return reply(req, { ok: true, paid: CITY.jobPay, spot, ...cityView(city, now) });
         }
         if (path === "/api/city/exchange" && req.method === "POST") {
           const units = Math.floor(Number(b.units));
@@ -478,6 +514,16 @@ export default {
           city.wallet += units;
           await saveCity(db, u.id, city);
           return reply(req, { ok: true, bought: units, octmiles: bal.octmiles - cost, ...cityView(city, now) });
+        }
+        if (path === "/api/city/sell" && req.method === "POST") {
+          const units = Math.floor(Number(b.units));
+          if (!(units >= 1 && units <= 10000)) return reply(req, { error: "bad_count", message: "Choose 1 to 10,000 CCT." }, 400);
+          if (city.wallet < units) return reply(req, { error: "short", message: `You only have ${city.wallet} CCT in your wallet. Nothing was changed.` }, 402);
+          const gain = units * CITY.sell, bal = await getBalances(db, env, u);
+          await saveBalances(db, { ...bal, octmiles: bal.octmiles + gain }).run();
+          city.wallet -= units;
+          await saveCity(db, u.id, city);
+          return reply(req, { ok: true, sold: units, got: gain, octmiles: bal.octmiles + gain, ...cityView(city, now) });
         }
         if (path === "/api/city/bank" && req.method === "POST") {
           const amount = Math.floor(Number(b.amount)), dir = b.dir === "out" ? "out" : "in";
