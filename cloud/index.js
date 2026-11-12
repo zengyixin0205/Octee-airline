@@ -490,6 +490,7 @@ export default {
             const fine = Math.min(CITY.fine, city.wallet);
             city.wallet -= fine; city.arrests += 1; city.jail_until = now + CITY.jailMinutes * 60000;
             await cityNews(db, `${u.username} was arrested for a double shift at ${job.replace(/-/g, " ")}. Fine: ${fine} CCT.`);
+            if (city.arrests === 5 || city.arrests === 10) await cityNews(db, `${u.username} is now a repeat offender, with ${city.arrests} arrests. The cells have a chair with their name on it.`);
             await saveCity(db, u.id, city);
             return reply(req, { ok: false, arrested: true, fine, ...cityView(city, now), message: `Arrested. You already did that shift today. Fine: ${fine} CCT. Please wait in the cells.` });
           }
@@ -538,7 +539,9 @@ export default {
           if (!(amount >= 1 && amount <= 10000000)) return reply(req, { error: "bad_count", message: "Choose a whole number of CCT." }, 400);
           if (dir === "in") {
             if (city.wallet < amount) return reply(req, { error: "short", message: `You only have ${city.wallet} CCT in your wallet. Nothing was moved.` }, 402);
+            const before = tierFor(Math.floor(city.bank_c / 100)).name;
             city.wallet -= amount; city.bank_c += amount * 100;
+            if (before !== "Gold" && tierFor(Math.floor(city.bank_c / 100)).name === "Gold") await cityNews(db, `${u.username} has reached Gold tier at OCT Bank. The bank has bought a second pen.`);
           } else {
             if (Math.floor(city.bank_c / 100) < amount) return reply(req, { error: "short", message: "The bank does not hold that much for you. Nothing was moved." }, 402);
             city.bank_c -= amount * 100; city.wallet += amount;

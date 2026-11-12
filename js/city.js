@@ -191,6 +191,14 @@ function jobRow(jobId, onDone) {
   return el("div", {}, el("div", { class: "city-job" }, el("div", {}, el("strong", {}, j.title), el("p", { class: "note", style: "margin:2px 0 0" }, "Pays " + payOf(jobId) + " CCT")), start), pick, doneMsg);
 }
 
+// How long until the cells let you out, from the last city card the Worker sent.
+function cellsNote() {
+  const until = state.view && state.view.jailUntil;
+  if (!until) return "";
+  const mins = Math.max(0, Math.ceil((until - Date.now()) / 60000));
+  return mins ? `You are in the cells for ${mins} more minute${mins === 1 ? "" : "s"}.` : "";
+}
+
 function buildingView(id, app) {
   const b = BUILDINGS.find((x) => x.id === id);
   const jobsHere = Object.entries(JOBS).filter(([, j]) => j.b === id).map(([k]) => k);
@@ -201,6 +209,7 @@ function buildingView(id, app) {
     el("h3", {}, "Spot checks"),
     el("p", { class: "note" }, "One clock-in in four is also a spot check. The police pick one of these rules at random. Fail it and you pay a fine, and the Gazette prints your name:"),
     el("ul", {}, SPOT_RULES.map((r) => el("li", {}, r))),
+    el("p", { id: "city-cells", class: "city-warn" }, cellsNote()),
     el("h3", {}, "Wanted"),
     el("p", { class: "note" }, "Citizens with two or more arrests. The police would like a word."),
     el("div", { id: "city-wanted" }, el("p", { class: "note" }, "Checking the files…")));
